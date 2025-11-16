@@ -1,0 +1,103 @@
+{% extends '@EasyAdmin/crud/edit.html.twig' %}
+
+{% block main %}
+
+    {{ parent() }}
+
+    <hr>
+
+    <h3 class="mt-4">Prestations liées</h3>
+
+    <div class="row">
+        {% for prestation in entity.instance.prestations %}
+            <div class="col-md-4 mb-3">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+
+                        <h5 class="card-title">
+                            {{ prestation.typePrestation ? prestation.typePrestation.nom : 'Prestation' }}
+                        </h5>
+
+                        <p class="text-muted mb-1">
+                            <strong>Date :</strong> {{ prestation.datePrestation|date('d/m/Y') }}
+                        </p>
+
+                        <p class="mb-1">
+                            <strong>Description :</strong><br>
+                            {{ prestation.description }}
+                        </p>
+
+                        <p>
+                            <span class="badge 
+                                {% if prestation.statut == 'terminé' %} bg-success
+                                {% elseif prestation.statut == 'en cours' %} bg-primary
+                                {% elseif prestation.statut == 'programmé' %} bg-info
+                                {% elseif prestation.statut == 'non effectué' %} bg-danger
+                                {% else %} bg-warning {% endif %}">
+                                {{ prestation.statut }}
+                            </span>
+                        </p>
+
+                        <!-- 📄 Bouton PDF -->
+                        <a href="{{ path('prestation_pdf', { id: prestation.id }) }}" 
+                           class="btn btn-sm btn-outline-secondary" target="_blank">
+                            📄 Télécharger PDF
+                        </a>
+
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <p class="text-muted">Aucune prestation pour le moment.</p>
+        {% endfor %}
+    </div>
+
+    <div class="text-center mt-4">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPrestationModal">
+            ➕ Ajouter une prestation
+        </button>
+    </div>
+
+    <!-- Modale Bootstrap -->
+    <div class="modal fade" id="addPrestationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">Ajouter une prestation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body" id="modal-prestation-content">
+                    <div class="text-center p-4">
+                        <div class="spinner-border"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+
+{% block body_javascript %}
+    {{ parent() }}
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+
+            const modal = document.getElementById('addPrestationModal');
+
+            modal.addEventListener('show.bs.modal', function () {
+                fetch('{{ path('ea_prestation_modal_new', { bon: entity.instance.id }) }}')
+                    .then(response => response.text())
+                    .then(html => {
+                        document.getElementById('modal-prestation-content').innerHTML = html;
+                    });
+            });
+
+        });
+    </script>
+
+{% endblock %}

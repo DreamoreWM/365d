@@ -1,0 +1,43 @@
+{% extends 'dashboard/layout.html.twig' %}
+
+{% block title %}Mes prestations{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <h1 class="mb-4">📅 Mes prestations du jour</h1>
+
+    <form method="get" class="mb-4">
+        <div class="input-group">
+            <input type="date" name="date" value="{{ selectedDate|date('Y-m-d') }}" class="form-control">
+            <button class="btn btn-primary">Filtrer</button>
+        </div>
+    </form>
+
+    <div class="row">
+        {% for p in prestations %}
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+
+                        <h5 class="card-title">{{ p.bonDeCommande.clientNom }}</h5>
+                        <p class="card-text">
+                            <strong>Adresse :</strong> {{ p.bonDeCommande.clientAdresse }}<br>
+                            <strong>Heure :</strong> {{ p.datePrestation|date('H:i') }}
+                        </p>
+
+                        <a href="{{ path('app_user_prestation_view', {id: p.id}) }}"
+                           class="btn btn-primary w-100">
+                            Ouvrir la prestation
+                        </a>
+
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <p>Aucune prestation aujourd'hui.</p>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@source "../../vendor/cisse/ui-bundle";
+
+/* REQUIRED COLORS */
+@theme {
+    --color-primary: #2563eb;
+    --color-secondary: #64748b;
+    --color-primary-foreground: #ffffff;
+    --color-secondary-foreground: #ffffff;
+}

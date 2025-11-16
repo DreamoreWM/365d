@@ -1,0 +1,31 @@
+{% extends 'dashboard/layout.html.twig' %}
+
+{% block content %}
+
+<h1 class="mb-4">Bienvenue 🚀</h1>
+
+<div class="row">
+
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="card-title">📄 Bons de commande</h5>
+                <p class="card-text">consulter les bons de commande.</p>
+                <a href="{{ path('app_user_prestations') }}" class="btn btn-primary">Voir</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="card-title">👤 Administration</h5>
+                <p class="card-text"></p>
+                <a href="{{ path('admin') }}" class="btn btn-primary">Voir</a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

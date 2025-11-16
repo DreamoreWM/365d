@@ -1,0 +1,173 @@
+{% extends 'dashboard/layout.html.twig' %}
+
+{% block title %}Détails prestation{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <h2 class="mb-3">{{ prestation.bonDeCommande.clientNom }}</h2>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <p><strong>Adresse :</strong> {{ prestation.bonDeCommande.clientAdresse }}</p>
+            <p><strong>Date :</strong> {{ prestation.datePrestation|date('d/m/Y H:i') }}</p>
+        </div>
+    </div>
+
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success">{{ message }}</div>
+    {% endfor %}
+
+    <form method="post" data-turbo="false" class="mb-4">
+
+        <div class="mb-3">
+            <label class="form-label">Rapport / Description :</label>
+            <textarea name="description" rows="5" class="form-control">{{ prestation.description }}</textarea>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Signature :</label><br>
+            <canvas id="signature-pad" style="width: 100%; height: 200px; border:1px solid #000"></canvas>
+            <button type="button" id="clear" class="btn btn-secondary btn-sm mt-2">Effacer</button>
+            <input type="hidden" name="signature" id="signature-input"> 
+        </div>
+
+        <button type="submit" class="btn btn-success w-100">💾 Enregistrer</button>
+    </form>
+
+    {% if prestation.signature %}
+        <h4>Signature enregistrée :</h4>
+        <img src="{{ prestation.signature }}" alt="signature" width="300" class="mb-4">
+    {% endif %}
+
+    <form method="post"
+          action="{{ path('app_user_prestation_terminer', {id: prestation.id}) }}"
+          data-turbo="false">
+        <button class="btn btn-primary w-100">✅ Terminer & Générer PDF</button>
+    </form>
+
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+
+<script>
+const canvas = document.getElementById('signature-pad');
+let signaturePad;
+
+// Sauvegarde la signature originale
+let signatureData = null;
+
+function resizeCanvas() {
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+
+    // Taille avant resize (pour recalcul)
+    const oldWidth = canvas.width / ratio;
+    const oldHeight = canvas.height / ratio;
+
+    // Compute new size
+    const newWidth = canvas.offsetWidth;
+    const newHeight = 200;
+
+    // Récupère données avant resize
+    if (signaturePad && !signaturePad.isEmpty()) {
+        signatureData = signaturePad.toData();
+    }
+
+    // Appliquer la nouvelle taille
+    canvas.width = newWidth * ratio;
+    canvas.height = newHeight * ratio;
+    canvas.getContext("2d").scale(ratio, ratio);
+
+    // Recréer le pad vide
+    if (signaturePad) {
+        signaturePad.off();
+    }
+
+    signaturePad = new SignaturePad(canvas, {
+        backgroundColor: 'white',
+        penColor: 'black',
+    });
+
+    // Restaurer la signature avec correction du ratio
+    if (signatureData) {
+        const scaleX = newWidth / oldWidth;
+        const scaleY = newHeight / oldHeight;
+
+        const scaled = signatureData.map(stroke => ({
+            ...stroke,
+            points: stroke.points.map(p => ({
+                x: p.x * scaleX,
+                y: p.y * scaleY
+            }))
+        }));
+
+        signaturePad.fromData(scaled);
+    }
+}
+
+// Initialisation
+function initSignature() {
+    signaturePad = new SignaturePad(canvas, {
+        backgroundColor: 'white',
+        penColor: 'black',
+    });
+
+    resizeCanvas();
+}
+
+initSignature();
+
+// Responsive & rotation
+window.addEventListener("resize", () => {
+    resizeCanvas();
+});
+
+// Effacer
+document.getElementById('clear').addEventListener('click', () => {
+    signaturePad.clear();
+    signatureData = null;
+});
+
+// Envoi du formulaire
+document.querySelector('form').addEventListener('submit', () => {
+    const input = document.getElementById("signature-input");
+
+    if (!signaturePad.isEmpty()) {
+        input.value = signaturePad.toDataURL();
+    } else {
+        // garder signature existante
+        input.value = input.value || "{{ prestation.signature }}";
+    }
+});
+
+
+</script>
+
+<!-- Place the first <script> tag in your HTML's <head> -->
+<script src="https://cdn.tiny.cloud/1/3wq425x2zlikgs096qilrkfuznnqq9sk1ry67zm2m3fe89ud/tinymce/8/tinymce.min.js" referrerpolicy="origin" crossorigin="anonymous"></script>
+
+<!-- Place the following <script> and <textarea> tags your HTML's <body> -->
+<script>
+  tinymce.init({
+    selector: 'textarea',
+    plugins: [
+      // Core editing features
+      'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'link', 'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount',
+      // Your account includes a free trial of TinyMCE premium features
+      // Try the most popular premium features until Nov 28, 2025:
+      'checklist', 'mediaembed', 'casechange', 'formatpainter', 'pageembed', 'a11ychecker', 'tinymcespellchecker', 'permanentpen', 'powerpaste', 'advtable', 'advcode', 'advtemplate', 'ai', 'uploadcare', 'mentions', 'tinycomments', 'tableofcontents', 'footnotes', 'mergetags', 'autocorrect', 'typography', 'inlinecss', 'markdown','importword', 'exportword', 'exportpdf'
+    ],
+    toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography uploadcare | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
+    tinycomments_mode: 'embedded',
+    tinycomments_author: 'Author name',
+    mergetags_list: [
+      { value: 'First.Name', title: 'First Name' },
+      { value: 'Email', title: 'Email' },
+    ],
+    ai_request: (request, respondWith) => respondWith.string(() => Promise.reject('See docs to implement AI Assistant')),
+    uploadcare_public_key: '6c4f3efab10cc0037f1e',
+  });
+</script>
+
+{% endblock %}

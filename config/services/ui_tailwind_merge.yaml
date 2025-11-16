@@ -1,0 +1,4 @@
+services:
+    Cisse\Bundle\Ui\Twig\TailwindMergeExtension:
+        tags:
+            - 'twig.extension'

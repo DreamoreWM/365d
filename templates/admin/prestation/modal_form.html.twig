@@ -1,0 +1,19 @@
+<form method="post" action="{{ path('ea_prestation_modal_save', { bon: bon }) }}">
+    <div class="mb-3">
+        {{ form_row(form.datePrestation) }}
+    </div>
+
+    <div class="mb-3">
+        {{ form_row(form.description) }}
+    </div>
+
+    <div class="mb-3">
+        {{ form_row(form.employe) }}
+    </div>
+
+    <div class="text-end">
+        <button type="submit" class="btn btn-primary">✔ Enregistrer</button>
+    </div>
+
+    {{ form_rest(form) }}
+</form>

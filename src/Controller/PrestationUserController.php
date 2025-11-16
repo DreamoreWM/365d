@@ -1,0 +1,128 @@
+<?php
+
+namespace App\Controller;
+
+use App\Entity\Prestation;
+use App\Repository\PrestationRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use Dompdf\Dompdf;
+use Dompdf\Options;
+
+#[Route('/mes-prestations')]
+#[IsGranted('ROLE_USER')]
+class PrestationUserController extends AbstractController
+{
+    #[Route('/', name: 'app_user_prestations')]
+    public function index(Request $request, PrestationRepository $repo): Response
+    {
+        $user = $this->getUser();
+        $date = $request->query->get('date') ? new \DateTimeImmutable($request->query->get('date')) : new \DateTimeImmutable('today');
+
+        $prestations = $repo->createQueryBuilder('p')
+            ->andWhere('p.employe = :user')
+            ->andWhere('p.datePrestation BETWEEN :start AND :end')
+            ->setParameter('user', $user)
+            ->setParameter('start', $date->setTime(0, 0))
+            ->setParameter('end', $date->setTime(23, 59, 59))
+            ->orderBy('p.datePrestation', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $this->render('prestation_user/index.html.twig', [
+            'prestations' => $prestations,
+            'selectedDate' => $date,
+        ]);
+    }
+
+    #[Route('/{id}', name: 'app_user_prestation_view')]
+    public function view(Prestation $prestation, Request $request, EntityManagerInterface $em): Response {
+        if ($prestation->getEmploye() !== $this->getUser()) {
+            throw $this->createAccessDeniedException();
+        }
+
+        if ($request->isMethod('POST')) {
+            $description = $request->request->get('description');
+            $signature = $request->request->get('signature');
+
+            $prestation->setDescription($description);
+
+            // 🔥 SI PAS DE NOUVELLE SIGNATURE, ON GARDE L’ANCIENNE
+            if ($signature) {
+                $prestation->setSignature($signature);
+            }
+
+            $em->flush();
+
+            $this->addFlash('success', 'Prestation mise à jour.');
+
+            return $this->redirectToRoute('app_user_prestation_view', [
+                'id' => $prestation->getId()
+            ]);
+        }
+
+
+        return $this->render('prestation_user/view.html.twig', [
+            'prestation' => $prestation,
+        ]);
+    }
+
+    #[Route('/{id}/terminer', name: 'app_user_prestation_terminer', methods: ['POST'])]
+    public function terminer(Prestation $prestation, EntityManagerInterface $em): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_USER');
+
+        $prestation->setStatut('terminé');
+        $em->flush();
+
+        // Générer PDF
+        $options = new Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', true);
+        $dompdf = new Dompdf($options);
+
+        $html = $this->renderView('prestation_user/pdf.html.twig', [
+            'prestation' => $prestation,
+        ]);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        return new StreamedResponse(function () use ($dompdf) {
+            echo $dompdf->output();
+        }, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="prestation-' . $prestation->getId() . '.pdf"',
+        ]);
+    }
+
+    #[Route('/prestation/{id}/pdf', name: 'prestation_pdf')]
+    public function pdf(Prestation $prestation): StreamedResponse
+    {
+        $options = new Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', true);
+        $dompdf = new Dompdf($options);
+
+        $html = $this->renderView('prestation_user/pdf.html.twig', [
+            'prestation' => $prestation,
+        ]);
+
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4');
+        $dompdf->render();
+
+        return new StreamedResponse(function () use ($dompdf) {
+            echo $dompdf->output();
+        }, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="prestation-' . $prestation->getId() . '.pdf"'
+        ]);
+    }
+
+}
