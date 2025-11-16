@@ -46,9 +46,23 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(mappedBy: 'employe', targetEntity: Prestation::class)]
     private Collection $prestations;
 
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $signature = null;
+
     public function __construct()
     {
         $this->prestations = new ArrayCollection();
+    }
+
+    public function getSignature(): ?string
+    {
+        return $this->signature;
+    }
+
+    public function setSignature(?string $signature): self
+    {
+        $this->signature = $signature;
+        return $this;
     }
 
     // 🔹 Identité utilisateur
