@@ -9,9 +9,19 @@ use App\Entity\TypePrestation;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 use Faker\Factory;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+
 
 class AppFixtures extends Fixture
 {
+
+    private UserPasswordHasherInterface $hasher;
+
+    public function __construct(UserPasswordHasherInterface $hasher)
+    {
+        $this->hasher = $hasher;
+    }
+
     public function load(ObjectManager $manager): void
     {
         $faker = Factory::create('fr_FR');
@@ -22,10 +32,21 @@ class AppFixtures extends Fixture
             $user = new User();
             $user->setEmail($faker->unique()->email);
             $user->setNom($faker->lastName);
-            $user->setPassword('password'); 
+            $hashedPassword = $this->hasher->hashPassword($user, "password");
+            $user->setPassword($hashedPassword);
+             $user->setRoles(['ROLE_USER']);
             $users[] = $user;
             $manager->persist($user);
         }
+
+         $user = new User();
+            $user->setEmail("admin@example.com");
+            $user->setNom("alexandre");
+            $hashedPassword = $this->hasher->hashPassword($user, "admin123");
+            $user->setPassword($hashedPassword);
+            $user->setRoles(['ROLE_ADMIN']);
+            $users[] = $user;
+            $manager->persist($user);
 
         // --- TYPES DE PRESTATION ---
         $types = [];
