@@ -97,16 +97,17 @@ class PrestationUserController extends AbstractController
             echo $dompdf->output();
         }, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="prestation-' . $prestation->getId() . '.pdf"',
+            'Content-Disposition' => 'inline; filename="prestation-' . $prestation->getId() . '.pdf"',
         ]);
     }
 
     #[Route('/prestation/{id}/pdf', name: 'prestation_pdf')]
-    public function pdf(Prestation $prestation): StreamedResponse
+    public function pdf(Prestation $prestation): Response
     {
         $options = new Options();
         $options->set('isHtml5ParserEnabled', true);
         $options->set('isRemoteEnabled', true);
+
         $dompdf = new Dompdf($options);
 
         $html = $this->renderView('prestation_user/pdf.html.twig', [
@@ -117,12 +118,15 @@ class PrestationUserController extends AbstractController
         $dompdf->setPaper('A4');
         $dompdf->render();
 
-        return new StreamedResponse(function () use ($dompdf) {
-            echo $dompdf->output();
-        }, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="prestation-' . $prestation->getId() . '.pdf"'
-        ]);
+        // ⚠️ Pas de StreamedResponse, sinon téléchargement forcé !
+        $pdfOutput = $dompdf->output();
+
+        $response = new Response($pdfOutput);
+        $response->headers->set('Content-Type', 'application/pdf');
+        $response->headers->set('Content-Disposition', 'inline; filename="prestation-'.$prestation->getId().'.pdf"');
+
+        return $response;
     }
+
 
 }

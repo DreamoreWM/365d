@@ -110,7 +110,7 @@
     <table>
         <tr>
             <td>
-                <strong>INTERVENTION :</strong> : {{ prestation.bonDeCommande.typePrestation }}
+                <strong>INTERVENTION :</strong> : {{ prestation.bonDeCommande.typePrestation ?? prestation.typePrestation}}
             </td>
         </tr>
     </table>

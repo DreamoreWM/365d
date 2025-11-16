@@ -21,6 +21,8 @@ use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
 use App\Service\PrestationManager;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Form\PrestationType;
+use Symfony\Component\HttpFoundation\Response;
+
 
 class PrestationCrudController extends AbstractCrudController
 {
@@ -96,6 +98,15 @@ class PrestationCrudController extends AbstractCrudController
             $this->prestationManager->updateBonDeCommande($bon);
         }
     }
+
+    #[Route('/admin/prestation/detail/{id}', name: 'prestation_detail_modal')]
+    public function modalDetail(Prestation $prestation): Response
+    {
+        return $this->render('admin/prestation_detail_modal.html.twig', [
+            'prestation' => $prestation
+        ]);
+    }
+
 
     #[Route('/admin/prestation/modal/new/{bon}', name: 'ea_prestation_modal_new')]
     public function modalNew(BonDeCommande $bon)
