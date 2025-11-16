@@ -1,0 +1,124 @@
+{% extends 'dashboard/layout.html.twig' %}
+
+{% block title %}Mon Profil{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <h2 class="mb-3">Mon Profil</h2>
+
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success">{{ message }}</div>
+    {% endfor %}
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <p><strong>Nom :</strong> {{ user.nom }}</p>
+            <p><strong>Email :</strong> {{ user.email }}</p>
+            <p><strong>Téléphone :</strong> {{ user.telephone ?: 'Non renseigné' }}</p>
+
+            {% if user.signature %}
+                <p><strong>Signature enregistrée :</strong></p>
+                <img src="{{ user.signature }}" width="300">
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="post" data-turbo="false">
+
+        <h4 class="mb-3">Modifier mes informations</h4>
+
+        <div class="mb-3">
+            <label class="form-label">Nom :</label>
+            <input type="text" name="nom" value="{{ user.nom }}" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Email :</label>
+            <input type="email" name="email" value="{{ user.email }}" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Téléphone :</label>
+            <input type="text" name="telephone" value="{{ user.telephone }}" class="form-control">
+        </div>
+
+        <hr>
+
+        <h4 class="mt-4">Ma signature</h4>
+
+        <div class="mb-3">
+            <label class="form-label">Nouvelle signature :</label><br>
+            <canvas id="signature-pad" style="width: 100%; height: 200px; border:1px solid #000"></canvas>
+            <button type="button" id="clear" class="btn btn-secondary btn-sm mt-2">Effacer</button>
+            <input type="hidden" name="signature" id="signature-input" value="{{ user.signature }}">
+        </div>
+
+        <button type="submit" class="btn btn-success w-100">💾 Enregistrer les modifications</button>
+
+    </form>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+
+<script>
+const canvas = document.getElementById('signature-pad');
+let signaturePad;
+let signatureData = null;
+
+function resizeCanvas() {
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const newWidth = canvas.offsetWidth;
+    const newHeight = 200;
+
+    if (signaturePad && !signaturePad.isEmpty()) {
+        signatureData = signaturePad.toData();
+    }
+
+    canvas.width = newWidth * ratio;
+    canvas.height = newHeight * ratio;
+    canvas.getContext("2d").scale(ratio, ratio);
+
+    if (signaturePad) {
+        signaturePad.off();
+    }
+
+    signaturePad = new SignaturePad(canvas, {
+        backgroundColor: 'white',
+        penColor: 'black'
+    });
+
+    if (signatureData) {
+        signaturePad.fromData(signatureData);
+    }
+}
+
+function initSignature() {
+    signaturePad = new SignaturePad(canvas, {
+        backgroundColor: 'white',
+        penColor: 'black',
+    });
+
+    resizeCanvas();
+}
+
+initSignature();
+
+window.addEventListener("resize", resizeCanvas);
+
+document.getElementById('clear').addEventListener('click', () => {
+    signaturePad.clear();
+    signatureData = null;
+});
+
+document.querySelector('form').addEventListener('submit', () => {
+    const input = document.getElementById("signature-input");
+
+    if (!signaturePad.isEmpty()) {
+        input.value = signaturePad.toDataURL();
+    }
+});
+</script>
+
+{% endblock %}
