@@ -5,35 +5,56 @@ namespace App\Form;
 use App\Entity\Prestation;
 use App\Entity\BonDeCommande;
 use App\Entity\User;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
-use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
+use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 
 class PrestationType extends AbstractType
 {
-    public function buildForm(FormBuilderInterface $builder, array $options)
+    public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
             ->add('datePrestation', DateTimeType::class, [
-                'label' => 'Date de prestation',
                 'widget' => 'single_text',
+                'html5' => true,
+                'attr' => [
+                    'min' => (new \DateTimeImmutable('today'))->format('Y-m-d\TH:i'),
+                ],
             ])
             ->add('description', TextType::class, [
                 'label' => 'Description',
+                'attr' => [
+                    'class' => 'form-control',
+                ],
+            ])
+            ->add('bonDeCommande', EntityType::class, [
+                'class' => BonDeCommande::class,
+                'label' => 'Bon de commande',
+                'choice_label' => function ($bon) {
+                    return sprintf(
+                        '#%s — %s — %s',
+                        $bon->getId(),
+                        $bon->getClientNom(),
+                        $bon->getClientAdresse()
+                    );
+                },
+                'disabled' => true,   // 🔒 lecture seule
+                'attr' => ['class' => 'form-select'],
             ])
             ->add('employe', EntityType::class, [
                 'class' => User::class,
-                'choice_label' => 'email',
                 'label' => 'Employé assigné',
                 'required' => false,
+                'choice_label' => 'email', // comme ton EasyAdmin
                 'placeholder' => 'Aucun',
+                'attr' => ['class' => 'form-select'],
             ]);
     }
 
-    public function configureOptions(OptionsResolver $resolver)
+    public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
             'data_class' => Prestation::class,

@@ -18,10 +18,11 @@ use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
+use App\Service\PrestationManager;
 
 class PrestationCrudController extends AbstractCrudController
 {
-    public function __construct(private EntityManagerInterface $em)
+    public function __construct(private EntityManagerInterface $em, private PrestationManager $prestationManager)
     {
     }
 
@@ -42,29 +43,37 @@ class PrestationCrudController extends AbstractCrudController
     {
         return [
             IdField::new('id')->hideOnForm(),
-            DateTimeField::new('datePrestation', 'Date de prestation'),
+            DateTimeField::new('datePrestation')
+                ->setFormTypeOptions([
+                    'widget' => 'single_text',
+                    'html5' => true,
+                    'attr' => [
+                        'min' => (new \DateTimeImmutable('today'))->format('Y-m-d\TH:i'),
+                    ],
+                ]),
             TextField::new('description', 'Description'),
             AssociationField::new('bonDeCommande', 'Bon de commande'),
             AssociationField::new('employe', 'Employé assigné')
-            ->setRequired(false)
-            ->setFormTypeOptions([
-                'choice_label' => 'email' // ou 'nom', selon ton entité User
-            ]),
+                ->setRequired(false)
+                ->setFormTypeOptions([
+                    'choice_label' => 'email' // ou 'nom', selon ton entité User
+                ]),
         ];
     }
 
     public function persistEntity(EntityManagerInterface $em, $entityInstance): void
     {
-        $this->updatePrestationStatut($entityInstance);
+        $this->prestationManager->updatePrestationStatut($entityInstance);
         parent::persistEntity($em, $entityInstance);
-        $this->updateBonDeCommande($entityInstance);
+        $this->prestationManager->updateBonDeCommande($entityInstance->getBonDeCommande());
+
     }
 
     public function updateEntity(EntityManagerInterface $em, $entityInstance): void
     {
-        $this->updatePrestationStatut($entityInstance);
+        $this->prestationManager->updatePrestationStatut($entityInstance);
         parent::updateEntity($em, $entityInstance);
-        $this->updateBonDeCommande($entityInstance);
+        $this->prestationManager->updateBonDeCommande($entityInstance->getBonDeCommande());
     }
 
     public function deleteEntity(EntityManagerInterface $em, $entityInstance): void
