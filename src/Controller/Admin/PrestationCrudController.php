@@ -110,4 +110,23 @@ class PrestationCrudController extends AbstractCrudController
             'bon'  => $bon->getId(), // 🔥 on renvoie bien la variable que la modal attend
         ]);
     }
+
+        public function createIndexQueryBuilder(
+        SearchDto $searchDto,
+        EntityDto $entityDto,
+        FieldCollection $fields,
+        FilterCollection $filters
+    ): QueryBuilder {
+        $qb = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);
+
+        $request = $this->getContext()?->getRequest();
+        $statut = $request?->query->get('statut');
+
+        if ($statut) {
+            $qb->andWhere('entity.statut = :statut')
+               ->setParameter('statut', $statut);
+        }
+
+        return $qb;
+    }
 }
