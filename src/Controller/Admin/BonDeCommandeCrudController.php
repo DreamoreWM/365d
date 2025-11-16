@@ -22,6 +22,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use thiagoalessio\TesseractOCR\TesseractOCR;
+use EasyCorp\Bundle\EasyAdminBundle\Exception\UserInvalidArgumentException;
 
 class BonDeCommandeCrudController extends AbstractCrudController
 {
@@ -199,6 +200,27 @@ class BonDeCommandeCrudController extends AbstractCrudController
     // -----------------------------------------------------
     public function persistEntity(EntityManagerInterface $em, $entityInstance): void
     {
+        /** @var BonDeCommande $entityInstance */
+
+        if ($entityInstance->getNumeroCommande()) {
+
+            $existant = $em->getRepository(BonDeCommande::class)->findOneBy([
+                'numeroCommande' => $entityInstance->getNumeroCommande()
+            ]);
+
+            if ($existant) {
+                $this->addFlash('danger', 
+                    "⚠️ Ce numéro de commande existe déjà. 
+                    <a href='/admin?crudControllerFqcn=App\\Controller\\Admin\\BonDeCommandeCrudController&crudAction=edit&entityId=".$existant->getId()."'>
+                        👉 Ouvrir le bon existant
+                    </a>"
+                );
+
+                // ❗ On empêche la création en retournant simplement sans persister
+                return;
+            }
+        }
+        
         $this->updateNombrePrestationsNecessaires($entityInstance);
         parent::persistEntity($em, $entityInstance);
     }
