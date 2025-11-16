@@ -56,6 +56,9 @@ class BonDeCommande
     {
         $this->prestations = new ArrayCollection();
         $this->dateCommande = new \DateTimeImmutable();
+        $this->statut = 'à programmer'; // 👈 FIX : statut par défaut correct
+        $this->nombrePrestations = 0;
+        $this->nombrePrestationsNecessaires = 0;
     }
 
     public function getNombrePrestationsNecessaires(): int
