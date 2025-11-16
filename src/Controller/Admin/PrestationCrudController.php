@@ -18,10 +18,11 @@ use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
+use App\Service\PrestationManager;
 
 class PrestationCrudController extends AbstractCrudController
 {
-    public function __construct(private EntityManagerInterface $em)
+    public function __construct(private EntityManagerInterface $em, private PrestationManager $prestationManager)
     {
     }
 
@@ -55,16 +56,17 @@ class PrestationCrudController extends AbstractCrudController
 
     public function persistEntity(EntityManagerInterface $em, $entityInstance): void
     {
-        $this->updatePrestationStatut($entityInstance);
+        $this->prestationManager->updatePrestationStatut($entityInstance);
         parent::persistEntity($em, $entityInstance);
-        $this->updateBonDeCommande($entityInstance);
+        $this->prestationManager->updateBonDeCommande($entityInstance->getBonDeCommande());
+
     }
 
     public function updateEntity(EntityManagerInterface $em, $entityInstance): void
     {
-        $this->updatePrestationStatut($entityInstance);
+        $this->prestationManager->updatePrestationStatut($entityInstance);
         parent::updateEntity($em, $entityInstance);
-        $this->updateBonDeCommande($entityInstance);
+        $this->prestationManager->updateBonDeCommande($entityInstance->getBonDeCommande());
     }
 
     public function deleteEntity(EntityManagerInterface $em, $entityInstance): void
