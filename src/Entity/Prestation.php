@@ -33,8 +33,8 @@ class Prestation
     #[ORM\ManyToOne(inversedBy: 'prestations')]
     private ?TypePrestation $typePrestation = null;
 
-    #[ORM\Column(length: 50)]
-    private ?string $statut = 'à programmer';
+    #[ORM\Column(length: 50, nullable: true)]
+    private ?string $statut = null;
 
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $signature = null;

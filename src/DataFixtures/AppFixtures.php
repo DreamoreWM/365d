@@ -16,18 +16,18 @@ class AppFixtures extends Fixture
     {
         $faker = Factory::create('fr_FR');
 
-        // Création des utilisateurs
+        // --- UTILISATEURS ---
         $users = [];
-        for ($i = 0; $i < 10; $i++) {
+        for ($i = 0; $i < 5; $i++) {
             $user = new User();
             $user->setEmail($faker->unique()->email);
-            $user->setNom($faker->word());
-            $user->setPassword('password'); // attention, pas de hash pour test
+            $user->setNom($faker->lastName);
+            $user->setPassword('password'); 
             $users[] = $user;
             $manager->persist($user);
         }
 
-        // Création des types de prestation
+        // --- TYPES DE PRESTATION ---
         $types = [];
         for ($i = 0; $i < 5; $i++) {
             $type = new TypePrestation();
@@ -36,32 +36,60 @@ class AppFixtures extends Fixture
             $manager->persist($type);
         }
 
-        // Création des prestations
+        // --- PRESTATIONS ---
         $prestations = [];
-        for ($i = 0; $i < 20; $i++) {
+        for ($i = 0; $i < 40; $i++) {
+
             $prestation = new Prestation();
             $prestation->setTypePrestation($faker->randomElement($types));
-            $prestations[] = $prestation;
+            $prestation->setDescription($faker->sentence());
+
+            // Génération volontaire de dates passées / actuelles / futures
+            $rand = rand(1, 100);
+            if ($rand <= 30) {
+                // 30% dates passées
+                $date = $faker->dateTimeBetween('-30 days', '-1 day');
+            } elseif ($rand <= 70) {
+                // 40% aujourd’hui
+                $date = new \DateTime('today');
+                $date->setTime(rand(8, 18), rand(0,59));
+            } else {
+                // 30% dates futures
+                $date = $faker->dateTimeBetween('+1 day', '+30 days');
+            }
+
             $prestation->setDatePrestation(
-                \DateTimeImmutable::createFromMutable($faker->dateTimeThisYear())
+                \DateTimeImmutable::createFromMutable($date)
             );
-            $prestation->setDescription($faker->word());
+
+            $prestation->setStatut('programmé'); // IMPORTANT
+
+            $prestations[] = $prestation;
             $manager->persist($prestation);
         }
 
-        // Création des bons de commande
-        for ($i = 0; $i < 15; $i++) {
+        // --- BONS DE COMMANDE ---
+        for ($i = 0; $i < 10; $i++) {
             $bon = new BonDeCommande();
-            $bon->addPrestation($faker->randomElement($prestations));
             $bon->setClientNom($faker->name());
             $bon->setClientAdresse($faker->address());
             $bon->setClientTelephone($faker->phoneNumber());
             $bon->setClientEmail($faker->email());
-            
-            // Date de commande
+            $bon->setTypePrestation($faker->randomElement($types));
+
+            // Date commande = avant les prestations
             $bon->setDateCommande(
-                \DateTimeImmutable::createFromMutable($faker->dateTimeThisYear())
+                \DateTimeImmutable::createFromMutable(
+                    $faker->dateTimeBetween('-40 days', 'now')
+                )
             );
+
+            // Ajout de 1 à 3 prestations au bon
+            $count = rand(1, 3);
+            for ($j = 0; $j < $count; $j++) {
+                $bon->addPrestation($faker->randomElement($prestations));
+            }
+
             $manager->persist($bon);
         }
 
