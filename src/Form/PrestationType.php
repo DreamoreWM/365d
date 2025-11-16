@@ -19,8 +19,10 @@ class PrestationType extends AbstractType
         $builder
             ->add('datePrestation', DateTimeType::class, [
                 'widget' => 'single_text',
-                'label'  => 'Date de prestation',
-                'attr'   => ['class' => 'form-control'],
+                'html5' => true,
+                'attr' => [
+                    'min' => (new \DateTimeImmutable('today'))->format('Y-m-d\TH:i'),
+                ],
             ])
             ->add('description', TextType::class, [
                 'label' => 'Description',

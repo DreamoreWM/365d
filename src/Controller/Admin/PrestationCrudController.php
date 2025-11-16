@@ -43,14 +43,21 @@ class PrestationCrudController extends AbstractCrudController
     {
         return [
             IdField::new('id')->hideOnForm(),
-            DateTimeField::new('datePrestation', 'Date de prestation'),
+            DateTimeField::new('datePrestation')
+                ->setFormTypeOptions([
+                    'widget' => 'single_text',
+                    'html5' => true,
+                    'attr' => [
+                        'min' => (new \DateTimeImmutable('today'))->format('Y-m-d\TH:i'),
+                    ],
+                ]),
             TextField::new('description', 'Description'),
             AssociationField::new('bonDeCommande', 'Bon de commande'),
             AssociationField::new('employe', 'Employé assigné')
-            ->setRequired(false)
-            ->setFormTypeOptions([
-                'choice_label' => 'email' // ou 'nom', selon ton entité User
-            ]),
+                ->setRequired(false)
+                ->setFormTypeOptions([
+                    'choice_label' => 'email' // ou 'nom', selon ton entité User
+                ]),
         ];
     }
 

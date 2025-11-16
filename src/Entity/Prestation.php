@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Repository\PrestationRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: PrestationRepository::class)]
 class Prestation
@@ -14,6 +15,10 @@ class Prestation
     private ?int $id = null;
 
     #[ORM\Column(type: 'datetime_immutable')]
+    #[Assert\GreaterThanOrEqual(
+        value: "today",
+        message: "La date de prestation ne peut pas être antérieure à aujourd’hui."
+    )]
     private ?\DateTimeImmutable $datePrestation = null;
 
     #[ORM\Column(type: 'text')]
