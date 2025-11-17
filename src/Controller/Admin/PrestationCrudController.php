@@ -22,6 +22,9 @@ use App\Service\PrestationManager;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Form\PrestationType;
 use Symfony\Component\HttpFoundation\Response;
+use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 
 
 class PrestationCrudController extends AbstractCrudController
@@ -36,39 +39,79 @@ class PrestationCrudController extends AbstractCrudController
         return Prestation::class;
     }
 
+
+
+    public function configureActions(Actions $actions): Actions
+    {
+        return $actions
+            ->add(Crud::PAGE_INDEX, Action::DETAIL); // 🔥 ajoute le bouton "Voir" dans la liste
+    }
+
+
     public function configureCrud(Crud $crud): Crud
     {
         return $crud
             ->setEntityLabelInSingular('Prestation')
             ->setEntityLabelInPlural('Prestations')
-            ->setDefaultSort(['datePrestation' => 'DESC']);
+            ->setDefaultSort(['datePrestation' => 'DESC'])
+            ->showEntityActionsInlined()
+            ->overrideTemplates([
+                'crud/detail' => 'admin/prestation_detail.html.twig',
+            ]);
     }
+
+    public function configureFilters(Filters $filters): Filters
+    {
+        return $filters
+            ->add('datePrestation')
+            ->add('employe')
+            ->add('description');
+    }
+
+
+
 
     public function configureFields(string $pageName): iterable
     {
-        return [
-            IdField::new('id')->hideOnForm(),
+        yield IdField::new('id')->hideOnForm()
+        ->setSortable(false);
 
-            DateTimeField::new('datePrestation')
-                ->setFormTypeOptions([
-                    'widget' => 'single_text',
-                    'html5' => true,
-                    'attr' => [
-                        'min' => (new \DateTimeImmutable('today'))->format('Y-m-d\TH:i'),
-                    ],
-                ]),
+        yield DateTimeField::new('datePrestation')
+            ->setFormTypeOptions([
+                'widget' => 'single_text',
+                'html5' => true,
+                'attr' => [
+                    'min' => (new \DateTimeImmutable('today'))->format('Y-m-d\TH:i'),
+                ],
+            ])
+            ->setSortable(true)
+            ->setCustomOption('sortable', 'datePrestation')
+            ->setSortable(false);
 
-            TextField::new('description', 'Description'),
+        yield TextField::new('description', 'Description')
+        ->setSortable(false);
 
-            AssociationField::new('bonDeCommande', 'Bon de commande'),
+        yield AssociationField::new('bonDeCommande', 'Bon de commande')
+        ->setSortable(false);
 
-            AssociationField::new('employe', 'Employé assigné')
-                ->setRequired(false)
-                ->setFormTypeOptions([
-                    'choice_label' => 'email'
-                ]),
-        ];
+        yield AssociationField::new('employe', 'Employé assigné')
+            ->setRequired(false)
+            ->setFormTypeOptions(['choice_label' => 'email'])
+            ->setSortable(false);
+
+        // 🔥 Le champ preview PDF, uniquement pour la page "detail"
+        yield TextField::new('pdfPreview', 'Aperçu PDF')
+            ->onlyOnDetail()
+            ->renderAsHtml()
+            ->formatValue(function ($value, $entity) {
+                return sprintf(
+                    '<iframe src="/prestation/%d/pdf" style="width:100%%; height:800px; border:1px solid #ddd; border-radius:8px;"></iframe>',
+                    $entity->getId()
+                );
+            })
+            ->setSortable(false);
     }
+
 
     public function persistEntity(EntityManagerInterface $em, $entityInstance): void
     {
@@ -77,6 +120,11 @@ class PrestationCrudController extends AbstractCrudController
         parent::persistEntity($em, $entityInstance);
 
         $this->prestationManager->updateBonDeCommande($entityInstance->getBonDeCommande());
+
+        $bon = $entityInstance->getBonDeCommande();
+        if ($bon) {
+            $this->prestationManager->updateBonDeCommande($bon);
+        }
     }
 
     public function updateEntity(EntityManagerInterface $em, $entityInstance): void
@@ -86,6 +134,11 @@ class PrestationCrudController extends AbstractCrudController
         parent::updateEntity($em, $entityInstance);
 
         $this->prestationManager->updateBonDeCommande($entityInstance->getBonDeCommande());
+
+        $bon = $entityInstance->getBonDeCommande();
+        if ($bon) {
+            $this->prestationManager->updateBonDeCommande($bon);
+        }
     }
 
     public function deleteEntity(EntityManagerInterface $em, $entityInstance): void

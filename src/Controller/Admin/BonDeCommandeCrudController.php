@@ -39,7 +39,16 @@ class BonDeCommandeCrudController extends AbstractCrudController
         return $crud
             ->overrideTemplates([
             'crud/edit' => 'admin/bon/edit_bdc.html.twig',
-        ]);
+            ]);
+    }
+
+    public function configureFilters(Filters $filters): Filters
+    {
+        return $filters
+            ->add('numeroCommande')
+            ->add('clientNom')
+            ->add('statut')
+            ->add('typePrestation');
     }
 
     public function configureFields(string $pageName): iterable
