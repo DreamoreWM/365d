@@ -15,6 +15,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 
 class DashboardController extends AbstractDashboardController
 {
+    #[AdminDashboard]
     #[Route('/admin', name: 'admin')]
     public function index(): Response
     {
