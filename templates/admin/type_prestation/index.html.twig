@@ -1,0 +1,378 @@
+{% extends 'dashboard/layout.html.twig' %}
+
+{% block title %}Types de prestations{% endblock %}
+
+{% block content %}
+<style>
+    .type-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 32px 24px;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    body.dark-mode .page-header {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .page-header h1 {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 400;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .page-header .material-icons {
+        font-size: 32px;
+    }
+
+    .filter-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .filter-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .filter-form {
+        display: flex;
+        gap: 16px;
+        align-items: end;
+    }
+
+    .filter-form .mdl-textfield {
+        margin: 0;
+        flex: 1;
+    }
+
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .stat-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    body.dark-mode .stat-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        background: rgba(63, 81, 181, 0.1);
+        color: var(--primary);
+    }
+
+    .stat-content { flex: 1; }
+    .stat-label { font-size: 0.875rem; color: #757575; margin-bottom: 4px; }
+    body.dark-mode .stat-label { color: #b0b0b0; }
+    .stat-value { font-size: 1.5rem; font-weight: 500; color: var(--text-light); }
+    body.dark-mode .stat-value { color: var(--text-dark); }
+
+    .types-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 24px;
+    }
+
+    .type-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.3s;
+        border-left: 4px solid var(--primary);
+    }
+
+    body.dark-mode .type-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .type-card:hover {
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        transform: translateY(-4px);
+    }
+
+    body.dark-mode .type-card:hover {
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    .type-card-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    body.dark-mode .type-card-header {
+        border-bottom-color: var(--border-dark);
+    }
+
+    .type-card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: rgba(63, 81, 181, 0.1);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+
+    .type-card-title {
+        flex: 1;
+        font-size: 1.25rem;
+        font-weight: 500;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .type-card-title {
+        color: var(--text-dark);
+    }
+
+    .type-card-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px;
+        background: rgba(63, 81, 181, 0.05);
+        border-radius: 4px;
+        margin-bottom: 16px;
+    }
+
+    body.dark-mode .type-card-info {
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    .type-card-info .material-icons {
+        color: var(--primary);
+        font-size: 20px;
+    }
+
+    .type-card-info-text {
+        flex: 1;
+        font-size: 0.875rem;
+        color: #757575;
+    }
+
+    body.dark-mode .type-card-info-text {
+        color: #b0b0b0;
+    }
+
+    .type-card-info-value {
+        font-size: 1.25rem;
+        font-weight: 500;
+        color: var(--primary);
+    }
+
+    .type-card-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .type-card-actions button,
+    .type-card-actions a {
+        flex: 1;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        font-size: 0.875rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        background: var(--card-light);
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .empty-state {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .empty-state .material-icons {
+        font-size: 80px;
+        color: #ccc;
+        margin-bottom: 16px;
+    }
+
+    body.dark-mode .empty-state .material-icons { color: #555; }
+
+    .empty-state h3 {
+        color: var(--text-light);
+        margin-bottom: 8px;
+        font-weight: 400;
+    }
+
+    body.dark-mode .empty-state h3 { color: var(--text-dark); }
+    .empty-state p { color: #757575; }
+    body.dark-mode .empty-state p { color: #b0b0b0; }
+
+    @media (max-width: 768px) {
+        .page-header { padding: 24px 16px; }
+        .page-header h1 { font-size: 1.5rem; }
+        .filter-card { padding: 16px; }
+        .filter-form { flex-direction: column; }
+        .filter-form button { width: 100%; }
+        .types-grid { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="type-container">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1>
+            <i class="material-icons">category</i>
+            Types de prestations
+        </h1>
+        <a href="{{ path('admin_type_prestation_new') }}" class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent">
+            <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">add</i>
+            Nouveau type
+        </a>
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="material-icons">category</i></div>
+            <div class="stat-content">
+                <div class="stat-label">Total types</div>
+                <div class="stat-value">{{ types|length }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon"><i class="material-icons">event_note</i></div>
+            <div class="stat-content">
+                <div class="stat-label">Total prestations nécessaires</div>
+                <div class="stat-value">{{ types|reduce((carry, t) => carry + t.nombrePrestationsNecessaires, 0) }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="filter-card">
+        <form method="get" class="filter-form" id="filter-form">
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                <input class="mdl-textfield__input" type="text" id="search" name="search" value="{{ app.request.get('search') }}">
+                <label class="mdl-textfield__label" for="search">Rechercher un type...</label>
+            </div>
+
+            <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">search</i>
+                Filtrer
+            </button>
+        </form>
+    </div>
+
+    <!-- Types Grid -->
+    {% if types is not empty %}
+        <div class="types-grid">
+            {% for type in types %}
+                <div class="type-card">
+                    <div class="type-card-header">
+                        <div class="type-card-icon">
+                            <i class="material-icons">label</i>
+                        </div>
+                        <div class="type-card-title">{{ type.nom }}</div>
+                    </div>
+
+                    <div class="type-card-info">
+                        <i class="material-icons">repeat</i>
+                        <span class="type-card-info-text">Prestations nécessaires</span>
+                        <span class="type-card-info-value">{{ type.nombrePrestationsNecessaires }}</span>
+                    </div>
+
+                    <div class="type-card-info">
+                        <i class="material-icons">assignment</i>
+                        <span class="type-card-info-text">Prestations en cours</span>
+                        <span class="type-card-info-value">{{ type.prestations|length }}</span>
+                    </div>
+
+                    <div class="type-card-actions">
+                        <a href="{{ path('admin_type_prestation_show', {id: type.id}) }}" class="mdl-button mdl-js-button mdl-button--raised">
+                            <i class="material-icons">visibility</i>
+                            Voir
+                        </a>
+                        <a href="{{ path('admin_type_prestation_edit', {id: type.id}) }}" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                            <i class="material-icons">edit</i>
+                            Modifier
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="material-icons">category</i>
+            <h3>Aucun type de prestation</h3>
+            <p>Commencez par créer votre premier type</p>
+        </div>
+    {% endif %}
+
+</div>
+
+<script>
+// Auto-upgrade MDL
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('search');
+    if (searchInput && searchInput.value) {
+        searchInput.parentElement.classList.add('is-dirty');
+    }
+});
+
+// Search with delay
+let searchTimeout;
+document.getElementById('search')?.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        document.getElementById('filter-form').submit();
+    }, 500);
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,339 @@
+{% extends 'dashboard/layout.html.twig' %}
+
+{% block title %}{{ isNew ? 'Nouvelle prestation' : 'Modifier la prestation' }}{% endblock %}
+
+{% block content %}
+<style>
+    .form-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .form-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 32px 24px;
+        border-radius: 8px 8px 0 0;
+        margin-bottom: 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .form-header {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .form-header h2 {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 400;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .form-card {
+        background: var(--card-light);
+        border-radius: 0 0 8px 8px;
+        padding: 32px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .form-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+        margin-top: 32px;
+        color: var(--text-light);
+        font-size: 1.25rem;
+        font-weight: 500;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--border-light);
+    }
+
+    body.dark-mode .section-title {
+        color: var(--text-dark);
+        border-bottom-color: var(--border-dark);
+    }
+
+    .section-title:first-child {
+        margin-top: 0;
+    }
+
+    .section-title .material-icons {
+        color: var(--primary);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    .form-grid.full {
+        grid-template-columns: 1fr;
+    }
+
+    .mdl-textfield {
+        width: 100%;
+    }
+
+    .helper-text {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #757575;
+        font-size: 0.875rem;
+        margin-bottom: 16px;
+        padding: 12px;
+        background: rgba(63, 81, 181, 0.05);
+        border-radius: 4px;
+    }
+
+    body.dark-mode .helper-text {
+        color: #b0b0b0;
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    .helper-text .material-icons {
+        font-size: 20px;
+        color: var(--primary);
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 12px;
+        margin-top: 32px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border-light);
+    }
+
+    body.dark-mode .action-buttons {
+        border-top-color: var(--border-dark);
+    }
+
+    .action-buttons button,
+    .action-buttons a {
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        flex: 1;
+    }
+
+    .datetime-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 16px;
+    }
+
+    @media (max-width: 768px) {
+        .form-header {
+            padding: 24px 16px;
+        }
+
+        .form-card {
+            padding: 20px;
+        }
+
+        .form-grid,
+        .datetime-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+
+<div class="form-container">
+    
+    <!-- Header -->
+    <div class="form-header">
+        <h2>
+            <i class="material-icons">{{ isNew ? 'add_circle' : 'edit' }}</i>
+            {{ isNew ? 'Nouvelle prestation' : 'Modifier la prestation' }}
+        </h2>
+    </div>
+
+    <!-- Form Card -->
+    <div class="form-card">
+        
+        {% for message in app.flashes('danger') %}
+            <div class="alert-success" style="background: #f44336; margin-bottom: 24px;">
+                <i class="material-icons">error</i>
+                <span>{{ message|raw }}</span>
+            </div>
+        {% endfor %}
+
+        <form method="post">
+            
+            <!-- Date et heure -->
+            <div class="section-title">
+                <i class="material-icons">event</i>
+                <span>Date et heure de la prestation</span>
+            </div>
+
+            <div class="helper-text">
+                <i class="material-icons">info</i>
+                <span>Définissez quand la prestation doit être effectuée</span>
+            </div>
+
+            <div class="datetime-grid">
+                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ prestation.datePrestation ? 'is-dirty' : '' }}">
+                    <input class="mdl-textfield__input" type="date" id="date" name="date" 
+                           value="{{ prestation.datePrestation ? prestation.datePrestation|date('Y-m-d') : '' }}" required>
+                    <label class="mdl-textfield__label" for="date">Date *</label>
+                </div>
+
+                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ prestation.datePrestation ? 'is-dirty' : '' }}">
+                    <input class="mdl-textfield__input" type="time" id="heure" name="heure" 
+                           value="{{ prestation.datePrestation ? prestation.datePrestation|date('H:i') : '09:00' }}" required>
+                    <label class="mdl-textfield__label" for="heure">Heure *</label>
+                </div>
+            </div>
+
+            <!-- Informations -->
+            <div class="section-title">
+                <i class="material-icons">assignment</i>
+                <span>Informations de la prestation</span>
+            </div>
+
+            <div class="form-grid">
+                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ prestation.bonDeCommande ? 'is-dirty' : '' }}">
+                    <select class="mdl-textfield__input" id="bonDeCommande" name="bonDeCommande" required>
+                        <option value="">Sélectionner...</option>
+                        {% for bon in bons %}
+                            <option value="{{ bon.id }}" {{ prestation.bonDeCommande and prestation.bonDeCommande.id == bon.id ? 'selected' : '' }}>
+                                {{ bon.clientNom }} - BC {{ bon.numeroCommande ?? '#' ~ bon.id }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <label class="mdl-textfield__label" for="bonDeCommande">Bon de commande *</label>
+                </div>
+
+                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ prestation.typePrestation ? 'is-dirty' : '' }}">
+                    <select class="mdl-textfield__input" id="typePrestation" name="typePrestation">
+                        <option value="">Sélectionner...</option>
+                        {% for type in types %}
+                            <option value="{{ type.id }}" {{ prestation.typePrestation and prestation.typePrestation.id == type.id ? 'selected' : '' }}>
+                                {{ type.nom }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <label class="mdl-textfield__label" for="typePrestation">Type de prestation</label>
+                </div>
+            </div>
+
+            <div class="form-grid full">
+                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ prestation.employe ? 'is-dirty' : '' }}">
+                    <select class="mdl-textfield__input" id="employe" name="employe">
+                        <option value="">Non assigné</option>
+                        {% for emp in employes %}
+                            <option value="{{ emp.id }}" {{ prestation.employe and prestation.employe.id == emp.id ? 'selected' : '' }}>
+                                {{ emp.nom }} - {{ emp.email }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <label class="mdl-textfield__label" for="employe">Employé assigné</label>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="section-title">
+                <i class="material-icons">description</i>
+                <span>Description / Notes</span>
+            </div>
+
+            <div class="helper-text">
+                <i class="material-icons">info</i>
+                <span>Ajoutez des notes ou instructions particulières pour cette prestation</span>
+            </div>
+
+            <div class="form-grid full">
+                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ prestation.description ? 'is-dirty' : '' }}">
+                    <textarea class="mdl-textfield__input" id="description" name="description" rows="4">{{ prestation.description }}</textarea>
+                    <label class="mdl-textfield__label" for="description">Description</label>
+                </div>
+            </div>
+
+            <!-- Statut actuel (si modification) -->
+            {% if not isNew %}
+                <div class="section-title">
+                    <i class="material-icons">info</i>
+                    <span>Statut actuel</span>
+                </div>
+
+                <div style="padding: 16px; background: rgba(63, 81, 181, 0.05); border-radius: 8px; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="material-icons" style="color: var(--primary); font-size: 24px;">info</i>
+                        <div>
+                            <div style="font-size: 0.875rem; color: #757575; margin-bottom: 4px;">Le statut est calculé automatiquement</div>
+                            <div style="font-size: 1.125rem; font-weight: 500; color: var(--text-light);">
+                                {% if prestation.statut == 'à programmer' %}
+                                    📅 À programmer
+                                {% elseif prestation.statut == 'programmé' %}
+                                    🗓️ Programmé
+                                {% elseif prestation.statut == 'en cours' %}
+                                    ⏳ En cours
+                                {% elseif prestation.statut == 'terminé' %}
+                                    ✅ Terminé
+                                {% elseif prestation.statut == 'non effectué' %}
+                                    ❌ Non effectué
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <a href="{{ path('admin_prestation_index') }}" class="mdl-button mdl-js-button mdl-button--raised">
+                    <i class="material-icons">arrow_back</i>
+                    Annuler
+                </a>
+                <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                    <i class="material-icons">save</i>
+                    {{ isNew ? 'Créer la prestation' : 'Enregistrer' }}
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+<script>
+// Auto-upgrade MDL pour les champs pré-remplis
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.mdl-textfield').forEach(field => {
+        const input = field.querySelector('input, textarea, select');
+        if (input && (input.value || input.tagName === 'SELECT')) {
+            field.classList.add('is-dirty');
+        }
+    });
+
+    // Auto-remplir le type de prestation depuis le bon de commande
+    const bonSelect = document.getElementById('bonDeCommande');
+    const typeSelect = document.getElementById('typePrestation');
+    
+    if (bonSelect && typeSelect) {
+        bonSelect.addEventListener('change', function() {
+            // Si on veut auto-remplir le type depuis le bon sélectionné
+            // Il faudrait faire un appel AJAX ou stocker les données en data-attributes
+        });
+    }
+});
+</script>
+
+{% endblock %}

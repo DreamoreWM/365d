@@ -1,0 +1,1073 @@
+{% extends 'dashboard/layout.html.twig' %}
+
+{% block title %}Bons de commande{% endblock %}
+
+{% block content %}
+<style>
+    .bon-commande-container {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 32px 24px;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    body.dark-mode .page-header {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .page-header h1 {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 400;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .page-header .material-icons {
+        font-size: 32px;
+    }
+
+    .filter-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .filter-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .filter-form {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 16px;
+        align-items: end;
+    }
+
+    .filter-form .mdl-textfield {
+        margin: 0;
+    }
+
+    .table-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .table-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .data-table {
+        color: var(--text-dark);
+    }
+
+    .data-table thead {
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    body.dark-mode .data-table thead {
+        background: rgba(63, 81, 181, 0.2);
+    }
+
+    .data-table th {
+        padding: 16px;
+        text-align: left;
+        font-weight: 500;
+        color: var(--primary);
+        border-bottom: 2px solid var(--border-light);
+        white-space: nowrap;
+    }
+
+    body.dark-mode .data-table th {
+        border-bottom-color: var(--border-dark);
+    }
+
+    .data-table td {
+        padding: 16px;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    body.dark-mode .data-table td {
+        border-bottom-color: var(--border-dark);
+    }
+
+    .data-table tbody tr {
+        transition: background 0.2s;
+    }
+
+    .data-table tbody tr:hover {
+        background: rgba(63, 81, 181, 0.05);
+    }
+
+    body.dark-mode .data-table tbody tr:hover {
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 16px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .status-badge .material-icons {
+        font-size: 16px;
+    }
+
+    .status-a-programmer {
+        background: #fff3e0;
+        color: #e65100;
+    }
+
+    body.dark-mode .status-a-programmer {
+        background: rgba(230, 81, 0, 0.2);
+        color: #ffb74d;
+    }
+
+    .status-programme {
+        background: #e3f2fd;
+        color: #1565c0;
+    }
+
+    body.dark-mode .status-programme {
+        background: rgba(21, 101, 192, 0.2);
+        color: #64b5f6;
+    }
+
+    .status-termine {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    body.dark-mode .status-termine {
+        background: rgba(46, 125, 50, 0.2);
+        color: #81c784;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+    }
+
+    .icon-btn {
+        min-width: 36px;
+        height: 36px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: none;
+        border: none;
+        cursor: pointer;
+        transition: background 0.2s;
+        text-decoration: none;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .icon-btn {
+        color: var(--text-dark);
+    }
+
+    .icon-btn:hover {
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    .icon-btn .material-icons {
+        font-size: 20px;
+    }
+
+    .icon-btn.edit {
+        color: var(--primary);
+    }
+
+    .icon-btn.view {
+        color: #00897b;
+    }
+
+    .icon-btn.delete {
+        color: #d32f2f;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+    }
+
+    .empty-state .material-icons {
+        font-size: 80px;
+        color: #ccc;
+        margin-bottom: 16px;
+    }
+
+    body.dark-mode .empty-state .material-icons {
+        color: #555;
+    }
+
+    .empty-state h3 {
+        color: var(--text-light);
+        margin-bottom: 8px;
+        font-weight: 400;
+    }
+
+    body.dark-mode .empty-state h3 {
+        color: var(--text-dark);
+    }
+
+    .empty-state p {
+        color: #757575;
+    }
+
+    body.dark-mode .empty-state p {
+        color: #b0b0b0;
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        padding: 24px;
+        flex-wrap: wrap;
+    }
+
+    .pagination button,
+    .pagination a {
+        min-width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        background: none;
+        border: 1px solid var(--border-light);
+        color: var(--text-light);
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    body.dark-mode .pagination button,
+    body.dark-mode .pagination a {
+        border-color: var(--border-dark);
+        color: var(--text-dark);
+    }
+
+    .pagination button:hover,
+    .pagination a:hover {
+        background: rgba(63, 81, 181, 0.1);
+        border-color: var(--primary);
+    }
+
+    .pagination button.active,
+    .pagination a.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .stat-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    body.dark-mode .stat-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+
+    .stat-icon.total {
+        background: rgba(63, 81, 181, 0.1);
+        color: var(--primary);
+    }
+
+    .stat-icon.programmer {
+        background: rgba(230, 81, 0, 0.1);
+        color: #e65100;
+    }
+
+    .stat-icon.programme {
+        background: rgba(21, 101, 192, 0.1);
+        color: #1565c0;
+    }
+
+    .stat-icon.termine {
+        background: rgba(46, 125, 50, 0.1);
+        color: #2e7d32;
+    }
+
+    .stat-content {
+        flex: 1;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: #757575;
+        margin-bottom: 4px;
+    }
+
+    body.dark-mode .stat-label {
+        color: #b0b0b0;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 500;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .stat-value {
+        color: var(--text-dark);
+    }
+
+    @media (max-width: 992px) {
+        .page-header {
+            padding: 24px 16px;
+        }
+
+        .page-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .filter-card {
+            padding: 16px;
+        }
+
+        .filter-form {
+            grid-template-columns: 1fr;
+        }
+
+        .filter-form button {
+            width: 100%;
+        }
+
+        .stats-row {
+            grid-template-columns: 1fr;
+        }
+
+        .data-table {
+            font-size: 0.875rem;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px 8px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .table-responsive {
+            border-radius: 8px;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+    }
+
+    /* ==================== MODAL OCR ==================== */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 9998;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .modal-overlay.open {
+        display: block;
+        opacity: 1;
+    }
+
+    .modal-container {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.9);
+        width: 90%;
+        max-width: 600px;
+        background: var(--card-light);
+        border-radius: 8px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        z-index: 9999;
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body.dark-mode .modal-container {
+        background: var(--card-dark);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-container.open {
+        display: block;
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    .modal-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 24px;
+        border-radius: 8px 8px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 400;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
+
+    .modal-close:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .modal-body {
+        padding: 32px 24px;
+    }
+
+    .file-upload-area {
+        border: 2px dashed var(--border-light);
+        border-radius: 8px;
+        padding: 40px 20px;
+        text-align: center;
+        background: rgba(63, 81, 181, 0.03);
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-bottom: 24px;
+    }
+
+    body.dark-mode .file-upload-area {
+        border-color: var(--border-dark);
+        background: rgba(63, 81, 181, 0.08);
+    }
+
+    .file-upload-area:hover {
+        border-color: var(--primary);
+        background: rgba(63, 81, 181, 0.08);
+    }
+
+    body.dark-mode .file-upload-area:hover {
+        background: rgba(63, 81, 181, 0.15);
+    }
+
+    .file-upload-area.drag-over {
+        border-color: var(--primary);
+        background: rgba(63, 81, 181, 0.12);
+        transform: scale(1.02);
+    }
+
+    .file-upload-icon {
+        font-size: 64px;
+        color: var(--primary);
+        margin-bottom: 16px;
+    }
+
+    .file-upload-text {
+        color: var(--text-light);
+        font-size: 1rem;
+        margin-bottom: 8px;
+    }
+
+    body.dark-mode .file-upload-text {
+        color: var(--text-dark);
+    }
+
+    .file-upload-hint {
+        color: #757575;
+        font-size: 0.875rem;
+    }
+
+    body.dark-mode .file-upload-hint {
+        color: #b0b0b0;
+    }
+
+    .file-preview {
+        display: none;
+        margin-top: 16px;
+        padding: 16px;
+        background: rgba(63, 81, 181, 0.05);
+        border-radius: 8px;
+        border: 1px solid var(--border-light);
+    }
+
+    body.dark-mode .file-preview {
+        background: rgba(63, 81, 181, 0.1);
+        border-color: var(--border-dark);
+    }
+
+    .file-preview.show {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .file-preview-icon {
+        font-size: 40px;
+        color: var(--primary);
+    }
+
+    .file-preview-info {
+        flex: 1;
+    }
+
+    .file-preview-name {
+        font-weight: 500;
+        color: var(--text-light);
+        margin-bottom: 4px;
+    }
+
+    body.dark-mode .file-preview-name {
+        color: var(--text-dark);
+    }
+
+    .file-preview-size {
+        font-size: 0.875rem;
+        color: #757575;
+    }
+
+    body.dark-mode .file-preview-size {
+        color: #b0b0b0;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 12px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border-light);
+    }
+
+    body.dark-mode .modal-actions {
+        border-top-color: var(--border-dark);
+    }
+
+    .modal-actions button {
+        flex: 1;
+        height: 48px;
+    }
+
+    #ocr-file-input {
+        display: none;
+    }
+
+    @media (max-width: 600px) {
+        .modal-container {
+            width: 95%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 20px 16px;
+        }
+
+        .modal-body {
+            padding: 24px 16px;
+        }
+
+        .file-upload-area {
+            padding: 32px 16px;
+        }
+
+        .modal-actions {
+            flex-direction: column;
+        }
+    }
+</style>
+
+<div class="bon-commande-container">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1>
+            <i class="material-icons">receipt_long</i>
+            Bons de commande
+        </h1>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" id="ocr-modal-btn" class="mdl-button mdl-js-button mdl-button--raised" style="background: white; color: var(--primary);">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">photo_camera</i>
+                Import OCR
+            </button>
+            <a href="{{ path('admin_bon_commande_new') }}" class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">add</i>
+                Nouveau bon
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-icon total">
+                <i class="material-icons">receipt</i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Total</div>
+                <div class="stat-value">{{ bonDeCommandes|length }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon programmer">
+                <i class="material-icons">schedule</i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">À programmer</div>
+                <div class="stat-value">{{ bonDeCommandes|filter(b => b.statut == 'à programmer')|length }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon programme">
+                <i class="material-icons">event</i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Programmé</div>
+                <div class="stat-value">{{ bonDeCommandes|filter(b => b.statut == 'programmé')|length }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon termine">
+                <i class="material-icons">check_circle</i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Terminé</div>
+                <div class="stat-value">{{ bonDeCommandes|filter(b => b.statut == 'terminé')|length }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="filter-card">
+        <form method="get" class="filter-form" id="filter-form">
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                <input class="mdl-textfield__input" type="text" id="search" name="search" value="{{ app.request.get('search') }}">
+                <label class="mdl-textfield__label" for="search">Rechercher (nom, email, téléphone...)</label>
+            </div>
+
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                <select class="mdl-textfield__input" id="statut" name="statut">
+                    <option value="">Tous les statuts</option>
+                    <option value="à programmer" {{ app.request.get('statut') == 'à programmer' ? 'selected' : '' }}>À programmer</option>
+                    <option value="programmé" {{ app.request.get('statut') == 'programmé' ? 'selected' : '' }}>Programmé</option>
+                    <option value="terminé" {{ app.request.get('statut') == 'terminé' ? 'selected' : '' }}>Terminé</option>
+                </select>
+                <label class="mdl-textfield__label" for="statut">Filtrer par statut</label>
+            </div>
+
+            <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">search</i>
+                Filtrer
+            </button>
+        </form>
+    </div>
+
+    <!-- Table Card -->
+    <div class="table-card">
+        {% if bonDeCommandes is not empty %}
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>N° Commande</th>
+                            <th>Client</th>
+                            <th>Contact</th>
+                            <th>Type</th>
+                            <th>Date commande</th>
+                            <th>Prestations</th>
+                            <th>Statut</th>
+                            <th style="text-align: center;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bon in bonDeCommandes %}
+                            <tr>
+                                <td>
+                                    <strong>{{ bon.numeroCommande ?? '#' ~ bon.id }}</strong>
+                                </td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <i class="material-icons" style="color: var(--primary); font-size: 20px;">person</i>
+                                        <div>
+                                            <div style="font-weight: 500;">{{ bon.clientNom }}</div>
+                                            <div style="font-size: 0.875rem; color: #757575;">{{ bon.clientAdresse }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="font-size: 0.875rem;">
+                                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                                            <i class="material-icons" style="font-size: 16px; color: #757575;">email</i>
+                                            <span>{{ bon.clientEmail }}</span>
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 6px;">
+                                            <i class="material-icons" style="font-size: 16px; color: #757575;">phone</i>
+                                            <span>{{ bon.clientTelephone }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if bon.typePrestation %}
+                                        <span style="font-weight: 500;">{{ bon.typePrestation.nom }}</span>
+                                    {% else %}
+                                        <span style="color: #999;">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ bon.dateCommande|date('d/m/Y') }}
+                                </td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <i class="material-icons" style="font-size: 18px; color: var(--primary);">event_note</i>
+                                        <span><strong>{{ bon.nombrePrestations }}</strong> / {{ bon.nombrePrestationsNecessaires }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if bon.statut == 'à programmer' %}
+                                        <span class="status-badge status-a-programmer">
+                                            <i class="material-icons">schedule</i>
+                                            À programmer
+                                        </span>
+                                    {% elseif bon.statut == 'programmé' %}
+                                        <span class="status-badge status-programme">
+                                            <i class="material-icons">event</i>
+                                            Programmé
+                                        </span>
+                                    {% elseif bon.statut == 'terminé' %}
+                                        <span class="status-badge status-termine">
+                                            <i class="material-icons">check_circle</i>
+                                            Terminé
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td style="text-align: center;">
+                                    <div class="action-buttons">
+                                        <a href="{{ path('admin_bon_commande_show', {id: bon.id}) }}" class="icon-btn view" title="Voir">
+                                            <i class="material-icons">visibility</i>
+                                        </a>
+                                        <a href="{{ path('admin_bon_commande_edit', {id: bon.id}) }}" class="icon-btn edit" title="Modifier">
+                                            <i class="material-icons">edit</i>
+                                        </a>
+                                        <button type="button" class="icon-btn delete" title="Supprimer" onclick="confirmDelete({{ bon.id }}, '{{ bon.clientNom }}')">
+                                            <i class="material-icons">delete</i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination (exemple basique) -->
+            <div class="pagination">
+                <button disabled>
+                    <i class="material-icons">chevron_left</i>
+                </button>
+                <a href="#" class="active">1</a>
+                <a href="#">2</a>
+                <a href="#">3</a>
+                <button>
+                    <i class="material-icons">chevron_right</i>
+                </button>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="material-icons">inbox</i>
+                <h3>Aucun bon de commande</h3>
+                <p>Commencez par créer votre premier bon de commande</p>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Modal OCR -->
+<div class="modal-overlay" id="ocr-modal-overlay"></div>
+<div class="modal-container" id="ocr-modal">
+    <div class="modal-header">
+        <h3>
+            <i class="material-icons">photo_camera</i>
+            Importer un bon via OCR
+        </h3>
+        <button type="button" class="modal-close" id="ocr-modal-close">
+            <i class="material-icons">close</i>
+        </button>
+    </div>
+    <div class="modal-body">
+        <form method="post" action="{{ path('admin_bon_commande_import_ocr') }}" enctype="multipart/form-data" id="ocr-form">
+            
+            <!-- File Upload Area -->
+            <div class="file-upload-area" id="file-upload-area">
+                <i class="material-icons file-upload-icon">cloud_upload</i>
+                <div class="file-upload-text">Cliquez pour sélectionner une image</div>
+                <div class="file-upload-hint">ou glissez-déposez une image ici</div>
+                <div class="file-upload-hint" style="margin-top: 8px;">JPG, PNG, PDF (max 10MB)</div>
+            </div>
+
+            <input type="file" name="photo" id="ocr-file-input" accept="image/*,.pdf" required>
+
+            <!-- File Preview -->
+            <div class="file-preview" id="file-preview">
+                <i class="material-icons file-preview-icon">image</i>
+                <div class="file-preview-info">
+                    <div class="file-preview-name" id="file-preview-name">-</div>
+                    <div class="file-preview-size" id="file-preview-size">-</div>
+                </div>
+                <button type="button" class="icon-btn delete" id="remove-file" title="Retirer">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+
+            <!-- Actions -->
+            <div class="modal-actions">
+                <button type="button" class="mdl-button mdl-js-button mdl-button--raised" id="cancel-ocr">
+                    Annuler
+                </button>
+                <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" id="submit-ocr" disabled>
+                    <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">search</i>
+                    Analyser
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<script>
+// ==================== MODAL OCR ====================
+const ocrModal = document.getElementById('ocr-modal');
+const ocrOverlay = document.getElementById('ocr-modal-overlay');
+const ocrModalBtn = document.getElementById('ocr-modal-btn');
+const ocrModalClose = document.getElementById('ocr-modal-close');
+const cancelOcrBtn = document.getElementById('cancel-ocr');
+const fileInput = document.getElementById('ocr-file-input');
+const fileUploadArea = document.getElementById('file-upload-area');
+const filePreview = document.getElementById('file-preview');
+const submitBtn = document.getElementById('submit-ocr');
+const removeFileBtn = document.getElementById('remove-file');
+
+function openOcrModal() {
+    ocrOverlay.classList.add('open');
+    ocrModal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeOcrModal() {
+    ocrOverlay.classList.remove('open');
+    ocrModal.classList.remove('open');
+    document.body.style.overflow = '';
+    // Reset form
+    fileInput.value = '';
+    filePreview.classList.remove('show');
+    submitBtn.disabled = true;
+}
+
+// Open modal
+ocrModalBtn?.addEventListener('click', openOcrModal);
+
+// Close modal
+ocrModalClose?.addEventListener('click', closeOcrModal);
+cancelOcrBtn?.addEventListener('click', closeOcrModal);
+ocrOverlay?.addEventListener('click', closeOcrModal);
+
+// Click to upload
+fileUploadArea?.addEventListener('click', () => {
+    fileInput.click();
+});
+
+// Drag & Drop
+fileUploadArea?.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    fileUploadArea.classList.add('drag-over');
+});
+
+fileUploadArea?.addEventListener('dragleave', () => {
+    fileUploadArea.classList.remove('drag-over');
+});
+
+fileUploadArea?.addEventListener('drop', (e) => {
+    e.preventDefault();
+    fileUploadArea.classList.remove('drag-over');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        fileInput.files = files;
+        handleFileSelect();
+    }
+});
+
+// File selection
+fileInput?.addEventListener('change', handleFileSelect);
+
+function handleFileSelect() {
+    const file = fileInput.files[0];
+    
+    if (file) {
+        // Check file size (10MB max)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('Le fichier est trop volumineux. Taille maximum : 10MB');
+            fileInput.value = '';
+            return;
+        }
+        
+        // Display preview
+        document.getElementById('file-preview-name').textContent = file.name;
+        document.getElementById('file-preview-size').textContent = formatFileSize(file.size);
+        filePreview.classList.add('show');
+        submitBtn.disabled = false;
+    }
+}
+
+// Remove file
+removeFileBtn?.addEventListener('click', () => {
+    fileInput.value = '';
+    filePreview.classList.remove('show');
+    submitBtn.disabled = true;
+});
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+// Close on Escape
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && ocrModal.classList.contains('open')) {
+        closeOcrModal();
+    }
+});
+
+// ==================== EXISTING SCRIPTS ====================
+// Auto-upgrade MDL select
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('search');
+    const statutSelect = document.getElementById('statut');
+    
+    if (searchInput && searchInput.value) {
+        searchInput.parentElement.classList.add('is-dirty');
+    }
+    
+    if (statutSelect && statutSelect.value) {
+        statutSelect.parentElement.classList.add('is-dirty');
+    }
+});
+
+// Confirm delete
+function confirmDelete(id, clientNom) {
+    if (confirm(`Êtes-vous sûr de vouloir supprimer le bon de commande de ${clientNom} ?\n\nCette action est irréversible.`)) {
+        // Create and submit delete form
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ path('admin_bon_commande_delete', {id: '__ID__'}) }}'.replace('__ID__', id);
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_token';
+        csrfInput.value = '{{ csrf_token('delete') }}';
+        
+        form.appendChild(csrfInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Real-time search (optional)
+let searchTimeout;
+document.getElementById('search')?.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        document.getElementById('filter-form').submit();
+    }, 500);
+});
+
+// Auto-submit on status change
+document.getElementById('statut')?.addEventListener('change', function() {
+    document.getElementById('filter-form').submit();
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,528 @@
+{% extends 'dashboard/layout.html.twig' %}
+
+{% block title %}Bon de commande #{{ bon.id }}{% endblock %}
+
+{% block content %}
+<style>
+    .detail-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .detail-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 32px 24px;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    body.dark-mode .detail-header {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .detail-header-left h1 {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 400;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .detail-header-left p {
+        margin: 8px 0 0 44px;
+        opacity: 0.9;
+        font-size: 1rem;
+    }
+
+    .detail-header-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 1rem;
+        font-weight: 500;
+    }
+
+    .status-badge .material-icons {
+        font-size: 20px;
+    }
+
+    .status-a-programmer {
+        background: #fff3e0;
+        color: #e65100;
+    }
+
+    body.dark-mode .status-a-programmer {
+        background: rgba(230, 81, 0, 0.2);
+        color: #ffb74d;
+    }
+
+    .status-programme {
+        background: #e3f2fd;
+        color: #1565c0;
+    }
+
+    body.dark-mode .status-programme {
+        background: rgba(21, 101, 192, 0.2);
+        color: #64b5f6;
+    }
+
+    .status-termine {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    body.dark-mode .status-termine {
+        background: rgba(46, 125, 50, 0.2);
+        color: #81c784;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+        margin-bottom: 24px;
+    }
+
+    .info-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .info-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .info-card-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.25rem;
+        font-weight: 500;
+        color: var(--text-light);
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--border-light);
+    }
+
+    body.dark-mode .info-card-title {
+        color: var(--text-dark);
+        border-bottom-color: var(--border-dark);
+    }
+
+    .info-card-title .material-icons {
+        color: var(--primary);
+    }
+
+    .info-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    body.dark-mode .info-row {
+        border-bottom-color: var(--border-dark);
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-row .material-icons {
+        color: var(--primary);
+        font-size: 20px;
+        margin-top: 2px;
+    }
+
+    .info-row-content {
+        flex: 1;
+    }
+
+    .info-label {
+        font-size: 0.875rem;
+        color: #757575;
+        margin-bottom: 4px;
+    }
+
+    body.dark-mode .info-label {
+        color: #b0b0b0;
+    }
+
+    .info-value {
+        font-size: 1rem;
+        color: var(--text-light);
+        line-height: 1.5;
+    }
+
+    body.dark-mode .info-value {
+        color: var(--text-dark);
+    }
+
+    .prestations-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .prestations-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .prestations-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--border-light);
+    }
+
+    body.dark-mode .prestations-header {
+        border-bottom-color: var(--border-dark);
+    }
+
+    .prestations-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.25rem;
+        font-weight: 500;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .prestations-title {
+        color: var(--text-dark);
+    }
+
+    .prestations-title .material-icons {
+        color: var(--primary);
+    }
+
+    .prestation-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px;
+        margin-bottom: 12px;
+        background: rgba(63, 81, 181, 0.05);
+        border-radius: 8px;
+        border-left: 4px solid var(--primary);
+    }
+
+    body.dark-mode .prestation-item {
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    .prestation-info {
+        flex: 1;
+    }
+
+    .prestation-date {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 500;
+        color: var(--text-light);
+        margin-bottom: 8px;
+    }
+
+    body.dark-mode .prestation-date {
+        color: var(--text-dark);
+    }
+
+    .prestation-date .material-icons {
+        font-size: 18px;
+        color: var(--primary);
+    }
+
+    .prestation-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .prestation-status.programmé {
+        background: #e3f2fd;
+        color: #1565c0;
+    }
+
+    .prestation-status.terminé {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    body.dark-mode .prestation-status.programmé {
+        background: rgba(21, 101, 192, 0.2);
+        color: #64b5f6;
+    }
+
+    body.dark-mode .prestation-status.terminé {
+        background: rgba(46, 125, 50, 0.2);
+        color: #81c784;
+    }
+
+    .empty-prestations {
+        text-align: center;
+        padding: 40px;
+        color: #757575;
+    }
+
+    body.dark-mode .empty-prestations {
+        color: #b0b0b0;
+    }
+
+    .empty-prestations .material-icons {
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    @media (max-width: 768px) {
+        .detail-header {
+            padding: 24px 16px;
+        }
+
+        .detail-header-left h1 {
+            font-size: 1.5rem;
+        }
+
+        .detail-header-actions {
+            width: 100%;
+        }
+
+        .detail-header-actions button,
+        .detail-header-actions a {
+            flex: 1;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .prestations-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .prestation-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+    }
+</style>
+
+<div class="detail-container">
+    
+    <!-- Header -->
+    <div class="detail-header">
+        <div class="detail-header-left">
+            <h1>
+                <i class="material-icons">receipt_long</i>
+                {{ bon.clientNom }}
+            </h1>
+            <p>Bon de commande {{ bon.numeroCommande ? '#' ~ bon.numeroCommande : '#' ~ bon.id }}</p>
+        </div>
+        <div class="detail-header-actions">
+            <a href="{{ path('admin_bon_commande_edit', {id: bon.id}) }}" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored" title="Modifier">
+                <i class="material-icons">edit</i>
+            </a>
+            <a href="{{ path('admin_bon_commande_index') }}" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab" style="background: white; color: var(--primary);" title="Retour">
+                <i class="material-icons">arrow_back</i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Info Grid -->
+    <div class="info-grid">
+        
+        <!-- Client Info -->
+        <div class="info-card">
+            <div class="info-card-title">
+                <i class="material-icons">person</i>
+                <span>Informations client</span>
+            </div>
+
+            <div class="info-row">
+                <i class="material-icons">person</i>
+                <div class="info-row-content">
+                    <div class="info-label">Nom</div>
+                    <div class="info-value">{{ bon.clientNom }}</div>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <i class="material-icons">email</i>
+                <div class="info-row-content">
+                    <div class="info-label">Email</div>
+                    <div class="info-value">{{ bon.clientEmail }}</div>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <i class="material-icons">phone</i>
+                <div class="info-row-content">
+                    <div class="info-label">Téléphone</div>
+                    <div class="info-value">{{ bon.clientTelephone }}</div>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <i class="material-icons">location_on</i>
+                <div class="info-row-content">
+                    <div class="info-label">Adresse</div>
+                    <div class="info-value">
+                        {{ bon.clientAdresse }}
+                        {% if bon.clientComplementAdresse %}
+                            <br><small>{{ bon.clientComplementAdresse }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Command Info -->
+        <div class="info-card">
+            <div class="info-card-title">
+                <i class="material-icons">description</i>
+                <span>Détails de la commande</span>
+            </div>
+
+            <div class="info-row">
+                <i class="material-icons">tag</i>
+                <div class="info-row-content">
+                    <div class="info-label">Numéro de commande</div>
+                    <div class="info-value">{{ bon.numeroCommande ?: '-' }}</div>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <i class="material-icons">category</i>
+                <div class="info-row-content">
+                    <div class="info-label">Type de prestation</div>
+                    <div class="info-value">{{ bon.typePrestation ? bon.typePrestation.nom : '-' }}</div>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <i class="material-icons">event</i>
+                <div class="info-row-content">
+                    <div class="info-label">Date de commande</div>
+                    <div class="info-value">{{ bon.dateCommande|date('d/m/Y à H:i') }}</div>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <i class="material-icons">info</i>
+                <div class="info-row-content">
+                    <div class="info-label">Statut</div>
+                    <div class="info-value">
+                        {% if bon.statut == 'à programmer' %}
+                            <span class="status-badge status-a-programmer">
+                                <i class="material-icons">schedule</i>
+                                À programmer
+                            </span>
+                        {% elseif bon.statut == 'programmé' %}
+                            <span class="status-badge status-programme">
+                                <i class="material-icons">event</i>
+                                Programmé
+                            </span>
+                        {% elseif bon.statut == 'terminé' %}
+                            <span class="status-badge status-termine">
+                                <i class="material-icons">check_circle</i>
+                                Terminé
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <i class="material-icons">assessment</i>
+                <div class="info-row-content">
+                    <div class="info-label">Progression</div>
+                    <div class="info-value">
+                        <strong>{{ bon.nombrePrestations }}</strong> / {{ bon.nombrePrestationsNecessaires }} prestations
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Prestations List -->
+    <div class="prestations-card">
+        <div class="prestations-header">
+            <div class="prestations-title">
+                <i class="material-icons">event_note</i>
+                <span>Prestations ({{ bon.prestations|length }})</span>
+            </div>
+            <a href="{{ path('admin_prestation_new_for_bon', {bonId: bon.id}) }}" class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">add</i>
+                Programmer une prestation
+            </a>
+        </div>
+
+        {% if bon.prestations is not empty %}
+            {% for prestation in bon.prestations %}
+                <div class="prestation-item">
+                    <div class="prestation-info">
+                        <div class="prestation-date">
+                            <i class="material-icons">schedule</i>
+                            {{ prestation.datePrestation|date('d/m/Y à H:i') }}
+                        </div>
+                        <div>
+                            <span class="prestation-status {{ prestation.statut }}">
+                                {% if prestation.statut == 'programmé' %}
+                                    <i class="material-icons" style="font-size: 16px;">event</i>
+                                    Programmé
+                                {% elseif prestation.statut == 'terminé' %}
+                                    <i class="material-icons" style="font-size: 16px;">check_circle</i>
+                                    Terminé
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <a href="{{ path('app_user_prestation_view', {id: prestation.id}) }}" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                        <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">visibility</i>
+                        Voir
+                    </a>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-prestations">
+                <i class="material-icons">event_busy</i>
+                <p>Aucune prestation programmée pour ce bon de commande</p>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+{% endblock %}

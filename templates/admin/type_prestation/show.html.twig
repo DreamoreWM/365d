@@ -1,0 +1,394 @@
+{% extends 'dashboard/layout.html.twig' %}
+
+{% block title %}{{ type.nom }}{% endblock %}
+
+{% block content %}
+<style>
+    .detail-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .detail-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 32px 24px;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    body.dark-mode .detail-header {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .detail-header-left h1 {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 400;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .detail-header-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .info-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        padding: 32px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 24px;
+    }
+
+    body.dark-mode .info-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 24px;
+    }
+
+    .info-box {
+        padding: 24px;
+        background: rgba(63, 81, 181, 0.05);
+        border-radius: 8px;
+        border-left: 4px solid var(--primary);
+    }
+
+    body.dark-mode .info-box {
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    .info-box-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.875rem;
+        color: #757575;
+        margin-bottom: 12px;
+    }
+
+    body.dark-mode .info-box-label {
+        color: #b0b0b0;
+    }
+
+    .info-box-label .material-icons {
+        font-size: 20px;
+        color: var(--primary);
+    }
+
+    .info-box-value {
+        font-size: 2rem;
+        font-weight: 500;
+        color: var(--primary);
+    }
+
+    .prestations-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .prestations-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .prestations-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid var(--border-light);
+    }
+
+    body.dark-mode .prestations-header {
+        border-bottom-color: var(--border-dark);
+    }
+
+    .prestations-header .material-icons {
+        color: var(--primary);
+        font-size: 28px;
+    }
+
+    .prestations-header h3 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 400;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .prestations-header h3 {
+        color: var(--text-dark);
+    }
+
+    .prestation-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px;
+        margin-bottom: 12px;
+        background: rgba(63, 81, 181, 0.03);
+        border-radius: 8px;
+        border-left: 4px solid var(--primary);
+        transition: all 0.2s;
+    }
+
+    body.dark-mode .prestation-item {
+        background: rgba(63, 81, 181, 0.08);
+    }
+
+    .prestation-item:hover {
+        background: rgba(63, 81, 181, 0.08);
+        transform: translateX(4px);
+    }
+
+    body.dark-mode .prestation-item:hover {
+        background: rgba(63, 81, 181, 0.15);
+    }
+
+    .prestation-info {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .prestation-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(63, 81, 181, 0.1);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .prestation-details {
+        flex: 1;
+    }
+
+    .prestation-client {
+        font-weight: 500;
+        color: var(--text-light);
+        margin-bottom: 4px;
+    }
+
+    body.dark-mode .prestation-client {
+        color: var(--text-dark);
+    }
+
+    .prestation-date {
+        font-size: 0.875rem;
+        color: #757575;
+    }
+
+    body.dark-mode .prestation-date {
+        color: #b0b0b0;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #757575;
+    }
+
+    body.dark-mode .empty-state {
+        color: #b0b0b0;
+    }
+
+    .empty-state .material-icons {
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    .delete-section {
+        margin-top: 40px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border-light);
+    }
+
+    body.dark-mode .delete-section {
+        border-top-color: var(--border-dark);
+    }
+
+    .delete-warning {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+        background: #fff3e0;
+        border-radius: 4px;
+        margin-bottom: 16px;
+    }
+
+    body.dark-mode .delete-warning {
+        background: rgba(255, 152, 0, 0.1);
+    }
+
+    .delete-warning .material-icons {
+        color: #ff9800;
+        font-size: 24px;
+    }
+
+    .delete-warning-text {
+        flex: 1;
+        color: #f57c00;
+    }
+
+    body.dark-mode .delete-warning-text {
+        color: #ffb74d;
+    }
+
+    @media (max-width: 768px) {
+        .detail-header {
+            padding: 24px 16px;
+        }
+
+        .detail-header-left h1 {
+            font-size: 1.5rem;
+        }
+
+        .detail-header-actions {
+            width: 100%;
+        }
+
+        .detail-header-actions button,
+        .detail-header-actions a {
+            flex: 1;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .prestation-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+    }
+</style>
+
+<div class="detail-container">
+    
+    <!-- Header -->
+    <div class="detail-header">
+        <div class="detail-header-left">
+            <h1>
+                <i class="material-icons">category</i>
+                {{ type.nom }}
+            </h1>
+        </div>
+        <div class="detail-header-actions">
+            <a href="{{ path('admin_type_prestation_edit', {id: type.id}) }}" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored" title="Modifier">
+                <i class="material-icons">edit</i>
+            </a>
+            <a href="{{ path('admin_type_prestation_index') }}" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab" style="background: white; color: var(--primary);" title="Retour">
+                <i class="material-icons">arrow_back</i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Info Card -->
+    <div class="info-card">
+        <div class="info-grid">
+            <div class="info-box">
+                <div class="info-box-label">
+                    <i class="material-icons">repeat</i>
+                    <span>Prestations nécessaires</span>
+                </div>
+                <div class="info-box-value">{{ type.nombrePrestationsNecessaires }}</div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-box-label">
+                    <i class="material-icons">assignment</i>
+                    <span>Prestations en cours</span>
+                </div>
+                <div class="info-box-value">{{ type.prestations|length }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prestations List -->
+    <div class="prestations-card">
+        <div class="prestations-header">
+            <i class="material-icons">event_note</i>
+            <h3>Prestations utilisant ce type ({{ type.prestations|length }})</h3>
+        </div>
+
+        {% if type.prestations is not empty %}
+            {% for prestation in type.prestations %}
+                <div class="prestation-item">
+                    <div class="prestation-info">
+                        <div class="prestation-icon">
+                            <i class="material-icons">event</i>
+                        </div>
+                        <div class="prestation-details">
+                            <div class="prestation-client">
+                                {% if prestation.bonDeCommande %}
+                                    {{ prestation.bonDeCommande.clientNom }}
+                                {% else %}
+                                    Prestation #{{ prestation.id }}
+                                {% endif %}
+                            </div>
+                            <div class="prestation-date">
+                                {{ prestation.datePrestation|date('d/m/Y à H:i') }}
+                            </div>
+                        </div>
+                    </div>
+                    <a href="{{ path('admin_prestation_show', {id: prestation.id}) }}" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                        <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">visibility</i>
+                        Voir
+                    </a>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="material-icons">event_busy</i>
+                <p>Aucune prestation n'utilise encore ce type</p>
+            </div>
+        {% endif %}
+
+        <!-- Delete Section -->
+        <div class="delete-section">
+            {% if type.prestations|length > 0 %}
+                <div class="delete-warning">
+                    <i class="material-icons">warning</i>
+                    <div class="delete-warning-text">
+                        <strong>Impossible de supprimer ce type</strong><br>
+                        <small>Ce type est utilisé par {{ type.prestations|length }} prestation(s). Vous devez d'abord supprimer ou modifier ces prestations.</small>
+                    </div>
+                </div>
+            {% else %}
+                <form method="post" action="{{ path('admin_type_prestation_delete', {id: type.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce type de prestation ?');">
+                    <input type="hidden" name="_token" value="{{ csrf_token('delete') }}">
+                    <button type="submit" class="mdl-button mdl-js-button mdl-button--raised" style="background: #f44336; color: white; width: 100%;">
+                        <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">delete</i>
+                        Supprimer ce type
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

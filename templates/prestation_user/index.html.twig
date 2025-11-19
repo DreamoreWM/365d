@@ -3,41 +3,371 @@
 {% block title %}Mes prestations{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<style>
+    .prestations-container {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
 
-    <h1 class="mb-4">📅 Mes prestations du jour</h1>
+    .page-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 32px 24px;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
 
-    <form method="get" class="mb-4">
-        <div class="input-group">
-            <input type="date" name="date" value="{{ selectedDate|date('Y-m-d') }}" class="form-control">
-            <button class="btn btn-primary">Filtrer</button>
-        </div>
-    </form>
+    body.dark-mode .page-header {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
 
-    <div class="row">
-        {% for p in prestations %}
-            <div class="col-md-4 mb-4">
-                <div class="card shadow-sm h-100">
-                    <div class="card-body">
+    .page-header h1 {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 400;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
 
-                        <h5 class="card-title">{{ p.bonDeCommande.clientNom }}</h5>
-                        <p class="card-text">
-                            <strong>Adresse :</strong> {{ p.bonDeCommande.clientAdresse }}<br>
-                            <strong>Heure :</strong> {{ p.datePrestation|date('H:i') }}
-                        </p>
+    .page-header .material-icons {
+        font-size: 32px;
+    }
 
-                        <a href="{{ path('app_user_prestation_view', {id: p.id}) }}"
-                           class="btn btn-primary w-100">
-                            Ouvrir la prestation
-                        </a>
+    .filter-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
 
-                    </div>
-                </div>
-            </div>
-        {% else %}
-            <p>Aucune prestation aujourd'hui.</p>
-        {% endfor %}
+    body.dark-mode .filter-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .filter-form {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .filter-form .mdl-textfield {
+        margin: 0;
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .filter-form button {
+        height: 48px;
+        min-width: 120px;
+    }
+
+    .prestations-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 24px;
+        margin-bottom: 40px;
+    }
+
+    .prestation-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    body.dark-mode .prestation-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .prestation-card:hover {
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        transform: translateY(-4px);
+    }
+
+    body.dark-mode .prestation-card:hover {
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    .prestation-card-header {
+        background: var(--primary);
+        color: white;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .prestation-card-header .material-icons {
+        font-size: 28px;
+        opacity: 0.9;
+    }
+
+    .prestation-card-header h5 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 500;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .prestation-card-body {
+        padding: 20px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .info-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .info-item {
+        color: var(--text-dark);
+    }
+
+    .info-item .material-icons {
+        color: var(--primary);
+        font-size: 20px;
+        margin-top: 2px;
+    }
+
+    .info-item-content {
+        flex: 1;
+    }
+
+    .info-item-label {
+        font-size: 0.875rem;
+        color: #757575;
+        margin-bottom: 4px;
+    }
+
+    body.dark-mode .info-item-label {
+        color: #b0b0b0;
+    }
+
+    .info-item-value {
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+
+    .prestation-card-actions {
+        padding: 16px 20px 20px;
+    }
+
+    .prestation-card-actions button,
+    .prestation-card-actions a {
+        width: 100%;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        text-decoration: none;
+    }
+
+    .time-badge {
+        background: rgba(63, 81, 181, 0.1);
+        color: var(--primary);
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    body.dark-mode .time-badge {
+        background: rgba(63, 81, 181, 0.2);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        background: var(--card-light);
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .empty-state {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .empty-state .material-icons {
+        font-size: 80px;
+        color: #ccc;
+        margin-bottom: 16px;
+    }
+
+    body.dark-mode .empty-state .material-icons {
+        color: #555;
+    }
+
+    .empty-state h3 {
+        color: var(--text-light);
+        margin-bottom: 8px;
+        font-weight: 400;
+    }
+
+    body.dark-mode .empty-state h3 {
+        color: var(--text-dark);
+    }
+
+    .empty-state p {
+        color: #757575;
+    }
+
+    body.dark-mode .empty-state p {
+        color: #b0b0b0;
+    }
+
+    @media (max-width: 768px) {
+        .page-header {
+            padding: 24px 16px;
+        }
+
+        .page-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .filter-card {
+            padding: 16px;
+        }
+
+        .filter-form {
+            flex-direction: column;
+        }
+
+        .filter-form .mdl-textfield,
+        .filter-form button {
+            width: 100%;
+        }
+
+        .prestations-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+    }
+</style>
+
+<div class="prestations-container">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1>
+            <i class="material-icons">event_note</i>
+            Mes prestations du jour
+        </h1>
     </div>
 
+    <!-- Filter Card -->
+    <div class="filter-card">
+        <form method="get" class="filter-form">
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                <input class="mdl-textfield__input" type="date" id="date" name="date" value="{{ selectedDate|date('Y-m-d') }}">
+                <label class="mdl-textfield__label" for="date">Sélectionner une date</label>
+            </div>
+            
+            <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">search</i>
+                Filtrer
+            </button>
+        </form>
+    </div>
+
+    <!-- Prestations Grid -->
+    {% if prestations is not empty %}
+        <div class="prestations-grid">
+            {% for p in prestations %}
+                <div class="prestation-card">
+                    
+                    <!-- Card Header -->
+                    <div class="prestation-card-header">
+                        <i class="material-icons">business</i>
+                        <h5>{{ p.bonDeCommande.clientNom }}</h5>
+                    </div>
+
+                    <!-- Card Body -->
+                    <div class="prestation-card-body">
+                        
+                        <!-- Address -->
+                        <div class="info-item">
+                            <i class="material-icons">location_on</i>
+                            <div class="info-item-content">
+                                <div class="info-item-label">Adresse</div>
+                                <div class="info-item-value">{{ p.bonDeCommande.clientAdresse }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Time -->
+                        <div class="info-item">
+                            <i class="material-icons">schedule</i>
+                            <div class="info-item-content">
+                                <div class="info-item-label">Heure de prestation</div>
+                                <div class="info-item-value">
+                                    <span class="time-badge">
+                                        <i class="material-icons" style="font-size: 16px;">access_time</i>
+                                        {{ p.datePrestation|date('H:i') }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Card Actions -->
+                    <div class="prestation-card-actions">
+                        <a href="{{ path('app_user_prestation_view', {id: p.id}) }}" 
+                           class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent">
+                            <i class="material-icons">visibility</i>
+                            Ouvrir la prestation
+                        </a>
+                    </div>
+
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <i class="material-icons">event_busy</i>
+            <h3>Aucune prestation</h3>
+            <p>Il n'y a aucune prestation prévue pour cette date.</p>
+        </div>
+    {% endif %}
+
 </div>
+
+<script>
+// Auto-submit form on date change
+document.getElementById('date')?.addEventListener('change', function() {
+    this.form.submit();
+});
+
+// Fix for MDL date input label
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInput = document.getElementById('date');
+    if (dateInput && dateInput.value) {
+        dateInput.parentElement.classList.add('is-dirty');
+    }
+});
+</script>
+
 {% endblock %}

@@ -1,0 +1,520 @@
+{% extends 'dashboard/layout.html.twig' %}
+
+{% block title %}Prestations{% endblock %}
+
+{% block content %}
+<style>
+    .prestation-container {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 32px 24px;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    body.dark-mode .page-header {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .page-header h1 {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 400;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .page-header .material-icons {
+        font-size: 32px;
+    }
+
+    .filter-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .filter-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .filter-form {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        align-items: end;
+    }
+
+    .filter-form .mdl-textfield {
+        margin: 0;
+    }
+
+    .filter-form button {
+        height: 48px;
+        grid-column: span 1;
+    }
+
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .stat-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    body.dark-mode .stat-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+
+    .stat-icon.total { background: rgba(63, 81, 181, 0.1); color: var(--primary); }
+    .stat-icon.programmer { background: rgba(230, 81, 0, 0.1); color: #e65100; }
+    .stat-icon.programme { background: rgba(21, 101, 192, 0.1); color: #1565c0; }
+    .stat-icon.en-cours { background: rgba(255, 152, 0, 0.1); color: #ff9800; }
+    .stat-icon.termine { background: rgba(46, 125, 50, 0.1); color: #2e7d32; }
+    .stat-icon.non-effectue { background: rgba(211, 47, 47, 0.1); color: #d32f2f; }
+
+    .stat-content { flex: 1; }
+    .stat-label { font-size: 0.875rem; color: #757575; margin-bottom: 4px; }
+    body.dark-mode .stat-label { color: #b0b0b0; }
+    .stat-value { font-size: 1.5rem; font-weight: 500; color: var(--text-light); }
+    body.dark-mode .stat-value { color: var(--text-dark); }
+
+    .table-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .table-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .table-responsive { overflow-x: auto; }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .data-table { color: var(--text-dark); }
+
+    .data-table thead { background: rgba(63, 81, 181, 0.1); }
+    body.dark-mode .data-table thead { background: rgba(63, 81, 181, 0.2); }
+
+    .data-table th {
+        padding: 16px;
+        text-align: left;
+        font-weight: 500;
+        color: var(--primary);
+        border-bottom: 2px solid var(--border-light);
+        white-space: nowrap;
+    }
+
+    body.dark-mode .data-table th { border-bottom-color: var(--border-dark); }
+
+    .data-table td {
+        padding: 16px;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    body.dark-mode .data-table td { border-bottom-color: var(--border-dark); }
+
+    .data-table tbody tr { transition: background 0.2s; }
+    .data-table tbody tr:hover { background: rgba(63, 81, 181, 0.05); }
+    body.dark-mode .data-table tbody tr:hover { background: rgba(63, 81, 181, 0.1); }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 16px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .status-badge .material-icons { font-size: 16px; }
+
+    .status-a-programmer { background: #fff3e0; color: #e65100; }
+    body.dark-mode .status-a-programmer { background: rgba(230, 81, 0, 0.2); color: #ffb74d; }
+
+    .status-programme { background: #e3f2fd; color: #1565c0; }
+    body.dark-mode .status-programme { background: rgba(21, 101, 192, 0.2); color: #64b5f6; }
+
+    .status-en-cours { background: #fff3e0; color: #ff9800; }
+    body.dark-mode .status-en-cours { background: rgba(255, 152, 0, 0.2); color: #ffb74d; }
+
+    .status-termine { background: #e8f5e9; color: #2e7d32; }
+    body.dark-mode .status-termine { background: rgba(46, 125, 50, 0.2); color: #81c784; }
+
+    .status-non-effectue { background: #ffebee; color: #d32f2f; }
+    body.dark-mode .status-non-effectue { background: rgba(211, 47, 47, 0.2); color: #ef5350; }
+
+    .action-buttons { display: flex; gap: 8px; }
+
+    .icon-btn {
+        min-width: 36px;
+        height: 36px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: none;
+        border: none;
+        cursor: pointer;
+        transition: background 0.2s;
+        text-decoration: none;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .icon-btn { color: var(--text-dark); }
+    .icon-btn:hover { background: rgba(63, 81, 181, 0.1); }
+    .icon-btn .material-icons { font-size: 20px; }
+    .icon-btn.edit { color: var(--primary); }
+    .icon-btn.view { color: #00897b; }
+    .icon-btn.delete { color: #d32f2f; }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+    }
+
+    .empty-state .material-icons {
+        font-size: 80px;
+        color: #ccc;
+        margin-bottom: 16px;
+    }
+
+    body.dark-mode .empty-state .material-icons { color: #555; }
+
+    .empty-state h3 {
+        color: var(--text-light);
+        margin-bottom: 8px;
+        font-weight: 400;
+    }
+
+    body.dark-mode .empty-state h3 { color: var(--text-dark); }
+
+    .empty-state p { color: #757575; }
+    body.dark-mode .empty-state p { color: #b0b0b0; }
+
+    @media (max-width: 992px) {
+        .page-header { padding: 24px 16px; }
+        .page-header h1 { font-size: 1.5rem; }
+        .filter-card { padding: 16px; }
+        .filter-form { grid-template-columns: 1fr; }
+        .filter-form button { width: 100%; }
+        .stats-row { grid-template-columns: repeat(2, 1fr); }
+        .data-table { font-size: 0.875rem; }
+        .data-table th, .data-table td { padding: 12px 8px; }
+    }
+
+    @media (max-width: 768px) {
+        .stats-row { grid-template-columns: 1fr; }
+        .action-buttons { flex-direction: column; }
+    }
+</style>
+
+<div class="prestation-container">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1>
+            <i class="material-icons">event_note</i>
+            Prestations
+        </h1>
+        <a href="{{ path('admin_prestation_new') }}" class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent">
+            <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">add</i>
+            Nouvelle prestation
+        </a>
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-icon total"><i class="material-icons">event_note</i></div>
+            <div class="stat-content">
+                <div class="stat-label">Total</div>
+                <div class="stat-value">{{ prestations|length }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon programmer"><i class="material-icons">schedule</i></div>
+            <div class="stat-content">
+                <div class="stat-label">À programmer</div>
+                <div class="stat-value">{{ prestations|filter(p => p.statut == 'à programmer')|length }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon programme"><i class="material-icons">event</i></div>
+            <div class="stat-content">
+                <div class="stat-label">Programmé</div>
+                <div class="stat-value">{{ prestations|filter(p => p.statut == 'programmé')|length }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon en-cours"><i class="material-icons">pending</i></div>
+            <div class="stat-content">
+                <div class="stat-label">En cours</div>
+                <div class="stat-value">{{ prestations|filter(p => p.statut == 'en cours')|length }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon termine"><i class="material-icons">check_circle</i></div>
+            <div class="stat-content">
+                <div class="stat-label">Terminé</div>
+                <div class="stat-value">{{ prestations|filter(p => p.statut == 'terminé')|length }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon non-effectue"><i class="material-icons">cancel</i></div>
+            <div class="stat-content">
+                <div class="stat-label">Non effectué</div>
+                <div class="stat-value">{{ prestations|filter(p => p.statut == 'non effectué')|length }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="filter-card">
+        <form method="get" class="filter-form" id="filter-form">
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                <input class="mdl-textfield__input" type="text" id="search" name="search" value="{{ app.request.get('search') }}">
+                <label class="mdl-textfield__label" for="search">Rechercher (client, N° commande...)</label>
+            </div>
+
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                <select class="mdl-textfield__input" id="statut" name="statut">
+                    <option value="">Tous les statuts</option>
+                    <option value="à programmer" {{ app.request.get('statut') == 'à programmer' ? 'selected' : '' }}>À programmer</option>
+                    <option value="programmé" {{ app.request.get('statut') == 'programmé' ? 'selected' : '' }}>Programmé</option>
+                    <option value="en cours" {{ app.request.get('statut') == 'en cours' ? 'selected' : '' }}>En cours</option>
+                    <option value="terminé" {{ app.request.get('statut') == 'terminé' ? 'selected' : '' }}>Terminé</option>
+                    <option value="non effectué" {{ app.request.get('statut') == 'non effectué' ? 'selected' : '' }}>Non effectué</option>
+                </select>
+                <label class="mdl-textfield__label" for="statut">Statut</label>
+            </div>
+
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                <select class="mdl-textfield__input" id="employe" name="employe">
+                    <option value="">Tous les employés</option>
+                    {% for emp in employes %}
+                        <option value="{{ emp.id }}" {{ app.request.get('employe') == emp.id ? 'selected' : '' }}>{{ emp.nom }}</option>
+                    {% endfor %}
+                </select>
+                <label class="mdl-textfield__label" for="employe">Employé</label>
+            </div>
+
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                <input class="mdl-textfield__input" type="date" id="date_debut" name="date_debut" value="{{ app.request.get('date_debut') }}">
+                <label class="mdl-textfield__label" for="date_debut">Date début</label>
+            </div>
+
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                <input class="mdl-textfield__input" type="date" id="date_fin" name="date_fin" value="{{ app.request.get('date_fin') }}">
+                <label class="mdl-textfield__label" for="date_fin">Date fin</label>
+            </div>
+
+            <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">search</i>
+                Filtrer
+            </button>
+        </form>
+    </div>
+
+    <!-- Table Card -->
+    <div class="table-card">
+        {% if prestations is not empty %}
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date & Heure</th>
+                            <th>Client / Bon</th>
+                            <th>Type</th>
+                            <th>Employé</th>
+                            <th>Statut</th>
+                            <th style="text-align: center;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for prestation in prestations %}
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <i class="material-icons" style="color: var(--primary); font-size: 20px;">event</i>
+                                        <div>
+                                            <div style="font-weight: 500;">{{ prestation.datePrestation|date('d/m/Y') }}</div>
+                                            <div style="font-size: 0.875rem; color: #757575;">{{ prestation.datePrestation|date('H:i') }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if prestation.bonDeCommande %}
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <i class="material-icons" style="color: var(--primary); font-size: 20px;">person</i>
+                                            <div>
+                                                <div style="font-weight: 500;">{{ prestation.bonDeCommande.clientNom }}</div>
+                                                <div style="font-size: 0.875rem; color: #757575;">
+                                                    BC {{ prestation.bonDeCommande.numeroCommande ?? '#' ~ prestation.bonDeCommande.id }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <span style="color: #999;">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if prestation.typePrestation %}
+                                        <span style="font-weight: 500;">{{ prestation.typePrestation.nom }}</span>
+                                    {% else %}
+                                        <span style="color: #999;">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if prestation.employe %}
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <i class="material-icons" style="font-size: 18px; color: #757575;">account_circle</i>
+                                            <span>{{ prestation.employe.nom }}</span>
+                                        </div>
+                                    {% else %}
+                                        <span style="color: #999;">Non assigné</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% set statusClass = 'status-' ~ prestation.statut|replace({' ': '-', 'é': 'e'}) %}
+                                    <span class="status-badge {{ statusClass }}">
+                                        {% if prestation.statut == 'à programmer' %}
+                                            <i class="material-icons">schedule</i>À programmer
+                                        {% elseif prestation.statut == 'programmé' %}
+                                            <i class="material-icons">event</i>Programmé
+                                        {% elseif prestation.statut == 'en cours' %}
+                                            <i class="material-icons">pending</i>En cours
+                                        {% elseif prestation.statut == 'terminé' %}
+                                            <i class="material-icons">check_circle</i>Terminé
+                                        {% elseif prestation.statut == 'non effectué' %}
+                                            <i class="material-icons">cancel</i>Non effectué
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td style="text-align: center;">
+                                    <div class="action-buttons">
+                                        <a href="{{ path('admin_prestation_show', {id: prestation.id}) }}" class="icon-btn view" title="Voir">
+                                            <i class="material-icons">visibility</i>
+                                        </a>
+                                        <a href="{{ path('admin_prestation_edit', {id: prestation.id}) }}" class="icon-btn edit" title="Modifier">
+                                            <i class="material-icons">edit</i>
+                                        </a>
+                                        <button type="button" class="icon-btn delete" title="Supprimer" onclick="confirmDelete({{ prestation.id }})">
+                                            <i class="material-icons">delete</i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="material-icons">event_busy</i>
+                <h3>Aucune prestation</h3>
+                <p>Commencez par créer votre première prestation</p>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<script>
+// Auto-upgrade MDL fields
+document.addEventListener('DOMContentLoaded', function() {
+    ['search', 'statut', 'employe', 'date_debut', 'date_fin'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input && input.value) {
+            input.parentElement.classList.add('is-dirty');
+        }
+    });
+});
+
+// Confirm delete
+function confirmDelete(id) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette prestation ?\n\nCette action est irréversible.')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ path('admin_prestation_delete', {id: '__ID__'}) }}'.replace('__ID__', id);
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_token';
+        csrfInput.value = '{{ csrf_token('delete') }}';
+        
+        form.appendChild(csrfInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Auto-submit on filter change
+['statut', 'employe', 'date_debut', 'date_fin'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', function() {
+        document.getElementById('filter-form').submit();
+    });
+});
+
+// Search with delay
+let searchTimeout;
+document.getElementById('search')?.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        document.getElementById('filter-form').submit();
+    }, 500);
+});
+</script>
+
+{% endblock %}

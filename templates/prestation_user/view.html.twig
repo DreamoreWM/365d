@@ -3,171 +3,553 @@
 {% block title %}Détails prestation{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<style>
+    .prestation-detail-container {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
 
-    <h2 class="mb-3">{{ prestation.bonDeCommande.clientNom }}</h2>
+    .detail-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 32px 24px;
+        border-radius: 8px 8px 0 0;
+        margin-bottom: 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
 
-    <div class="card mb-4">
-        <div class="card-body">
-            <p><strong>Adresse :</strong> {{ prestation.bonDeCommande.clientAdresse }}</p>
-            <p><strong>Date :</strong> {{ prestation.datePrestation|date('d/m/Y H:i') }}</p>
+    body.dark-mode .detail-header {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .detail-header h2 {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 400;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .detail-header .material-icons {
+        font-size: 32px;
+    }
+
+    .info-card {
+        background: var(--card-light);
+        border-radius: 0 0 8px 8px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .info-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+
+    .info-block {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .info-block .material-icons {
+        color: var(--primary);
+        font-size: 24px;
+        margin-top: 2px;
+    }
+
+    .info-content {
+        flex: 1;
+    }
+
+    .info-label {
+        font-size: 0.875rem;
+        color: #757575;
+        margin-bottom: 4px;
+        font-weight: 500;
+    }
+
+    body.dark-mode .info-label {
+        color: #b0b0b0;
+    }
+
+    .info-value {
+        font-size: 1rem;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .info-value {
+        color: var(--text-dark);
+    }
+
+    .section-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .section-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+        color: var(--text-light);
+        font-size: 1.5rem;
+        font-weight: 400;
+    }
+
+    body.dark-mode .section-title {
+        color: var(--text-dark);
+    }
+
+    .section-title .material-icons {
+        color: var(--primary);
+        font-size: 28px;
+    }
+
+    .tox-tinymce {
+        border-radius: 4px !important;
+        border: 2px solid var(--border-light) !important;
+    }
+
+    body.dark-mode .tox-tinymce {
+        border-color: var(--border-dark) !important;
+    }
+
+    .signature-wrapper {
+        margin-top: 16px;
+    }
+
+    .signature-canvas-container {
+        position: relative;
+        margin-bottom: 12px;
+    }
+
+    #signature-pad {
+        width: 100%;
+        height: 250px;
+        border: 2px solid var(--border-light);
+        border-radius: 4px;
+        background: white;
+        touch-action: none;
+        cursor: crosshair;
+    }
+
+    body.dark-mode #signature-pad {
+        border-color: var(--border-dark);
+        background: #2a2a2a;
+    }
+
+    .signature-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .saved-signature {
+        margin-top: 24px;
+        padding: 20px;
+        background: #fafafa;
+        border-radius: 4px;
+        border: 1px solid var(--border-light);
+    }
+
+    body.dark-mode .saved-signature {
+        background: #2a2a2a;
+        border-color: var(--border-dark);
+    }
+
+    .saved-signature h4 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+        color: var(--text-light);
+        font-size: 1.125rem;
+        font-weight: 500;
+    }
+
+    body.dark-mode .saved-signature h4 {
+        color: var(--text-dark);
+    }
+
+    .saved-signature .material-icons {
+        color: #4caf50;
+    }
+
+    .saved-signature img {
+        max-width: 100%;
+        height: auto;
+        border: 1px solid var(--border-light);
+        border-radius: 4px;
+        background: white;
+    }
+
+    body.dark-mode .saved-signature img {
+        border-color: var(--border-dark);
+    }
+
+    .alert-success {
+        background: #4caf50;
+        color: white;
+        padding: 16px 24px;
+        border-radius: 4px;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .alert-success .material-icons {
+        font-size: 24px;
+    }
+
+    .action-buttons {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+        margin-top: 32px;
+    }
+
+    .action-buttons button,
+    .action-buttons a {
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 1rem;
+        text-decoration: none;
+    }
+
+    .helper-text {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #757575;
+        font-size: 0.875rem;
+        margin-bottom: 12px;
+        padding: 12px;
+        background: rgba(63, 81, 181, 0.05);
+        border-radius: 4px;
+    }
+
+    body.dark-mode .helper-text {
+        color: #b0b0b0;
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    .helper-text .material-icons {
+        font-size: 20px;
+        color: var(--primary);
+    }
+
+    @media (max-width: 768px) {
+        .detail-header {
+            padding: 24px 16px;
+        }
+
+        .detail-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .info-card,
+        .section-card {
+            padding: 16px;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        #signature-pad {
+            height: 200px;
+        }
+
+        .signature-actions {
+            flex-direction: column;
+        }
+
+        .signature-actions button {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="prestation-detail-container">
+    
+    <!-- Header -->
+    <div class="detail-header">
+        <h2>
+            <i class="material-icons">assignment</i>
+            {{ prestation.bonDeCommande.clientNom }}
+        </h2>
+    </div>
+
+    <!-- Info Card -->
+    <div class="info-card">
+        <div class="info-grid">
+            <div class="info-block">
+                <i class="material-icons">location_on</i>
+                <div class="info-content">
+                    <div class="info-label">Adresse</div>
+                    <div class="info-value">{{ prestation.bonDeCommande.clientAdresse }}</div>
+                </div>
+            </div>
+
+            <div class="info-block">
+                <i class="material-icons">event</i>
+                <div class="info-content">
+                    <div class="info-label">Date et heure</div>
+                    <div class="info-value">{{ prestation.datePrestation|date('d/m/Y à H:i') }}</div>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- Success Messages -->
     {% for message in app.flashes('success') %}
-        <div class="alert alert-success">{{ message }}</div>
+        <div class="alert-success">
+            <i class="material-icons">check_circle</i>
+            <span>{{ message }}</span>
+        </div>
     {% endfor %}
 
-    <form method="post" data-turbo="false" class="mb-4">
+    <!-- Main Form -->
+    <form method="post" data-turbo="false">
+        
+        <!-- Description Section -->
+        <div class="section-card">
+            <div class="section-title">
+                <i class="material-icons">description</i>
+                <span>Rapport de prestation</span>
+            </div>
 
-        <div class="mb-3">
-            <label class="form-label">Rapport / Description :</label>
-            <textarea name="description" rows="5" class="form-control">{{ prestation.description }}</textarea>
+            <div class="helper-text">
+                <i class="material-icons">info</i>
+                <span>Décrivez en détail les travaux effectués, observations et remarques</span>
+            </div>
+
+            <textarea name="description" id="description-editor" rows="10">{{ prestation.description }}</textarea>
         </div>
 
-        <div class="mb-3">
-            <label class="form-label">Signature :</label><br>
-            <canvas id="signature-pad" style="width: 100%; height: 200px; border:1px solid #000"></canvas>
-            <button type="button" id="clear" class="btn btn-secondary btn-sm mt-2">Effacer</button>
-            <input type="hidden" name="signature" id="signature-input"> 
+        <!-- Signature Section -->
+        <div class="section-card">
+            <div class="section-title">
+                <i class="material-icons">draw</i>
+                <span>Signature du client</span>
+            </div>
+
+            <div class="helper-text">
+                <i class="material-icons">touch_app</i>
+                <span>Dessinez la signature avec votre souris ou votre doigt sur l'écran tactile</span>
+            </div>
+
+            <div class="signature-wrapper">
+                <div class="signature-canvas-container">
+                    <canvas id="signature-pad"></canvas>
+                    <input type="hidden" name="signature" id="signature-input">
+                </div>
+
+                <div class="signature-actions">
+                    <button type="button" id="clear" class="mdl-button mdl-js-button mdl-button--raised">
+                        <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">clear</i>
+                        Effacer
+                    </button>
+                    <button type="button" id="undo" class="mdl-button mdl-js-button mdl-button--raised">
+                        <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">undo</i>
+                        Annuler
+                    </button>
+                </div>
+            </div>
+
+            {% if prestation.signature %}
+                <div class="saved-signature">
+                    <h4>
+                        <i class="material-icons">check_circle</i>
+                        Signature enregistrée
+                    </h4>
+                    <img src="{{ prestation.signature }}" alt="Signature client">
+                </div>
+            {% endif %}
         </div>
 
-        <button type="submit" class="btn btn-success w-100">💾 Enregistrer</button>
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                <i class="material-icons">save</i>
+                Enregistrer les modifications
+            </button>
+        </div>
     </form>
 
-    {% if prestation.signature %}
-        <h4>Signature enregistrée :</h4>
-        <img src="{{ prestation.signature }}" alt="signature" width="300" class="mb-4">
-    {% endif %}
-
-    <form method="post"
-          action="{{ path('app_user_prestation_terminer', {id: prestation.id}) }}"
-          data-turbo="false">
-        <button class="btn btn-primary w-100">✅ Terminer & Générer PDF</button>
+    <!-- Finish Button -->
+    <form method="post" action="{{ path('app_user_prestation_terminer', {id: prestation.id}) }}" data-turbo="false">
+        <div class="action-buttons">
+            <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent">
+                <i class="material-icons">check_circle</i>
+                Terminer & Générer le PDF
+            </button>
+        </div>
     </form>
 
 </div>
 
+<!-- TinyMCE -->
+<script src="https://cdn.tiny.cloud/1/3wq425x2zlikgs096qilrkfuznnqq9sk1ry67zm2m3fe89ud/tinymce/8/tinymce.min.js" referrerpolicy="origin" crossorigin="anonymous"></script>
 
+<!-- Signature Pad -->
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
 
 <script>
+// ==================== TINYMCE INIT ====================
+tinymce.init({
+    selector: '#description-editor',
+    height: 400,
+    menubar: false,
+    plugins: [
+        'advlist', 'autolink', 'lists', 'link', 'charmap', 'preview',
+        'searchreplace', 'visualblocks', 'code', 'fullscreen',
+        'table', 'wordcount'
+    ],
+    toolbar: 'undo redo | formatselect | bold italic underline | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | code',
+    content_style: 'body { font-family: Roboto, Arial, sans-serif; font-size: 14px; }',
+    skin: document.body.classList.contains('dark-mode') ? 'oxide-dark' : 'oxide',
+    content_css: document.body.classList.contains('dark-mode') ? 'dark' : 'default'
+});
+
+// Update TinyMCE theme on theme toggle
+const themeObserver = new MutationObserver(() => {
+    const isDark = document.body.classList.contains('dark-mode');
+    if (tinymce.activeEditor) {
+        tinymce.activeEditor.destroy();
+        tinymce.init({
+            selector: '#description-editor',
+            height: 400,
+            menubar: false,
+            plugins: [
+                'advlist', 'autolink', 'lists', 'link', 'charmap', 'preview',
+                'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                'table', 'wordcount'
+            ],
+            toolbar: 'undo redo | formatselect | bold italic underline | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | code',
+            content_style: 'body { font-family: Roboto, Arial, sans-serif; font-size: 14px; }',
+            skin: isDark ? 'oxide-dark' : 'oxide',
+            content_css: isDark ? 'dark' : 'default'
+        });
+    }
+    resizeCanvas();
+});
+
+themeObserver.observe(document.body, {
+    attributes: true,
+    attributeFilter: ['class']
+});
+
+// ==================== SIGNATURE PAD ====================
 const canvas = document.getElementById('signature-pad');
 let signaturePad;
-
-// Sauvegarde la signature originale
 let signatureData = null;
 
 function resizeCanvas() {
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
-
-    // Taille avant resize (pour recalcul)
-    const oldWidth = canvas.width / ratio;
-    const oldHeight = canvas.height / ratio;
-
-    // Compute new size
     const newWidth = canvas.offsetWidth;
-    const newHeight = 200;
+    const newHeight = 250;
 
-    // Récupère données avant resize
     if (signaturePad && !signaturePad.isEmpty()) {
         signatureData = signaturePad.toData();
     }
 
-    // Appliquer la nouvelle taille
     canvas.width = newWidth * ratio;
     canvas.height = newHeight * ratio;
-    canvas.getContext("2d").scale(ratio, ratio);
+    
+    const ctx = canvas.getContext("2d");
+    ctx.scale(ratio, ratio);
+    
+    const isDark = document.body.classList.contains('dark-mode');
+    ctx.fillStyle = isDark ? '#2a2a2a' : 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Recréer le pad vide
     if (signaturePad) {
         signaturePad.off();
     }
 
     signaturePad = new SignaturePad(canvas, {
-        backgroundColor: 'white',
-        penColor: 'black',
+        backgroundColor: isDark ? 'rgba(42, 42, 42, 1)' : 'rgba(255, 255, 255, 1)',
+        penColor: isDark ? '#e0e0e0' : 'black',
     });
 
-    // Restaurer la signature avec correction du ratio
     if (signatureData) {
-        const scaleX = newWidth / oldWidth;
-        const scaleY = newHeight / oldHeight;
-
-        const scaled = signatureData.map(stroke => ({
-            ...stroke,
-            points: stroke.points.map(p => ({
-                x: p.x * scaleX,
-                y: p.y * scaleY
-            }))
-        }));
-
-        signaturePad.fromData(scaled);
+        signaturePad.fromData(signatureData);
     }
 }
 
-// Initialisation
 function initSignature() {
-    signaturePad = new SignaturePad(canvas, {
-        backgroundColor: 'white',
-        penColor: 'black',
-    });
-
     resizeCanvas();
 }
 
 initSignature();
 
-// Responsive & rotation
-window.addEventListener("resize", () => {
-    resizeCanvas();
-});
+window.addEventListener("resize", resizeCanvas);
 
-// Effacer
+// Clear button
 document.getElementById('clear').addEventListener('click', () => {
     signaturePad.clear();
     signatureData = null;
+    
+    const ctx = canvas.getContext("2d");
+    const isDark = document.body.classList.contains('dark-mode');
+    ctx.fillStyle = isDark ? '#2a2a2a' : 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 });
 
-// Envoi du formulaire
-document.querySelector('form').addEventListener('submit', () => {
-    const input = document.getElementById("signature-input");
-
-    if (!signaturePad.isEmpty()) {
-        input.value = signaturePad.toDataURL();
-    } else {
-        // garder signature existante
-        input.value = input.value || "{{ prestation.signature }}";
+// Undo button
+document.getElementById('undo').addEventListener('click', () => {
+    const data = signaturePad.toData();
+    if (data && data.length > 0) {
+        data.pop();
+        signaturePad.fromData(data);
     }
 });
 
-
-</script>
-
-<!-- Place the first <script> tag in your HTML's <head> -->
-<script src="https://cdn.tiny.cloud/1/3wq425x2zlikgs096qilrkfuznnqq9sk1ry67zm2m3fe89ud/tinymce/8/tinymce.min.js" referrerpolicy="origin" crossorigin="anonymous"></script>
-
-<!-- Place the following <script> and <textarea> tags your HTML's <body> -->
-<script>
-  tinymce.init({
-    selector: 'textarea',
-    plugins: [
-      // Core editing features
-      'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'link', 'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount',
-      // Your account includes a free trial of TinyMCE premium features
-      // Try the most popular premium features until Nov 28, 2025:
-      'checklist', 'mediaembed', 'casechange', 'formatpainter', 'pageembed', 'a11ychecker', 'tinymcespellchecker', 'permanentpen', 'powerpaste', 'advtable', 'advcode', 'advtemplate', 'ai', 'uploadcare', 'mentions', 'tinycomments', 'tableofcontents', 'footnotes', 'mergetags', 'autocorrect', 'typography', 'inlinecss', 'markdown','importword', 'exportword', 'exportpdf'
-    ],
-    toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography uploadcare | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
-    tinycomments_mode: 'embedded',
-    tinycomments_author: 'Author name',
-    mergetags_list: [
-      { value: 'First.Name', title: 'First Name' },
-      { value: 'Email', title: 'Email' },
-    ],
-    ai_request: (request, respondWith) => respondWith.string(() => Promise.reject('See docs to implement AI Assistant')),
-    uploadcare_public_key: '6c4f3efab10cc0037f1e',
-  });
+// Form submission
+document.querySelector('form').addEventListener('submit', () => {
+    const input = document.getElementById("signature-input");
+    
+    if (!signaturePad.isEmpty()) {
+        input.value = signaturePad.toDataURL();
+    } else {
+        input.value = input.value || "{{ prestation.signature }}";
+    }
+});
 </script>
 
 {% endblock %}

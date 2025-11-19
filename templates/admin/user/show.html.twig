@@ -1,0 +1,584 @@
+{% extends 'dashboard/layout.html.twig' %}
+
+{% block title %}{{ user.nom }}{% endblock %}
+
+{% block content %}
+<style>
+    .detail-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .detail-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 32px 24px;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    body.dark-mode .detail-header {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .detail-header-left {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .user-avatar-large {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 36px;
+        font-weight: 500;
+        flex-shrink: 0;
+    }
+
+    .detail-header-info h1 {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 400;
+    }
+
+    .detail-header-info p {
+        margin: 8px 0 0 0;
+        opacity: 0.9;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .detail-header-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+        margin-bottom: 24px;
+    }
+
+    .info-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .info-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .info-card-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.25rem;
+        font-weight: 500;
+        color: var(--text-light);
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--border-light);
+    }
+
+    body.dark-mode .info-card-title {
+        color: var(--text-dark);
+        border-bottom-color: var(--border-dark);
+    }
+
+    .info-card-title .material-icons {
+        color: var(--primary);
+    }
+
+    .info-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    body.dark-mode .info-row {
+        border-bottom-color: var(--border-dark);
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-row .material-icons {
+        color: var(--primary);
+        font-size: 20px;
+        margin-top: 2px;
+    }
+
+    .info-row-content {
+        flex: 1;
+    }
+
+    .info-label {
+        font-size: 0.875rem;
+        color: #757575;
+        margin-bottom: 4px;
+    }
+
+    body.dark-mode .info-label {
+        color: #b0b0b0;
+    }
+
+    .info-value {
+        font-size: 1rem;
+        color: var(--text-light);
+        line-height: 1.5;
+    }
+
+    body.dark-mode .info-value {
+        color: var(--text-dark);
+    }
+
+    .role-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 16px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-right: 8px;
+        margin-bottom: 8px;
+    }
+
+    .role-badge.admin {
+        background: #ffebee;
+        color: #d32f2f;
+    }
+
+    body.dark-mode .role-badge.admin {
+        background: rgba(211, 47, 47, 0.2);
+        color: #ef5350;
+    }
+
+    .role-badge.user {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    body.dark-mode .role-badge.user {
+        background: rgba(46, 125, 50, 0.2);
+        color: #81c784;
+    }
+
+    .signature-preview {
+        padding: 20px;
+        background: #fafafa;
+        border-radius: 4px;
+        border: 1px solid var(--border-light);
+        text-align: center;
+    }
+
+    body.dark-mode .signature-preview {
+        background: #2a2a2a;
+        border-color: var(--border-dark);
+    }
+
+    .signature-preview img {
+        max-width: 100%;
+        height: auto;
+        border: 1px solid var(--border-light);
+        border-radius: 4px;
+        background: white;
+    }
+
+    body.dark-mode .signature-preview img {
+        border-color: var(--border-dark);
+    }
+
+    .no-signature {
+        text-align: center;
+        padding: 40px;
+        color: #757575;
+    }
+
+    body.dark-mode .no-signature {
+        color: #b0b0b0;
+    }
+
+    .no-signature .material-icons {
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    .prestations-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .prestations-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .prestations-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid var(--border-light);
+    }
+
+    body.dark-mode .prestations-header {
+        border-bottom-color: var(--border-dark);
+    }
+
+    .prestations-header .material-icons {
+        color: var(--primary);
+        font-size: 28px;
+    }
+
+    .prestations-header h3 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 400;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .prestations-header h3 {
+        color: var(--text-dark);
+    }
+
+    .prestation-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px;
+        margin-bottom: 12px;
+        background: rgba(63, 81, 181, 0.03);
+        border-radius: 8px;
+        border-left: 4px solid var(--primary);
+        transition: all 0.2s;
+    }
+
+    body.dark-mode .prestation-item {
+        background: rgba(63, 81, 181, 0.08);
+    }
+
+    .prestation-item:hover {
+        background: rgba(63, 81, 181, 0.08);
+        transform: translateX(4px);
+    }
+
+    body.dark-mode .prestation-item:hover {
+        background: rgba(63, 81, 181, 0.15);
+    }
+
+    .prestation-info {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .prestation-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(63, 81, 181, 0.1);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .prestation-details {
+        flex: 1;
+    }
+
+    .prestation-client {
+        font-weight: 500;
+        color: var(--text-light);
+        margin-bottom: 4px;
+    }
+
+    body.dark-mode .prestation-client {
+        color: var(--text-dark);
+    }
+
+    .prestation-date {
+        font-size: 0.875rem;
+        color: #757575;
+    }
+
+    body.dark-mode .prestation-date {
+        color: #b0b0b0;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .status-termine {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    body.dark-mode .status-termine {
+        background: rgba(46, 125, 50, 0.2);
+        color: #81c784;
+    }
+
+    .status-programme {
+        background: #e3f2fd;
+        color: #1565c0;
+    }
+
+    body.dark-mode .status-programme {
+        background: rgba(21, 101, 192, 0.2);
+        color: #64b5f6;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #757575;
+    }
+
+    body.dark-mode .empty-state {
+        color: #b0b0b0;
+    }
+
+    .empty-state .material-icons {
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    @media (max-width: 768px) {
+        .detail-header {
+            padding: 24px 16px;
+        }
+
+        .detail-header-left {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .detail-header-actions {
+            width: 100%;
+        }
+
+        .detail-header-actions button,
+        .detail-header-actions a {
+            flex: 1;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .prestation-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+    }
+</style>
+
+<div class="detail-container">
+    
+    <!-- Header -->
+    <div class="detail-header">
+        <div class="detail-header-left">
+            <div class="user-avatar-large">
+                {{ user.nom|slice(0, 1)|upper }}
+            </div>
+            <div class="detail-header-info">
+                <h1>{{ user.nom }}</h1>
+                <p>
+                    {% if 'ROLE_ADMIN' in user.roles %}
+                        <i class="material-icons" style="font-size: 18px;">admin_panel_settings</i>
+                        Administrateur
+                    {% else %}
+                        <i class="material-icons" style="font-size: 18px;">person</i>
+                        Utilisateur
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        <div class="detail-header-actions">
+            <a href="{{ path('admin_user_edit', {id: user.id}) }}" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored" title="Modifier">
+                <i class="material-icons">edit</i>
+            </a>
+            <a href="{{ path('admin_user_index') }}" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab" style="background: white; color: var(--primary);" title="Retour">
+                <i class="material-icons">arrow_back</i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Info Grid -->
+    <div class="info-grid">
+        
+        <!-- Informations personnelles -->
+        <div class="info-card">
+            <div class="info-card-title">
+                <i class="material-icons">person</i>
+                <span>Informations personnelles</span>
+            </div>
+
+            <div class="info-row">
+                <i class="material-icons">badge</i>
+                <div class="info-row-content">
+                    <div class="info-label">Nom complet</div>
+                    <div class="info-value">{{ user.nom }}</div>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <i class="material-icons">email</i>
+                <div class="info-row-content">
+                    <div class="info-label">Email</div>
+                    <div class="info-value">{{ user.email }}</div>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <i class="material-icons">phone</i>
+                <div class="info-row-content">
+                    <div class="info-label">Téléphone</div>
+                    <div class="info-value">{{ user.telephone ?: 'Non renseigné' }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rôles et permissions -->
+        <div class="info-card">
+            <div class="info-card-title">
+                <i class="material-icons">admin_panel_settings</i>
+                <span>Rôles et permissions</span>
+            </div>
+
+            <div class="info-row">
+                <i class="material-icons">shield</i>
+                <div class="info-row-content">
+                    <div class="info-label">Rôles attribués</div>
+                    <div class="info-value">
+                        {% for role in user.roles %}
+                            {% if role == 'ROLE_ADMIN' %}
+                                <span class="role-badge admin">
+                                    <i class="material-icons" style="font-size: 14px;">admin_panel_settings</i>
+                                    Administrateur
+                                </span>
+                            {% elseif role == 'ROLE_USER' %}
+                                <span class="role-badge user">
+                                    <i class="material-icons" style="font-size: 14px;">person</i>
+                                    Utilisateur
+                                </span>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <i class="material-icons">event_note</i>
+                <div class="info-row-content">
+                    <div class="info-label">Prestations assignées</div>
+                    <div class="info-value"><strong>{{ user.prestations|length }}</strong> prestation(s)</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Signature -->
+    <div class="info-card" style="margin-bottom: 24px;">
+        <div class="info-card-title">
+            <i class="material-icons">draw</i>
+            <span>Signature enregistrée</span>
+        </div>
+
+        {% if user.signature %}
+            <div class="signature-preview">
+                <img src="{{ user.signature }}" alt="Signature">
+            </div>
+        {% else %}
+            <div class="no-signature">
+                <i class="material-icons">edit_off</i>
+                <p>Aucune signature enregistrée</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Prestations List -->
+    <div class="prestations-card">
+        <div class="prestations-header">
+            <i class="material-icons">event_note</i>
+            <h3>Prestations assignées ({{ user.prestations|length }})</h3>
+        </div>
+
+        {% if user.prestations is not empty %}
+            {% for prestation in user.prestations %}
+                <div class="prestation-item">
+                    <div class="prestation-info">
+                        <div class="prestation-icon">
+                            <i class="material-icons">event</i>
+                        </div>
+                        <div class="prestation-details">
+                            <div class="prestation-client">
+                                {% if prestation.bonDeCommande %}
+                                    {{ prestation.bonDeCommande.clientNom }}
+                                {% else %}
+                                    Prestation #{{ prestation.id }}
+                                {% endif %}
+                            </div>
+                            <div class="prestation-date">
+                                {{ prestation.datePrestation|date('d/m/Y à H:i') }}
+                                <span class="status-badge status-{{ prestation.statut|replace({' ': '-', 'é': 'e'}) }}">
+                                    {{ prestation.statut }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="{{ path('admin_prestation_show', {id: prestation.id}) }}" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                        <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">visibility</i>
+                        Voir
+                    </a>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="material-icons">event_busy</i>
+                <p>Aucune prestation assignée à cet utilisateur</p>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+{% endblock %}

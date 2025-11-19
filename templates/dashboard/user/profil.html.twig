@@ -3,60 +3,330 @@
 {% block title %}Mon Profil{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<style>
+    .profile-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
 
-    <h2 class="mb-3">Mon Profil</h2>
+    .profile-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 32px 24px;
+        border-radius: 8px 8px 0 0;
+        margin-bottom: 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
 
+    body.dark-mode .profile-header {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .profile-header h2 {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 400;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .mdl-card {
+        border-radius: 8px;
+        margin-bottom: 24px;
+        width: 100%;
+    }
+
+    .info-row {
+        display: flex;
+        align-items: center;
+        padding: 16px 0;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    body.dark-mode .info-row {
+        border-bottom-color: var(--border-dark);
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-row .material-icons {
+        color: var(--primary);
+        margin-right: 16px;
+        font-size: 24px;
+    }
+
+    .info-label {
+        font-weight: 500;
+        color: #757575;
+        min-width: 120px;
+        margin-right: 16px;
+    }
+
+    body.dark-mode .info-label {
+        color: #b0b0b0;
+    }
+
+    .info-value {
+        flex: 1;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .info-value {
+        color: var(--text-dark);
+    }
+
+    .signature-preview {
+        margin-top: 16px;
+        padding: 16px;
+        background: #fafafa;
+        border-radius: 4px;
+        border: 1px solid var(--border-light);
+    }
+
+    body.dark-mode .signature-preview {
+        background: #2a2a2a;
+        border-color: var(--border-dark);
+    }
+
+    .signature-preview img {
+        max-width: 100%;
+        height: auto;
+        border: 1px solid var(--border-light);
+        border-radius: 4px;
+    }
+
+    body.dark-mode .signature-preview img {
+        border-color: var(--border-dark);
+    }
+
+    .mdl-textfield {
+        width: 100%;
+    }
+
+    .signature-canvas-wrapper {
+        position: relative;
+        margin-top: 8px;
+    }
+
+    #signature-pad {
+        width: 100%;
+        height: 200px;
+        border: 2px solid var(--border-light);
+        border-radius: 4px;
+        background: white;
+        touch-action: none;
+        cursor: crosshair;
+    }
+
+    body.dark-mode #signature-pad {
+        border-color: var(--border-dark);
+        background: #2a2a2a;
+    }
+
+    .signature-actions {
+        margin-top: 12px;
+        display: flex;
+        gap: 8px;
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+        color: var(--text-light);
+        font-size: 1.5rem;
+        font-weight: 400;
+    }
+
+    body.dark-mode .section-title {
+        color: var(--text-dark);
+    }
+
+    .section-title .material-icons {
+        color: var(--primary);
+    }
+
+    .mdl-snackbar {
+        background: #4caf50;
+    }
+
+    .alert-success {
+        background: #4caf50;
+        color: white;
+        padding: 16px 24px;
+        border-radius: 4px;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .alert-success .material-icons {
+        font-size: 24px;
+    }
+
+    @media (max-width: 768px) {
+        .profile-header {
+            padding: 24px 16px;
+        }
+
+        .profile-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .info-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .info-label {
+            min-width: auto;
+            margin-right: 0;
+        }
+
+        .signature-actions {
+            flex-direction: column;
+        }
+
+        .signature-actions button {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="profile-container">
+    
+    <!-- Header -->
+    <div class="profile-header">
+        <h2>
+            <i class="material-icons">account_circle</i>
+            Mon Profil
+        </h2>
+    </div>
+
+    <!-- Success Messages -->
     {% for message in app.flashes('success') %}
-        <div class="alert alert-success">{{ message }}</div>
+        <div class="alert-success">
+            <i class="material-icons">check_circle</i>
+            <span>{{ message }}</span>
+        </div>
     {% endfor %}
 
-    <div class="card mb-4">
-        <div class="card-body">
-            <p><strong>Nom :</strong> {{ user.nom }}</p>
-            <p><strong>Email :</strong> {{ user.email }}</p>
-            <p><strong>Téléphone :</strong> {{ user.telephone ?: 'Non renseigné' }}</p>
+    <!-- Current Info Card -->
+    <div class="mdl-card mdl-shadow--4dp">
+        <div class="mdl-card__title">
+            <h2 class="mdl-card__title-text">Informations actuelles</h2>
+        </div>
+        <div class="mdl-card__supporting-text">
+            
+            <div class="info-row">
+                <i class="material-icons">person</i>
+                <span class="info-label">Nom</span>
+                <span class="info-value">{{ user.nom }}</span>
+            </div>
+
+            <div class="info-row">
+                <i class="material-icons">email</i>
+                <span class="info-label">Email</span>
+                <span class="info-value">{{ user.email }}</span>
+            </div>
+
+            <div class="info-row">
+                <i class="material-icons">phone</i>
+                <span class="info-label">Téléphone</span>
+                <span class="info-value">{{ user.telephone ?: 'Non renseigné' }}</span>
+            </div>
 
             {% if user.signature %}
-                <p><strong>Signature enregistrée :</strong></p>
-                <img src="{{ user.signature }}" width="300">
+                <div class="info-row">
+                    <i class="material-icons">edit</i>
+                    <div style="flex: 1;">
+                        <span class="info-label" style="display: block; margin-bottom: 8px;">Signature enregistrée</span>
+                        <div class="signature-preview">
+                            <img src="{{ user.signature }}" alt="Signature">
+                        </div>
+                    </div>
+                </div>
             {% endif %}
+
         </div>
     </div>
 
-    <form method="post" data-turbo="false">
+    <!-- Edit Form -->
+    <div class="mdl-card mdl-shadow--4dp">
+        <div class="mdl-card__supporting-text">
+            
+            <div class="section-title">
+                <i class="material-icons">edit</i>
+                <span>Modifier mes informations</span>
+            </div>
 
-        <h4 class="mb-3">Modifier mes informations</h4>
+            <form method="post" data-turbo="false">
+                
+                <!-- Nom -->
+                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                    <input class="mdl-textfield__input" type="text" id="nom" name="nom" value="{{ user.nom }}" required>
+                    <label class="mdl-textfield__label" for="nom">Nom complet</label>
+                </div>
 
-        <div class="mb-3">
-            <label class="form-label">Nom :</label>
-            <input type="text" name="nom" value="{{ user.nom }}" class="form-control">
+                <!-- Email -->
+                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                    <input class="mdl-textfield__input" type="email" id="email" name="email" value="{{ user.email }}" required>
+                    <label class="mdl-textfield__label" for="email">Adresse email</label>
+                </div>
+
+                <!-- Téléphone -->
+                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                    <input class="mdl-textfield__input" type="tel" id="telephone" name="telephone" value="{{ user.telephone }}">
+                    <label class="mdl-textfield__label" for="telephone">Numéro de téléphone</label>
+                </div>
+
+                <div style="height: 24px;"></div>
+
+                <!-- Signature Section -->
+                <div class="section-title">
+                    <i class="material-icons">draw</i>
+                    <span>Ma signature</span>
+                </div>
+
+                <p style="color: #757575; margin-bottom: 16px;">
+                    Dessinez votre signature ci-dessous avec votre souris ou votre doigt
+                </p>
+
+                <div class="signature-canvas-wrapper">
+                    <canvas id="signature-pad"></canvas>
+                    <input type="hidden" name="signature" id="signature-input" value="{{ user.signature }}">
+                </div>
+
+                <div class="signature-actions">
+                    <button type="button" id="clear" class="mdl-button mdl-js-button mdl-button--raised">
+                        <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">clear</i>
+                        Effacer
+                    </button>
+                    <button type="button" id="undo" class="mdl-button mdl-js-button mdl-button--raised">
+                        <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">undo</i>
+                        Annuler
+                    </button>
+                </div>
+
+                <div style="height: 32px;"></div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored mdl-button--accent" style="width: 100%; height: 48px;">
+                    <i class="material-icons" style="vertical-align: middle; margin-right: 8px;">save</i>
+                    Enregistrer les modifications
+                </button>
+
+            </form>
+
         </div>
-
-        <div class="mb-3">
-            <label class="form-label">Email :</label>
-            <input type="email" name="email" value="{{ user.email }}" class="form-control">
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Téléphone :</label>
-            <input type="text" name="telephone" value="{{ user.telephone }}" class="form-control">
-        </div>
-
-        <hr>
-
-        <h4 class="mt-4">Ma signature</h4>
-
-        <div class="mb-3">
-            <label class="form-label">Nouvelle signature :</label><br>
-            <canvas id="signature-pad" style="width: 100%; height: 200px; border:1px solid #000"></canvas>
-            <button type="button" id="clear" class="btn btn-secondary btn-sm mt-2">Effacer</button>
-            <input type="hidden" name="signature" id="signature-input" value="{{ user.signature }}">
-        </div>
-
-        <button type="submit" class="btn btn-success w-100">💾 Enregistrer les modifications</button>
-
-    </form>
+    </div>
 
 </div>
 
@@ -72,52 +342,89 @@ function resizeCanvas() {
     const newWidth = canvas.offsetWidth;
     const newHeight = 200;
 
+    // Save current signature if exists
     if (signaturePad && !signaturePad.isEmpty()) {
         signatureData = signaturePad.toData();
     }
 
     canvas.width = newWidth * ratio;
     canvas.height = newHeight * ratio;
-    canvas.getContext("2d").scale(ratio, ratio);
+    
+    const ctx = canvas.getContext("2d");
+    ctx.scale(ratio, ratio);
+    
+    // Set background based on theme
+    const isDark = document.body.classList.contains('dark-mode');
+    ctx.fillStyle = isDark ? '#2a2a2a' : 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (signaturePad) {
         signaturePad.off();
     }
 
     signaturePad = new SignaturePad(canvas, {
-        backgroundColor: 'white',
-        penColor: 'black'
+        backgroundColor: isDark ? 'rgba(42, 42, 42, 1)' : 'rgba(255, 255, 255, 1)',
+        penColor: isDark ? '#e0e0e0' : 'black',
     });
 
+    // Restore signature if it was saved
     if (signatureData) {
         signaturePad.fromData(signatureData);
     }
 }
 
 function initSignature() {
-    signaturePad = new SignaturePad(canvas, {
-        backgroundColor: 'white',
-        penColor: 'black',
-    });
-
     resizeCanvas();
 }
 
 initSignature();
 
+// Handle window resize
 window.addEventListener("resize", resizeCanvas);
 
+// Clear button
 document.getElementById('clear').addEventListener('click', () => {
     signaturePad.clear();
     signatureData = null;
+    
+    // Redraw background
+    const ctx = canvas.getContext("2d");
+    const isDark = document.body.classList.contains('dark-mode');
+    ctx.fillStyle = isDark ? '#2a2a2a' : 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 });
 
+// Undo button
+document.getElementById('undo').addEventListener('click', () => {
+    const data = signaturePad.toData();
+    if (data && data.length > 0) {
+        data.pop();
+        signaturePad.fromData(data);
+    }
+});
+
+// Form submission
 document.querySelector('form').addEventListener('submit', () => {
     const input = document.getElementById("signature-input");
-
+    
     if (!signaturePad.isEmpty()) {
         input.value = signaturePad.toDataURL();
+    } else {
+        input.value = '';
     }
+});
+
+// Handle theme changes for signature pad
+const themeObserver = new MutationObserver(() => {
+    if (signaturePad && !signaturePad.isEmpty()) {
+        signatureData = signaturePad.toData();
+    }
+    resizeCanvas();
+});
+
+themeObserver.observe(document.body, {
+    attributes: true,
+    attributeFilter: ['class']
 });
 </script>
 

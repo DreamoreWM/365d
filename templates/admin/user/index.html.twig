@@ -1,0 +1,576 @@
+{% extends 'dashboard/layout.html.twig' %}
+
+{% block title %}Utilisateurs{% endblock %}
+
+{% block content %}
+<style>
+    .user-container {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 32px 24px;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    body.dark-mode .page-header {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .page-header h1 {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 400;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .page-header .material-icons {
+        font-size: 32px;
+    }
+
+    .filter-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .filter-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .filter-form {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 16px;
+        align-items: end;
+    }
+
+    .filter-form .mdl-textfield {
+        margin: 0;
+    }
+
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .stat-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    body.dark-mode .stat-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+
+    .stat-icon.total { background: rgba(63, 81, 181, 0.1); color: var(--primary); }
+    .stat-icon.admin { background: rgba(211, 47, 47, 0.1); color: #d32f2f; }
+    .stat-icon.employe { background: rgba(46, 125, 50, 0.1); color: #2e7d32; }
+
+    .stat-content { flex: 1; }
+    .stat-label { font-size: 0.875rem; color: #757575; margin-bottom: 4px; }
+    body.dark-mode .stat-label { color: #b0b0b0; }
+    .stat-value { font-size: 1.5rem; font-weight: 500; color: var(--text-light); }
+    body.dark-mode .stat-value { color: var(--text-dark); }
+
+    .users-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 24px;
+    }
+
+    .user-card {
+        background: var(--card-light);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.3s;
+    }
+
+    body.dark-mode .user-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .user-card:hover {
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        transform: translateY(-4px);
+    }
+
+    body.dark-mode .user-card:hover {
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    .user-card-header {
+        padding: 24px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    body.dark-mode .user-card-header {
+        border-bottom-color: var(--border-dark);
+    }
+
+    .user-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        font-weight: 500;
+        flex-shrink: 0;
+    }
+
+    .user-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .user-name {
+        font-size: 1.25rem;
+        font-weight: 500;
+        color: var(--text-light);
+        margin-bottom: 4px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    body.dark-mode .user-name {
+        color: var(--text-dark);
+    }
+
+    .user-role {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .user-role.admin {
+        background: #ffebee;
+        color: #d32f2f;
+    }
+
+    body.dark-mode .user-role.admin {
+        background: rgba(211, 47, 47, 0.2);
+        color: #ef5350;
+    }
+
+    .user-role.user {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    body.dark-mode .user-role.user {
+        background: rgba(46, 125, 50, 0.2);
+        color: #81c784;
+    }
+
+    .user-card-body {
+        padding: 20px 24px;
+    }
+
+    .user-detail {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .user-detail {
+        color: var(--text-dark);
+    }
+
+    .user-detail:last-child {
+        margin-bottom: 0;
+    }
+
+    .user-detail .material-icons {
+        color: var(--primary);
+        font-size: 20px;
+    }
+
+    .user-detail-text {
+        flex: 1;
+        font-size: 0.875rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .user-card-footer {
+        padding: 16px 24px;
+        background: rgba(63, 81, 181, 0.03);
+        border-top: 1px solid var(--border-light);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    body.dark-mode .user-card-footer {
+        background: rgba(63, 81, 181, 0.08);
+        border-top-color: var(--border-dark);
+    }
+
+    .user-stats {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.875rem;
+        color: #757575;
+    }
+
+    body.dark-mode .user-stats {
+        color: #b0b0b0;
+    }
+
+    .user-stats .material-icons {
+        font-size: 18px;
+        color: var(--primary);
+    }
+
+    .user-card-actions {
+        display: flex;
+        gap: 4px;
+    }
+
+    .icon-btn {
+        min-width: 36px;
+        height: 36px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: none;
+        border: none;
+        cursor: pointer;
+        transition: background 0.2s;
+        text-decoration: none;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .icon-btn {
+        color: var(--text-dark);
+    }
+
+    .icon-btn:hover {
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    .icon-btn .material-icons {
+        font-size: 20px;
+    }
+
+    .icon-btn.edit {
+        color: var(--primary);
+    }
+
+    .icon-btn.view {
+        color: #00897b;
+    }
+
+    .icon-btn.delete {
+        color: #d32f2f;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        background: var(--card-light);
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .empty-state {
+        background: var(--card-dark);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .empty-state .material-icons {
+        font-size: 80px;
+        color: #ccc;
+        margin-bottom: 16px;
+    }
+
+    body.dark-mode .empty-state .material-icons {
+        color: #555;
+    }
+
+    .empty-state h3 {
+        color: var(--text-light);
+        margin-bottom: 8px;
+        font-weight: 400;
+    }
+
+    body.dark-mode .empty-state h3 {
+        color: var(--text-dark);
+    }
+
+    .empty-state p {
+        color: #757575;
+    }
+
+    body.dark-mode .empty-state p {
+        color: #b0b0b0;
+    }
+
+    @media (max-width: 992px) {
+        .page-header {
+            padding: 24px 16px;
+        }
+
+        .page-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .filter-card {
+            padding: 16px;
+        }
+
+        .filter-form {
+            grid-template-columns: 1fr;
+        }
+
+        .filter-form button {
+            width: 100%;
+        }
+
+        .stats-row {
+            grid-template-columns: 1fr;
+        }
+
+        .users-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="user-container">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1>
+            <i class="material-icons">people</i>
+            Utilisateurs
+        </h1>
+        <a href="{{ path('admin_user_new') }}" class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent">
+            <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">person_add</i>
+            Nouvel utilisateur
+        </a>
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-icon total">
+                <i class="material-icons">people</i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Total</div>
+                <div class="stat-value">{{ users|length }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon admin">
+                <i class="material-icons">admin_panel_settings</i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Administrateurs</div>
+                <div class="stat-value">{{ users|filter(u => 'ROLE_ADMIN' in u.roles)|length }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon employe">
+                <i class="material-icons">work</i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Employés</div>
+                <div class="stat-value">{{ users|filter(u => 'ROLE_ADMIN' not in u.roles)|length }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="filter-card">
+        <form method="get" class="filter-form" id="filter-form">
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                <input class="mdl-textfield__input" type="text" id="search" name="search" value="{{ app.request.get('search') }}">
+                <label class="mdl-textfield__label" for="search">Rechercher (nom, email, téléphone...)</label>
+            </div>
+
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                <select class="mdl-textfield__input" id="role" name="role">
+                    <option value="">Tous les rôles</option>
+                    <option value="ROLE_ADMIN" {{ app.request.get('role') == 'ROLE_ADMIN' ? 'selected' : '' }}>Administrateur</option>
+                    <option value="ROLE_USER" {{ app.request.get('role') == 'ROLE_USER' ? 'selected' : '' }}>Utilisateur</option>
+                </select>
+                <label class="mdl-textfield__label" for="role">Filtrer par rôle</label>
+            </div>
+
+            <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">search</i>
+                Filtrer
+            </button>
+        </form>
+    </div>
+
+    <!-- Users Grid -->
+    {% if users is not empty %}
+        <div class="users-grid">
+            {% for user in users %}
+                <div class="user-card">
+                    <div class="user-card-header">
+                        <div class="user-avatar">
+                            {{ user.nom|slice(0, 1)|upper }}
+                        </div>
+                        <div class="user-info">
+                            <div class="user-name">{{ user.nom }}</div>
+                            <span class="user-role {{ 'ROLE_ADMIN' in user.roles ? 'admin' : 'user' }}">
+                                {% if 'ROLE_ADMIN' in user.roles %}
+                                    <i class="material-icons" style="font-size: 14px;">admin_panel_settings</i>
+                                    Admin
+                                {% else %}
+                                    <i class="material-icons" style="font-size: 14px;">person</i>
+                                    Utilisateur
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="user-card-body">
+                        <div class="user-detail">
+                            <i class="material-icons">email</i>
+                            <span class="user-detail-text">{{ user.email }}</span>
+                        </div>
+
+                        <div class="user-detail">
+                            <i class="material-icons">phone</i>
+                            <span class="user-detail-text">{{ user.telephone ?: 'Non renseigné' }}</span>
+                        </div>
+                    </div>
+
+                    <div class="user-card-footer">
+                        <div class="user-stats">
+                            <i class="material-icons">event_note</i>
+                            <span>{{ user.prestations|length }} prestation(s)</span>
+                        </div>
+
+                        <div class="user-card-actions">
+                            <a href="{{ path('admin_user_show', {id: user.id}) }}" class="icon-btn view" title="Voir">
+                                <i class="material-icons">visibility</i>
+                            </a>
+                            <a href="{{ path('admin_user_edit', {id: user.id}) }}" class="icon-btn edit" title="Modifier">
+                                <i class="material-icons">edit</i>
+                            </a>
+                            {% if user.id != app.user.id %}
+                                <button type="button" class="icon-btn delete" title="Supprimer" onclick="confirmDelete({{ user.id }}, '{{ user.nom }}')">
+                                    <i class="material-icons">delete</i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="material-icons">people</i>
+            <h3>Aucun utilisateur</h3>
+            <p>Commencez par créer votre premier utilisateur</p>
+        </div>
+    {% endif %}
+
+</div>
+
+<script>
+// Auto-upgrade MDL
+document.addEventListener('DOMContentLoaded', function() {
+    ['search', 'role'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input && input.value) {
+            input.parentElement.classList.add('is-dirty');
+        }
+    });
+});
+
+// Confirm delete
+function confirmDelete(id, nom) {
+    if (confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur ${nom} ?\n\nCette action est irréversible.`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ path('admin_user_delete', {id: '__ID__'}) }}'.replace('__ID__', id);
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_token';
+        csrfInput.value = '{{ csrf_token('delete') }}';
+        
+        form.appendChild(csrfInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Auto-submit on filter change
+document.getElementById('role')?.addEventListener('change', function() {
+    document.getElementById('filter-form').submit();
+});
+
+// Search with delay
+let searchTimeout;
+document.getElementById('search')?.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        document.getElementById('filter-form').submit();
+    }, 500);
+});
+</script>
+
+{% endblock %}
