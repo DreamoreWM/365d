@@ -13,7 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use thiagoalessio\TesseractOCR\TesseractOCR;
 
-#[Route('/adm/bon-commande')]
+#[Route('/admin/bon-commande')]
 class BonDeCommandeController extends AbstractController
 {
     public function __construct(
@@ -29,7 +29,7 @@ class BonDeCommandeController extends AbstractController
     public function index(Request $request): Response
     {
         // Mise à jour des statuts avant affichage
-        $this->prestationManager->updateAllBonDeCommande(); 
+        $this->prestationManager->updateAllBonDeCommande();
 
         $search = $request->query->get('search', '');
         $statut = $request->query->get('statut', '');
@@ -43,13 +43,13 @@ class BonDeCommandeController extends AbstractController
                         OR b.clientEmail LIKE :search 
                         OR b.clientTelephone LIKE :search 
                         OR b.numeroCommande LIKE :search')
-            ->setParameter('search', '%' . $search . '%');
+               ->setParameter('search', '%' . $search . '%');
         }
 
         // Filtre par statut
         if ($statut) {
             $qb->andWhere('b.statut = :statut')
-            ->setParameter('statut', $statut);
+               ->setParameter('statut', $statut);
         }
 
         $bonDeCommandes = $qb->getQuery()->getResult();
@@ -123,6 +123,22 @@ class BonDeCommandeController extends AbstractController
     }
 
     // =====================================================
+    // CRÉER UNE PRESTATION POUR UN BON
+    // =====================================================
+    #[Route('/{bonId}/nouvelle-prestation', name: 'admin_bon_commande_new_prestation', methods: ['GET'])]
+    public function newForBon(int $bonId): Response
+    {
+        $bon = $this->em->getRepository(BonDeCommande::class)->find($bonId);
+        
+        if (!$bon) {
+            throw $this->createNotFoundException('Bon de commande introuvable');
+        }
+        
+        // Rediriger vers le formulaire de création de prestation avec le bon pré-sélectionné
+        return $this->redirectToRoute('admin_prestation_new', ['bonId' => $bonId]);
+    }
+
+    // =====================================================
     // SUPPRIMER UN BON
     // =====================================================
     #[Route('/{id}/delete', name: 'admin_bon_commande_delete', methods: ['POST'])]
@@ -144,77 +160,8 @@ class BonDeCommandeController extends AbstractController
     }
 
     // =====================================================
-    // MÉTHODE PRIVÉE : TRAITEMENT DU FORMULAIRE
+    // IMPORT OCR
     // =====================================================
-    private function handleForm(Request $request, BonDeCommande $bon, bool $isNew): Response
-    {
-        $bon->setNumeroCommande($request->request->get('numeroCommande'));
-        $bon->setClientNom($request->request->get('clientNom'));
-        $bon->setClientEmail($request->request->get('clientEmail'));
-        $bon->setClientTelephone($request->request->get('clientTelephone'));
-        $bon->setClientAdresse($request->request->get('clientAdresse'));
-        $bon->setClientComplementAdresse($request->request->get('clientComplementAdresse'));
-
-        // Type de prestation
-        $typePrestationId = $request->request->get('typePrestation');
-        if ($typePrestationId) {
-            $typePrestation = $this->em->getRepository(TypePrestation::class)->find($typePrestationId);
-            $bon->setTypePrestation($typePrestation);
-            
-            if ($typePrestation) {
-                $bon->setNombrePrestationsNecessaires($typePrestation->getNombrePrestationsNecessaires());
-            }
-        }
-
-        // Validation basique
-        if (!$bon->getClientNom() || !$bon->getClientEmail() || !$bon->getClientTelephone()) {
-            $this->addFlash('danger', 'Veuillez remplir tous les champs obligatoires');
-            return $this->redirectToRoute($isNew ? 'admin_bon_commande_new' : 'admin_bon_commande_edit', 
-                $isNew ? [] : ['id' => $bon->getId()]
-            );
-        }
-
-        // Vérification unicité numéro de commande
-        if ($isNew && $bon->getNumeroCommande()) {
-            $existant = $this->repository->findOneBy(['numeroCommande' => $bon->getNumeroCommande()]);
-            if ($existant) {
-                $this->addFlash('danger', 'Ce numéro de commande existe déjà');
-                return $this->redirectToRoute('admin_bon_commande_edit', ['id' => $existant->getId()]);
-            }
-        }
-
-        $this->em->persist($bon);
-        $this->em->flush();
-
-        // ⭐ Mise à jour du statut via le service après la sauvegarde
-        $this->prestationManager->updateBonDeCommande($bon);
-
-        $this->addFlash('success', $isNew 
-            ? 'Bon de commande créé avec succès' 
-            : 'Bon de commande modifié avec succès'
-        );
-
-        return $this->redirectToRoute('admin_bon_commande_show', ['id' => $bon->getId()]);
-    }
-
-    // Dans ton PrestationController (ou crée-le si tu ne l'as pas)
-    #[Route('/admin/prestation/new-for-bon/{bonId}', name: 'admin_prestation_new_for_bon')]
-    public function newForBon(int $bonId): Response
-    {
-        $bon = $this->em->getRepository(BonDeCommande::class)->find($bonId);
-        
-        if (!$bon) {
-            throw $this->createNotFoundException('Bon de commande introuvable');
-        }
-        
-        // Créer une nouvelle prestation liée à ce bon
-        $prestation = new Prestation();
-        $prestation->setBonDeCommande($bon);
-        
-        // Rediriger vers ton formulaire de création de prestation
-        // ou afficher un formulaire directement
-    }
-
     #[Route('/import-ocr', name: 'admin_bon_commande_import_ocr', methods: ['POST'])]
     public function importViaOcr(Request $request): Response
     {
@@ -281,5 +228,59 @@ class BonDeCommandeController extends AbstractController
 
         $this->addFlash('danger', 'Aucun fichier reçu');
         return $this->redirectToRoute('admin_bon_commande_index');
+    }
+
+    // =====================================================
+    // MÉTHODE PRIVÉE : TRAITEMENT DU FORMULAIRE
+    // =====================================================
+    private function handleForm(Request $request, BonDeCommande $bon, bool $isNew): Response
+    {
+        $bon->setNumeroCommande($request->request->get('numeroCommande'));
+        $bon->setClientNom($request->request->get('clientNom'));
+        $bon->setClientEmail($request->request->get('clientEmail'));
+        $bon->setClientTelephone($request->request->get('clientTelephone'));
+        $bon->setClientAdresse($request->request->get('clientAdresse'));
+        $bon->setClientComplementAdresse($request->request->get('clientComplementAdresse'));
+
+        // Type de prestation
+        $typePrestationId = $request->request->get('typePrestation');
+        if ($typePrestationId) {
+            $typePrestation = $this->em->getRepository(TypePrestation::class)->find($typePrestationId);
+            $bon->setTypePrestation($typePrestation);
+            
+            if ($typePrestation) {
+                $bon->setNombrePrestationsNecessaires($typePrestation->getNombrePrestationsNecessaires());
+            }
+        }
+
+        // Validation basique
+        if (!$bon->getClientNom() || !$bon->getClientEmail() || !$bon->getClientTelephone()) {
+            $this->addFlash('danger', 'Veuillez remplir tous les champs obligatoires');
+            return $this->redirectToRoute($isNew ? 'admin_bon_commande_new' : 'admin_bon_commande_edit', 
+                $isNew ? [] : ['id' => $bon->getId()]
+            );
+        }
+
+        // Vérification unicité numéro de commande
+        if ($isNew && $bon->getNumeroCommande()) {
+            $existant = $this->repository->findOneBy(['numeroCommande' => $bon->getNumeroCommande()]);
+            if ($existant) {
+                $this->addFlash('danger', 'Ce numéro de commande existe déjà');
+                return $this->redirectToRoute('admin_bon_commande_edit', ['id' => $existant->getId()]);
+            }
+        }
+
+        $this->em->persist($bon);
+        $this->em->flush();
+
+        // ⭐ Mise à jour du statut via le service après la sauvegarde
+        $this->prestationManager->updateBonDeCommande($bon);
+
+        $this->addFlash('success', $isNew 
+            ? 'Bon de commande créé avec succès' 
+            : 'Bon de commande modifié avec succès'
+        );
+
+        return $this->redirectToRoute('admin_bon_commande_show', ['id' => $bon->getId()]);
     }
 }

@@ -1,29 +1,588 @@
 {% extends 'dashboard/layout.html.twig' %}
 
+{% block title %}Dashboard{% endblock %}
+
 {% block content %}
+<style>
+    .dashboard-container {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
 
-<h1 class="mb-4">Bienvenue 🚀</h1>
+    .welcome-banner {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 40px 32px;
+        border-radius: 12px;
+        margin-bottom: 32px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        position: relative;
+        overflow: hidden;
+    }
 
-<div class="row">
+    body.dark-mode .welcome-banner {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
 
-    <div class="col-md-4">
-        <div class="card shadow-sm mb-3">
-            <div class="card-body">
-                <h5 class="card-title">📄 Bons de commande</h5>
-                <p class="card-text">consulter les bons de commande.</p>
-                <a href="{{ path('app_user_prestations') }}" class="btn btn-primary">Voir</a>
+    .welcome-banner::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 300px;
+        height: 300px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+    }
+
+    .welcome-banner h1 {
+        margin: 0 0 8px 0;
+        font-size: 2rem;
+        font-weight: 400;
+        position: relative;
+        z-index: 1;
+    }
+
+    .welcome-banner p {
+        margin: 0;
+        opacity: 0.95;
+        font-size: 1.1rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .stat-card {
+        background: var(--card-light);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s;
+        position: relative;
+        overflow: hidden;
+    }
+
+    body.dark-mode .stat-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    body.dark-mode .stat-card:hover {
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--primary);
+    }
+
+    .stat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 16px;
+    }
+
+    .stat-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+    }
+
+    .stat-icon.blue {
+        background: rgba(33, 150, 243, 0.1);
+        color: #2196F3;
+    }
+
+    .stat-icon.orange {
+        background: rgba(255, 152, 0, 0.1);
+        color: #FF9800;
+    }
+
+    .stat-icon.green {
+        background: rgba(76, 175, 80, 0.1);
+        color: #4CAF50;
+    }
+
+    .stat-icon.purple {
+        background: rgba(156, 39, 176, 0.1);
+        color: #9C27B0;
+    }
+
+    .stat-content {
+        flex: 1;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: #757575;
+        margin-bottom: 8px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    body.dark-mode .stat-label {
+        color: #b0b0b0;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 600;
+        color: var(--text-light);
+        line-height: 1;
+    }
+
+    body.dark-mode .stat-value {
+        color: var(--text-dark);
+    }
+
+    .stat-footer {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border-light);
+        font-size: 0.875rem;
+        color: #757575;
+    }
+
+    body.dark-mode .stat-footer {
+        border-top-color: var(--border-dark);
+        color: #b0b0b0;
+    }
+
+    .stat-footer .material-icons {
+        font-size: 18px;
+    }
+
+    .quick-actions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .action-card {
+        background: var(--card-light);
+        border-radius: 12px;
+        padding: 28px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        border: 2px solid transparent;
+    }
+
+    body.dark-mode .action-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+
+    .action-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        border-color: var(--primary);
+    }
+
+    body.dark-mode .action-card:hover {
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    .action-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        flex-shrink: 0;
+    }
+
+    .action-content {
+        flex: 1;
+    }
+
+    .action-title {
+        font-size: 1.25rem;
+        font-weight: 500;
+        color: var(--text-light);
+        margin-bottom: 6px;
+    }
+
+    body.dark-mode .action-title {
+        color: var(--text-dark);
+    }
+
+    .action-description {
+        font-size: 0.875rem;
+        color: #757575;
+        line-height: 1.5;
+    }
+
+    body.dark-mode .action-description {
+        color: #b0b0b0;
+    }
+
+    .recent-section {
+        background: var(--card-light);
+        border-radius: 12px;
+        padding: 28px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 32px;
+    }
+
+    body.dark-mode .recent-section {
+        background: var(--card-dark);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid var(--border-light);
+    }
+
+    body.dark-mode .section-header {
+        border-bottom-color: var(--border-dark);
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.5rem;
+        font-weight: 500;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .section-title {
+        color: var(--text-dark);
+    }
+
+    .section-title .material-icons {
+        color: var(--primary);
+        font-size: 28px;
+    }
+
+    .recent-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px;
+        background: rgba(63, 81, 181, 0.03);
+        border-radius: 8px;
+        margin-bottom: 12px;
+        border-left: 4px solid var(--primary);
+        transition: all 0.2s;
+    }
+
+    body.dark-mode .recent-item {
+        background: rgba(63, 81, 181, 0.08);
+    }
+
+    .recent-item:hover {
+        background: rgba(63, 81, 181, 0.08);
+        transform: translateX(4px);
+    }
+
+    body.dark-mode .recent-item:hover {
+        background: rgba(63, 81, 181, 0.15);
+    }
+
+    .recent-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        background: rgba(63, 81, 181, 0.1);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        flex-shrink: 0;
+    }
+
+    .recent-content {
+        flex: 1;
+    }
+
+    .recent-title {
+        font-weight: 500;
+        color: var(--text-light);
+        margin-bottom: 4px;
+    }
+
+    body.dark-mode .recent-title {
+        color: var(--text-dark);
+    }
+
+    .recent-subtitle {
+        font-size: 0.875rem;
+        color: #757575;
+    }
+
+    body.dark-mode .recent-subtitle {
+        color: #b0b0b0;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #757575;
+    }
+
+    body.dark-mode .empty-state {
+        color: #b0b0b0;
+    }
+
+    .empty-state .material-icons {
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    @media (max-width: 768px) {
+        .welcome-banner {
+            padding: 32px 24px;
+        }
+
+        .welcome-banner h1 {
+            font-size: 1.75rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .quick-actions-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+        }
+    }
+</style>
+
+<div class="dashboard-container">
+    
+    <!-- Welcome Banner -->
+    <div class="welcome-banner">
+        <h1>👋 Bienvenue, {{ app.user.nom }} !</h1>
+        <p>Voici un aperçu de votre activité</p>
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-content">
+                    <div class="stat-label">Prestations</div>
+                    <div class="stat-value">{{ app.user.prestations|length }}</div>
+                </div>
+                <div class="stat-icon blue">
+                    <i class="material-icons">event_note</i>
+                </div>
+            </div>
+            <div class="stat-footer">
+                <i class="material-icons">info</i>
+                <span>Total assignées</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-content">
+                    <div class="stat-label">En cours</div>
+                    <div class="stat-value">{{ app.user.prestations|filter(p => p.statut == 'en cours')|length }}</div>
+                </div>
+                <div class="stat-icon orange">
+                    <i class="material-icons">pending</i>
+                </div>
+            </div>
+            <div class="stat-footer">
+                <i class="material-icons">trending_up</i>
+                <span>À réaliser</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-content">
+                    <div class="stat-label">Terminées</div>
+                    <div class="stat-value">{{ app.user.prestations|filter(p => p.statut == 'terminé')|length }}</div>
+                </div>
+                <div class="stat-icon green">
+                    <i class="material-icons">check_circle</i>
+                </div>
+            </div>
+            <div class="stat-footer">
+                <i class="material-icons">done_all</i>
+                <span>Complétées</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-content">
+                    <div class="stat-label">Programmées</div>
+                    <div class="stat-value">{{ app.user.prestations|filter(p => p.statut == 'programmé')|length }}</div>
+                </div>
+                <div class="stat-icon purple">
+                    <i class="material-icons">schedule</i>
+                </div>
+            </div>
+            <div class="stat-footer">
+                <i class="material-icons">calendar_today</i>
+                <span>À venir</span>
             </div>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <div class="card shadow-sm mb-3">
-            <div class="card-body">
-                <h5 class="card-title">👤 Administration</h5>
-                <p class="card-text"></p>
-                <a href="{{ path('admin') }}" class="btn btn-primary">Voir</a>
-            </div>
+    <!-- Quick Actions -->
+    <div class="section-header">
+        <div class="section-title">
+            <i class="material-icons">flash_on</i>
+            <span>Actions rapides</span>
         </div>
+    </div>
+
+    <div class="quick-actions-grid">
+        <a href="{{ path('app_user_prestations') }}" class="action-card">
+            <div class="action-icon">
+                <i class="material-icons">event_note</i>
+            </div>
+            <div class="action-content">
+                <div class="action-title">Mes prestations</div>
+                <div class="action-description">Consulter et gérer vos prestations du jour</div>
+            </div>
+        </a>
+
+        {% if 'ROLE_ADMIN' in app.user.roles %}
+            <a href="{{ path('admin_bon_commande_index') }}" class="action-card">
+                <div class="action-icon">
+                    <i class="material-icons">receipt_long</i>
+                </div>
+                <div class="action-content">
+                    <div class="action-title">Bons de commande</div>
+                    <div class="action-description">Gérer les bons de commande et clients</div>
+                </div>
+            </a>
+
+            <a href="{{ path('admin_prestation_index') }}" class="action-card">
+                <div class="action-icon">
+                    <i class="material-icons">assignment</i>
+                </div>
+                <div class="action-content">
+                    <div class="action-title">Toutes les prestations</div>
+                    <div class="action-description">Vue d'ensemble de toutes les prestations</div>
+                </div>
+            </a>
+
+            <a href="{{ path('admin_user_index') }}" class="action-card">
+                <div class="action-icon">
+                    <i class="material-icons">people</i>
+                </div>
+                <div class="action-content">
+                    <div class="action-title">Utilisateurs</div>
+                    <div class="action-description">Gérer les employés et administrateurs</div>
+                </div>
+            </a>
+        {% endif %}
+
+        <a href="{{ path('app_user_profil') }}" class="action-card">
+            <div class="action-icon">
+                <i class="material-icons">account_circle</i>
+            </div>
+            <div class="action-content">
+                <div class="action-title">Mon profil</div>
+                <div class="action-description">Modifier vos informations personnelles</div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Recent Prestations -->
+    <div class="recent-section">
+        <div class="section-header">
+            <div class="section-title">
+                <i class="material-icons">history</i>
+                <span>Prestations récentes</span>
+            </div>
+            <a href="{{ path('app_user_prestations') }}" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                Voir tout
+            </a>
+        </div>
+
+        {% set recentPrestations = app.user.prestations|slice(0, 5) %}
+        {% if recentPrestations is not empty %}
+            {% for prestation in recentPrestations %}
+                <div class="recent-item">
+                    <div class="recent-icon">
+                        <i class="material-icons">event</i>
+                    </div>
+                    <div class="recent-content">
+                        <div class="recent-title">
+                            {% if prestation.bonDeCommande %}
+                                {{ prestation.bonDeCommande.clientNom }}
+                            {% else %}
+                                Prestation #{{ prestation.id }}
+                            {% endif %}
+                        </div>
+                        <div class="recent-subtitle">
+                            {{ prestation.datePrestation|date('d/m/Y à H:i') }} • 
+                            {% if prestation.statut == 'terminé' %}
+                                ✅ Terminé
+                            {% elseif prestation.statut == 'en cours' %}
+                                ⏳ En cours
+                            {% elseif prestation.statut == 'programmé' %}
+                                📅 Programmé
+                            {% else %}
+                                {{ prestation.statut }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <a href="{{ path('app_user_prestation_view', {id: prestation.id}) }}" class="mdl-button mdl-js-button mdl-button--raised">
+                        <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">visibility</i>
+                        Voir
+                    </a>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="material-icons">event_busy</i>
+                <p>Aucune prestation pour le moment</p>
+            </div>
+        {% endif %}
     </div>
 
 </div>
