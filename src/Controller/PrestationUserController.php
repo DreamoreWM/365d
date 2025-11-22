@@ -72,34 +72,19 @@ class PrestationUserController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}/terminer', name: 'app_user_prestation_terminer', methods: ['POST'])]
-    public function terminer(Prestation $prestation, EntityManagerInterface $em): Response
-    {
-        $this->denyAccessUnlessGranted('ROLE_USER');
+#[Route('/{id}/terminer', name: 'app_user_prestation_terminer', methods: ['POST'])]
+public function terminer(Prestation $prestation, EntityManagerInterface $em): Response
+{
+    $this->denyAccessUnlessGranted('ROLE_USER');
 
-        $prestation->setStatut('terminé');
-        $em->flush();
+    $prestation->setStatut('terminé');
+    $em->flush();
 
-        // Générer PDF
-        $options = new Options();
-        $options->set('isHtml5ParserEnabled', true);
-        $options->set('isRemoteEnabled', true);
-        $dompdf = new Dompdf($options);
+    $this->addFlash('success', 'Prestation terminée avec succès !');
 
-        $html = $this->renderView('prestation_user/pdf.html.twig', [
-            'prestation' => $prestation,
-        ]);
-        $dompdf->loadHtml($html);
-        $dompdf->setPaper('A4', 'portrait');
-        $dompdf->render();
-
-        return new StreamedResponse(function () use ($dompdf) {
-            echo $dompdf->output();
-        }, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="prestation-' . $prestation->getId() . '.pdf"',
-        ]);
-    }
+    // Rediriger vers la même page avec l'aperçu PDF
+    return $this->redirectToRoute('app_user_prestation_view', ['id' => $prestation->getId()]);
+}
 
     #[Route('/prestation/{id}/pdf', name: 'prestation_pdf')]
     public function pdf(Prestation $prestation): Response

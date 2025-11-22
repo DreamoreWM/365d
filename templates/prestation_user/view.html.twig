@@ -411,12 +411,42 @@
         </div>
     </form>
 
+    {% if prestation.statut == 'terminé' %}
+    <!-- Aperçu PDF -->
+    <div class="section-card">
+        <div class="section-title">
+            <i class="material-icons">picture_as_pdf</i>
+            <span>Aperçu du PDF</span>
+        </div>
+
+        <div class="helper-text">
+            <i class="material-icons">info</i>
+            <span>Votre prestation est terminée. Vous pouvez consulter le PDF ci-dessous.</span>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 16px;">
+            <a href="{{ path('prestation_pdf', {id: prestation.id}) }}" target="_blank" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">download</i>
+                Télécharger le PDF
+            </a>
+        </div>
+
+        <div style="border: 2px solid var(--border-light); border-radius: 8px; overflow: hidden;">
+            <iframe 
+                src="{{ path('prestation_pdf', {id: prestation.id}) }}" 
+                style="width: 100%; height: 800px; border: none;"
+                title="Aperçu PDF">
+            </iframe>
+        </div>
+    </div>
+{% endif %}
+
     <!-- Finish Button -->
     <form method="post" action="{{ path('app_user_prestation_terminer', {id: prestation.id}) }}" data-turbo="false">
         <div class="action-buttons">
             <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent">
                 <i class="material-icons">check_circle</i>
-                Terminer & Générer le PDF
+                Terminer
             </button>
         </div>
     </form>

@@ -483,7 +483,7 @@
                 <i class="material-icons">event_note</i>
                 <span>Prestations ({{ bon.prestations|length }})</span>
             </div>
-            <a href="{{ path('admin_prestation_new_for_bon', {bonId: bon.id}) }}" class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent">
+            <a href="{{ path('admin_bon_commande_new_prestation', {bonId: bon.id}) }}" class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent">
                 <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">add</i>
                 Programmer une prestation
             </a>
