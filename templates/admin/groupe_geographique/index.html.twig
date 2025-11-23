@@ -1,0 +1,1756 @@
+{% extends 'dashboard/layout.html.twig' %}
+
+{% block title %}Groupes Géographiques{% endblock %}
+
+{% block content %}
+<style>
+    .geo-container {
+        max-width: 1800px;
+        margin: 0 auto;
+        padding: 0;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 32px 24px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    body.dark-mode .page-header {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+
+    .page-header h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 400;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* ==================== TABS SYSTEM ==================== */
+    .tabs-container {
+        background: var(--card-light);
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 24px;
+        overflow: hidden;
+    }
+
+    body.dark-mode .tabs-container {
+        background: var(--card-dark);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+
+    .tabs-header {
+        display: flex;
+        border-bottom: 2px solid var(--border-light);
+        background: rgba(0,0,0,0.02);
+    }
+
+    body.dark-mode .tabs-header {
+        border-bottom-color: var(--border-dark);
+        background: rgba(255,255,255,0.02);
+    }
+
+    .tab-button {
+        flex: 1;
+        padding: 16px 24px;
+        border: none;
+        background: transparent;
+        color: #757575;
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s;
+        position: relative;
+    }
+
+    body.dark-mode .tab-button {
+        color: #b0b0b0;
+    }
+
+    .tab-button:hover {
+        background: rgba(63, 81, 181, 0.05);
+        color: var(--primary);
+    }
+
+    .tab-button.active {
+        color: var(--primary);
+        background: transparent;
+    }
+
+    .tab-button.active::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--primary);
+    }
+
+    .tab-content {
+        display: none;
+        padding: 24px;
+        animation: fadeIn 0.3s ease-in;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ==================== MODE INDICATOR ==================== */
+    .mode-indicator {
+        position: fixed;
+        top: 80px;
+        right: 24px;
+        padding: 12px 20px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 500;
+        z-index: 1001;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transition: all 0.3s;
+    }
+
+    .mode-indicator.mode-view {
+        background: #2196F3;
+        color: white;
+    }
+
+    .mode-indicator.mode-create {
+        background: #4CAF50;
+        color: white;
+    }
+
+    .mode-indicator.mode-edit {
+        background: #FF9800;
+        color: white;
+    }
+
+    .mode-indicator .material-icons {
+        font-size: 20px;
+    }
+
+    /* ==================== FORM STYLES ==================== */
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text-light);
+        margin-bottom: 8px;
+    }
+
+    body.dark-mode .form-group label {
+        color: var(--text-dark);
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 10px 12px;
+        border: 2px solid var(--border-light);
+        border-radius: 6px;
+        font-size: 0.95rem;
+        background: white;
+        color: var(--text-light);
+        font-family: inherit;
+    }
+
+    body.dark-mode .form-control {
+        background: #2a2a2a;
+        border-color: var(--border-dark);
+        color: var(--text-dark);
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+
+    textarea.form-control {
+        resize: vertical;
+        min-height: 60px;
+    }
+
+    .color-picker {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .color-option {
+        width: 100%;
+        aspect-ratio: 1;
+        border-radius: 8px;
+        cursor: pointer;
+        border: 3px solid transparent;
+        transition: all 0.2s;
+    }
+
+    .color-option:hover {
+        transform: scale(1.05);
+    }
+
+    .color-option.selected {
+        border-color: var(--text-light);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    body.dark-mode .color-option.selected {
+        border-color: var(--text-dark);
+    }
+
+    .ville-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: rgba(63, 81, 181, 0.1);
+        border-radius: 16px;
+        font-size: 0.85rem;
+        margin: 4px;
+    }
+
+    body.dark-mode .ville-tag {
+        background: rgba(63, 81, 181, 0.2);
+    }
+
+    .ville-tag .remove-ville {
+        cursor: pointer;
+        font-size: 16px;
+        opacity: 0.7;
+        display: flex;
+        align-items: center;
+    }
+
+    .ville-tag .remove-ville:hover {
+        opacity: 1;
+        color: #f44336;
+    }
+
+    .ville-suggestions {
+        position: relative;
+        background: var(--card-light);
+        border: 2px solid var(--border-light);
+        border-radius: 6px;
+        max-height: 200px;
+        overflow-y: auto;
+        margin-top: 8px;
+        display: none;
+    }
+
+    body.dark-mode .ville-suggestions {
+        background: var(--card-dark);
+        border-color: var(--border-dark);
+    }
+
+    .ville-suggestions.show {
+        display: block;
+    }
+
+    .ville-suggestion-item {
+        padding: 10px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border-light);
+        transition: background 0.2s;
+    }
+
+    body.dark-mode .ville-suggestion-item {
+        border-bottom-color: var(--border-dark);
+    }
+
+    .ville-suggestion-item:hover {
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    .ville-suggestion-item:last-child {
+        border-bottom: none;
+    }
+
+    .ville-suggestion-name {
+        font-weight: 500;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .ville-suggestion-name {
+        color: var(--text-dark);
+    }
+
+    .ville-suggestion-code {
+        font-size: 0.75rem;
+        color: #757575;
+    }
+
+    body.dark-mode .ville-suggestion-code {
+        color: #b0b0b0;
+    }
+
+    .selected-villes-container {
+        min-height: 80px;
+        max-height: 150px;
+        overflow-y: auto;
+        padding: 12px;
+        background: rgba(0,0,0,0.02);
+        border-radius: 6px;
+        border: 2px dashed var(--border-light);
+    }
+
+    body.dark-mode .selected-villes-container {
+        background: rgba(255,255,255,0.02);
+        border-color: var(--border-dark);
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 12px;
+        margin-top: 24px;
+        padding-top: 24px;
+        border-top: 2px solid var(--border-light);
+    }
+
+    body.dark-mode .action-buttons {
+        border-top-color: var(--border-dark);
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: background 0.2s;
+        flex: 1;
+    }
+
+    .btn-primary:hover {
+        background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+        background: transparent;
+        color: var(--text-light);
+        border: 2px solid var(--border-light);
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s;
+        flex: 1;
+    }
+
+    body.dark-mode .btn-secondary {
+        color: var(--text-dark);
+        border-color: var(--border-dark);
+    }
+
+    .btn-secondary:hover {
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    .btn-danger {
+        background: #f44336;
+        color: white;
+        border: none;
+    }
+
+    .btn-danger:hover {
+        background: #d32f2f;
+    }
+
+    /* ==================== GROUPS LIST ==================== */
+    .groupe-item {
+        padding: 16px;
+        background: rgba(63, 81, 181, 0.05);
+        border-radius: 8px;
+        margin-bottom: 12px;
+        border-left: 4px solid;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    body.dark-mode .groupe-item {
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    .groupe-item:hover {
+        background: rgba(63, 81, 181, 0.1);
+        transform: translateX(4px);
+    }
+
+    body.dark-mode .groupe-item:hover {
+        background: rgba(63, 81, 181, 0.15);
+    }
+
+    .groupe-item.visible {
+        background: rgba(63, 81, 181, 0.15);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .groupe-item.visible {
+        background: rgba(63, 81, 181, 0.2);
+    }
+
+    .groupe-checkbox {
+        flex-shrink: 0;
+    }
+
+    .groupe-checkbox input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        accent-color: var(--primary);
+    }
+
+    .groupe-color {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .groupe-info {
+        flex: 1;
+    }
+
+    .groupe-name {
+        font-weight: 500;
+        color: var(--text-light);
+        margin-bottom: 4px;
+    }
+
+    body.dark-mode .groupe-name {
+        color: var(--text-dark);
+    }
+
+    .groupe-villes {
+        font-size: 0.75rem;
+        color: #757575;
+    }
+
+    body.dark-mode .groupe-villes {
+        color: #b0b0b0;
+    }
+
+    .groupe-actions {
+        display: flex;
+        gap: 4px;
+    }
+
+    .btn-icon-small {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        padding: 0;
+        border-radius: 50%;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #757575;
+    }
+
+    body.dark-mode .empty-state {
+        color: #b0b0b0;
+    }
+
+    .empty-state .material-icons {
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .stat-card {
+        padding: 12px;
+        background: rgba(63, 81, 181, 0.05);
+        border-radius: 6px;
+        text-align: center;
+    }
+
+    body.dark-mode .stat-card {
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--primary);
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: #757575;
+        margin-top: 4px;
+    }
+
+    body.dark-mode .stat-label {
+        color: #b0b0b0;
+    }
+
+    /* ==================== MAP ==================== */
+    .map-container {
+        background: var(--card-light);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 24px;
+    }
+
+    body.dark-mode .map-container {
+        background: var(--card-dark);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+
+    /* Map Search Bar */
+    .map-search-container {
+        position: relative;
+        margin-bottom: 16px;
+    }
+
+    .map-search-input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        background: white;
+        border: 2px solid var(--border-light);
+        border-radius: 8px;
+        padding: 0 12px;
+        transition: all 0.2s;
+    }
+
+    body.dark-mode .map-search-input-wrapper {
+        background: #2a2a2a;
+        border-color: var(--border-dark);
+    }
+
+    .map-search-input-wrapper:focus-within {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.1);
+    }
+
+    .map-search-input-wrapper .material-icons {
+        color: #757575;
+        font-size: 20px;
+        margin-right: 8px;
+    }
+
+    body.dark-mode .map-search-input-wrapper .material-icons {
+        color: #b0b0b0;
+    }
+
+    .map-search-input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        padding: 12px 0;
+        font-size: 0.95rem;
+        color: var(--text-light);
+        outline: none;
+    }
+
+    body.dark-mode .map-search-input {
+        color: var(--text-dark);
+    }
+
+    .map-search-input::placeholder {
+        color: #9e9e9e;
+    }
+
+    .map-search-clear {
+        background: none;
+        border: none;
+        color: #757575;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    .map-search-clear:hover {
+        background: rgba(0,0,0,0.05);
+        color: #f44336;
+    }
+
+    body.dark-mode .map-search-clear {
+        color: #b0b0b0;
+    }
+
+    body.dark-mode .map-search-clear:hover {
+        background: rgba(255,255,255,0.05);
+    }
+
+    .map-search-clear .material-icons {
+        font-size: 18px;
+    }
+
+    .map-search-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--card-light);
+        border: 2px solid var(--border-light);
+        border-radius: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+        margin-top: 8px;
+        display: none;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    body.dark-mode .map-search-suggestions {
+        background: var(--card-dark);
+        border-color: var(--border-dark);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .map-search-suggestions.show {
+        display: block;
+    }
+
+    .map-search-suggestion-item {
+        padding: 12px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border-light);
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    body.dark-mode .map-search-suggestion-item {
+        border-bottom-color: var(--border-dark);
+    }
+
+    .map-search-suggestion-item:hover {
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    .map-search-suggestion-item:last-child {
+        border-bottom: none;
+    }
+
+    .map-search-suggestion-icon {
+        color: var(--primary);
+        font-size: 20px;
+        flex-shrink: 0;
+    }
+
+    .map-search-suggestion-content {
+        flex: 1;
+    }
+
+    .map-search-suggestion-name {
+        font-weight: 500;
+        color: var(--text-light);
+        margin-bottom: 2px;
+    }
+
+    body.dark-mode .map-search-suggestion-name {
+        color: var(--text-dark);
+    }
+
+    .map-search-suggestion-code {
+        font-size: 0.75rem;
+        color: #757575;
+    }
+
+    body.dark-mode .map-search-suggestion-code {
+        color: #b0b0b0;
+    }
+
+    #map {
+        width: 100%;
+        height: 600px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 2px solid var(--border-light);
+    }
+
+    body.dark-mode #map {
+        border-color: var(--border-dark);
+    }
+
+    .clickable-polygon {
+        cursor: pointer !important;
+    }
+
+    .map-instructions {
+        background: #E3F2FD;
+        border-left: 4px solid #2196F3;
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    body.dark-mode .map-instructions {
+        background: rgba(33, 150, 243, 0.1);
+    }
+
+    .map-instructions .material-icons {
+        color: #2196F3;
+        font-size: 24px;
+    }
+
+    .map-instructions-text {
+        flex: 1;
+        font-size: 0.9rem;
+        color: #1565C0;
+    }
+
+    body.dark-mode .map-instructions-text {
+        color: #64B5F6;
+    }
+
+    @media (max-width: 1200px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .color-picker {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+
+<div class="geo-container">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1>
+            <i class="material-icons">map</i>
+            Groupes Géographiques
+        </h1>
+    </div>
+
+    <!-- Mode Indicator -->
+    <div class="mode-indicator mode-view" id="modeIndicator">
+        <i class="material-icons">visibility</i>
+        <span id="modeText">Mode Visualisation</span>
+    </div>
+
+    <!-- Tabs Container -->
+    <div class="tabs-container">
+        <div class="tabs-header">
+            <button class="tab-button active" onclick="switchTab('view')">
+                <i class="material-icons">layers</i>
+                Mes Groupes
+            </button>
+            <button class="tab-button" onclick="switchTab('create')" id="createTabBtn">
+                <i class="material-icons">add_location</i>
+                Nouveau Groupe
+            </button>
+        </div>
+
+        <!-- TAB 1: VIEW GROUPS -->
+        <div class="tab-content active" id="viewTab">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="statGroupes">0</div>
+                    <div class="stat-label">Groupes créés</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statVilles">0</div>
+                    <div class="stat-label">Villes totales</div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 16px; display: flex; gap: 8px; align-items: center;">
+                <button onclick="toggleAllGroupes(true)" class="mdl-button mdl-js-button mdl-button--raised" style="flex: 1;">
+                    <i class="material-icons" style="vertical-align: middle; font-size: 18px;">check_box</i>
+                    Tout afficher
+                </button>
+                <button onclick="toggleAllGroupes(false)" class="mdl-button mdl-js-button mdl-button--raised" style="flex: 1;">
+                    <i class="material-icons" style="vertical-align: middle; font-size: 18px;">check_box_outline_blank</i>
+                    Tout masquer
+                </button>
+            </div>
+
+            <div id="groupesList">
+                <div class="empty-state">
+                    <i class="material-icons">inbox</i>
+                    <p>Aucun groupe créé</p>
+                    <button onclick="switchTab('create')" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" style="margin-top: 16px;">
+                        <i class="material-icons" style="vertical-align: middle; margin-right: 8px;">add</i>
+                        Créer mon premier groupe
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: CREATE/EDIT GROUP -->
+        <div class="tab-content" id="createTab">
+            <form id="groupeForm" onsubmit="saveGroupe(event)">
+                <input type="hidden" id="groupeId">
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="groupeNom">Nom du groupe *</label>
+                        <input type="text" id="groupeNom" class="form-control" required placeholder="Ex: Nord-Pas-de-Calais">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="groupeDescription">Description</label>
+                        <textarea id="groupeDescription" class="form-control" placeholder="Description optionnelle..."></textarea>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Couleur du groupe</label>
+                    <div class="color-picker" id="colorPicker"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="searchVilleInput">Rechercher une ville</label>
+                    <input type="text" 
+                           id="searchVilleInput" 
+                           class="form-control" 
+                           placeholder="Ex: Lille, Calais..." 
+                           autocomplete="off"
+                           onkeyup="searchVilles()">
+                    <div id="villeSuggestions" class="ville-suggestions"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Villes sélectionnées (<span id="villesCount">0</span>)</label>
+                    <div id="selectedVilles" class="selected-villes-container">
+                        <span style="color: #757575; font-size: 0.85rem;">Cliquez sur la carte ou utilisez la recherche</span>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button type="submit" class="btn-primary">
+                        <i class="material-icons">save</i>
+                        <span id="saveBtnText">Créer le groupe</span>
+                    </button>
+
+                    <button type="button" onclick="cancelEdit()" class="btn-secondary">
+                        <i class="material-icons">close</i>
+                        Annuler
+                    </button>
+
+                    <button type="button" onclick="deleteCurrentGroupe()" class="btn-secondary btn-danger" id="deleteBtn" style="display: none;">
+                        <i class="material-icons">delete</i>
+                        Supprimer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Map Container -->
+    <div class="map-container">
+        <div class="map-instructions" id="mapInstructions">
+            <i class="material-icons">info</i>
+            <div class="map-instructions-text">
+                <strong>Mode Visualisation:</strong> Cliquez sur un groupe dans la liste pour l'afficher sur la carte
+            </div>
+        </div>
+
+        <!-- Map Search Bar -->
+        <div class="map-search-container">
+            <div class="map-search-input-wrapper">
+                <i class="material-icons">search</i>
+                <input type="text" 
+                       id="mapSearchInput" 
+                       class="map-search-input" 
+                       placeholder="Rechercher une ville sur la carte..." 
+                       autocomplete="off"
+                       onkeyup="searchMapVilles()">
+                <button class="map-search-clear" id="mapSearchClear" onclick="clearMapSearch()" style="display: none;">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            <div id="mapSearchSuggestions" class="map-search-suggestions"></div>
+        </div>
+
+        <div id="map"></div>
+    </div>
+
+</div>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// ==================== GLOBAL VARIABLES ====================
+let map;
+let polygons = {};
+let groupes = [];
+let selectedVilles = [];
+let currentGroupeId = null;
+let selectedGroupeId = null;
+let visibleGroupes = new Set(); // IDs des groupes visibles sur la carte
+let selectedColor = '#3F51B5';
+let searchTimeout = null;
+let mapSearchTimeout = null;
+let mapSearchMarker = null;
+let currentMode = 'view'; // 'view', 'create', 'edit'
+
+const colors = ['#3F51B5', '#4CAF50', '#FF9800', '#F44336', '#9C27B0', '#00BCD4', '#FF5722', '#795548'];
+
+// ==================== INITIALIZATION ====================
+document.addEventListener('DOMContentLoaded', function() {
+    initMap();
+    initColorPicker();
+    loadGroupes();
+    
+    console.log('✓ Application initialisée');
+});
+
+function initMap() {
+    map = L.map('map').setView([46.603354, 1.888334], 6);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 18,
+    }).addTo(map);
+    
+    map.on('click', handleMapClick);
+    
+    console.log('✓ Carte initialisée');
+}
+
+function initColorPicker() {
+    const picker = document.getElementById('colorPicker');
+    picker.innerHTML = colors.map(color => `
+        <div class="color-option ${color === selectedColor ? 'selected' : ''}" 
+             style="background: ${color};" 
+             onclick="selectColor('${color}')">
+        </div>
+    `).join('');
+}
+
+// ==================== MODE MANAGEMENT ====================
+function switchTab(tab, event) {
+    // Update tab buttons
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    
+    // Find and activate the correct tab button
+    const tabButtons = document.querySelectorAll('.tab-button');
+    if (tab === 'view') {
+        tabButtons[0].classList.add('active');
+    } else if (tab === 'create') {
+        tabButtons[1].classList.add('active');
+    }
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    if (tab === 'view') {
+        document.getElementById('viewTab').classList.add('active');
+        setMode('view');
+        
+        // Show all visible groups
+        showAllVisibleGroupes();
+    } else if (tab === 'create') {
+        document.getElementById('createTab').classList.add('active');
+        
+        // Check if we're editing
+        if (currentGroupeId) {
+            setMode('edit');
+        } else {
+            // Reset for new group
+            resetForm();
+            setMode('create');
+        }
+    }
+}
+
+function setMode(mode) {
+    currentMode = mode;
+    const indicator = document.getElementById('modeIndicator');
+    const modeText = document.getElementById('modeText');
+    const instructions = document.getElementById('mapInstructions');
+    
+    indicator.className = 'mode-indicator';
+    
+    if (mode === 'view') {
+        indicator.classList.add('mode-view');
+        modeText.innerHTML = '<span>Mode Visualisation</span>';
+        instructions.innerHTML = `
+            <i class="material-icons">info</i>
+            <div class="map-instructions-text">
+                <strong>Mode Visualisation:</strong> Cliquez sur un groupe dans la liste pour l'afficher sur la carte
+            </div>
+        `;
+    } else if (mode === 'create') {
+        indicator.classList.add('mode-create');
+        modeText.innerHTML = '<span>Mode Création</span>';
+        instructions.innerHTML = `
+            <i class="material-icons">touch_app</i>
+            <div class="map-instructions-text">
+                <strong>Mode Création:</strong> Cliquez sur la carte pour ajouter des villes à votre nouveau groupe
+            </div>
+        `;
+    } else if (mode === 'edit') {
+        indicator.classList.add('mode-edit');
+        modeText.innerHTML = '<span>Mode Édition</span>';
+        instructions.innerHTML = `
+            <i class="material-icons">edit_location</i>
+            <div class="map-instructions-text">
+                <strong>Mode Édition:</strong> Cliquez sur la carte pour ajouter/retirer des villes de ce groupe
+            </div>
+        `;
+    }
+}
+
+// ==================== MAP CLICK HANDLER ====================
+async function handleMapClick(e) {
+    // Only allow map clicks in create or edit mode
+    if (currentMode === 'view') {
+        return;
+    }
+    
+    const lat = e.latlng.lat;
+    const lng = e.latlng.lng;
+    
+    console.log('🖱️ Clic sur la carte:', lat, lng);
+    await findVilleByCoordinates(lat, lng);
+}
+
+// ==================== GROUPS MANAGEMENT ====================
+async function loadGroupes() {
+    try {
+        const response = await fetch('/admin/groupes-geographiques/api/groupes');
+        groupes = await response.json();
+        
+        // Par défaut, tous les groupes sont visibles
+        visibleGroupes.clear();
+        groupes.forEach(groupe => visibleGroupes.add(groupe.id));
+        
+        displayGroupes();
+        updateStats();
+        
+        // Afficher tous les groupes sur la carte
+        await showAllVisibleGroupes();
+    } catch (error) {
+        console.error('Erreur lors du chargement des groupes:', error);
+    }
+}
+
+function displayGroupes() {
+    const container = document.getElementById('groupesList');
+    
+    if (groupes.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="material-icons">inbox</i>
+                <p>Aucun groupe créé</p>
+                <button onclick="switchTab('create')" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" style="margin-top: 16px;">
+                    <i class="material-icons" style="vertical-align: middle; margin-right: 8px;">add</i>
+                    Créer mon premier groupe
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = groupes.map(groupe => `
+        <div class="groupe-item ${visibleGroupes.has(groupe.id) ? 'visible' : ''}" 
+             style="border-left-color: ${groupe.couleur};">
+            <div class="groupe-checkbox" onclick="event.stopPropagation();">
+                <input type="checkbox" 
+                       id="checkbox-${groupe.id}"
+                       ${visibleGroupes.has(groupe.id) ? 'checked' : ''}
+                       onchange="toggleGroupeVisibility(${groupe.id})">
+            </div>
+            <div class="groupe-color" style="background: ${groupe.couleur};"></div>
+            <div class="groupe-info">
+                <div class="groupe-name">${groupe.nom}</div>
+                <div class="groupe-villes">
+                    <i class="material-icons" style="font-size: 12px; vertical-align: middle;">place</i>
+                    ${groupe.villes ? groupe.villes.length : 0} ville(s)
+                </div>
+            </div>
+            <div class="groupe-actions" onclick="event.stopPropagation();">
+                <button class="mdl-button mdl-js-button mdl-button--icon btn-icon-small" 
+                        onclick="editGroupe(${groupe.id})" 
+                        title="Modifier">
+                    <i class="material-icons">edit</i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+    
+    if (typeof componentHandler !== 'undefined') {
+        componentHandler.upgradeAllRegistered();
+    }
+}
+
+async function toggleGroupeVisibility(groupeId) {
+    if (visibleGroupes.has(groupeId)) {
+        visibleGroupes.delete(groupeId);
+    } else {
+        visibleGroupes.add(groupeId);
+    }
+    
+    displayGroupes();
+    await showAllVisibleGroupes();
+    
+    console.log('✓ Groupes visibles:', Array.from(visibleGroupes));
+}
+
+async function showAllVisibleGroupes() {
+    clearMapPolygons();
+    
+    if (visibleGroupes.size === 0) {
+        console.log('Aucun groupe visible');
+        return;
+    }
+    
+    const bounds = [];
+    
+    for (const groupeId of visibleGroupes) {
+        const groupe = groupes.find(g => g.id === groupeId);
+        if (!groupe || !groupe.villesData) continue;
+        
+        for (const villeData of groupe.villesData) {
+            await drawVillePolygon(villeData, groupe.couleur, true);
+            
+            if (villeData.latitude && villeData.longitude) {
+                bounds.push([villeData.latitude, villeData.longitude]);
+            }
+        }
+    }
+    
+    // Ajuster la vue pour montrer tous les groupes visibles
+    if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [50, 50] });
+    }
+}
+
+function toggleAllGroupes(visible) {
+    if (visible) {
+        groupes.forEach(groupe => visibleGroupes.add(groupe.id));
+    } else {
+        visibleGroupes.clear();
+    }
+    
+    displayGroupes();
+    showAllVisibleGroupes();
+}
+
+function updateStats() {
+    document.getElementById('statGroupes').textContent = groupes.length;
+    
+    const uniqueVilles = new Set();
+    groupes.forEach(groupe => {
+        if (groupe.villes) {
+            groupe.villes.forEach(ville => uniqueVilles.add(ville));
+        }
+    });
+    document.getElementById('statVilles').textContent = uniqueVilles.size;
+}
+
+function resetForm() {
+    currentGroupeId = null;
+    selectedVilles = [];
+    selectedColor = colors[0];
+    
+    document.getElementById('groupeId').value = '';
+    document.getElementById('groupeNom').value = '';
+    document.getElementById('groupeDescription').value = '';
+    document.getElementById('saveBtnText').textContent = 'Créer le groupe';
+    document.getElementById('deleteBtn').style.display = 'none';
+    document.getElementById('createTabBtn').innerHTML = '<i class="material-icons">add_location</i> Nouveau Groupe';
+    
+    initColorPicker();
+    updateSelectedVillesDisplay();
+    clearMapPolygons();
+}
+
+async function editGroupe(groupeId) {
+    const groupe = groupes.find(g => g.id === groupeId);
+    if (!groupe) return;
+    
+    currentGroupeId = groupe.id;
+    selectedVilles = groupe.villesData || [];
+    selectedColor = groupe.couleur;
+    
+    document.getElementById('groupeId').value = groupe.id;
+    document.getElementById('groupeNom').value = groupe.nom;
+    document.getElementById('groupeDescription').value = groupe.description || '';
+    document.getElementById('saveBtnText').textContent = 'Enregistrer les modifications';
+    document.getElementById('deleteBtn').style.display = 'block';
+    document.getElementById('createTabBtn').innerHTML = '<i class="material-icons">edit</i> Modifier le Groupe';
+    
+    initColorPicker();
+    updateSelectedVillesDisplay();
+    
+    clearMapPolygons();
+    for (const villeData of selectedVilles) {
+        await drawVillePolygon(villeData, selectedColor, false);
+    }
+    
+    // Switch to create/edit tab
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-button')[1].classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    document.getElementById('createTab').classList.add('active');
+    
+    setMode('edit');
+    
+    console.log('✓ Mode édition activé pour:', groupe.nom);
+}
+
+function cancelEdit() {
+    if (confirm('Annuler les modifications ?')) {
+        resetForm();
+        switchTab('view');
+    }
+}
+
+async function saveGroupe(event) {
+    event.preventDefault();
+    
+    const id = document.getElementById('groupeId').value;
+    const nom = document.getElementById('groupeNom').value.trim();
+    const description = document.getElementById('groupeDescription').value.trim();
+    
+    if (!nom) {
+        alert('Le nom du groupe est requis');
+        return;
+    }
+    
+    if (selectedVilles.length === 0) {
+        alert('Veuillez sélectionner au moins une ville');
+        return;
+    }
+    
+    const data = {
+        nom,
+        description,
+        couleur: selectedColor,
+        villes: selectedVilles.map(v => v.nom),
+        villesData: selectedVilles
+    };
+    
+    try {
+        const url = id 
+            ? `/admin/groupes-geographiques/api/groupes/${id}`
+            : '/admin/groupes-geographiques/api/groupes';
+        
+        const method = id ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            const savedGroupe = await response.json();
+            await loadGroupes();
+            
+            // Si c'est un nouveau groupe, l'ajouter aux groupes visibles
+            if (!id && savedGroupe.id) {
+                visibleGroupes.add(savedGroupe.id);
+            }
+            
+            resetForm();
+            switchTab('view');
+            alert(id ? 'Groupe mis à jour ✓' : 'Groupe créé ✓');
+        } else {
+            alert('Erreur lors de l\'enregistrement');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de l\'enregistrement');
+    }
+}
+
+async function deleteCurrentGroupe() {
+    if (!currentGroupeId) return;
+    
+    const groupe = groupes.find(g => g.id === currentGroupeId);
+    if (!confirm(`Supprimer définitivement le groupe "${groupe.nom}" ?`)) return;
+    
+    try {
+        const response = await fetch(`/admin/groupes-geographiques/api/groupes/${currentGroupeId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            // Retirer le groupe des groupes visibles
+            visibleGroupes.delete(currentGroupeId);
+            
+            await loadGroupes();
+            resetForm();
+            switchTab('view');
+            
+            alert('Groupe supprimé ✓');
+        } else {
+            alert('Erreur lors de la suppression');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la suppression');
+    }
+}
+
+// ==================== VILLE SEARCH ====================
+async function searchVilles() {
+    clearTimeout(searchTimeout);
+    
+    const query = document.getElementById('searchVilleInput').value.trim();
+    const suggestions = document.getElementById('villeSuggestions');
+    
+    if (query.length < 2) {
+        suggestions.classList.remove('show');
+        return;
+    }
+    
+    suggestions.innerHTML = '<div style="padding: 15px; text-align: center; color: #757575;">Recherche...</div>';
+    suggestions.classList.add('show');
+    
+    searchTimeout = setTimeout(async () => {
+        try {
+            const response = await fetch(`/admin/api/villes/search?q=${encodeURIComponent(query)}`);
+            const villes = await response.json();
+            
+            displayVilleSuggestions(villes);
+        } catch (error) {
+            console.error('Erreur de recherche:', error);
+            suggestions.innerHTML = '<div style="padding: 15px; text-align: center; color: #757575;">Erreur de recherche</div>';
+        }
+    }, 300);
+}
+
+function displayVilleSuggestions(villes) {
+    const suggestions = document.getElementById('villeSuggestions');
+    
+    if (villes.length === 0) {
+        suggestions.innerHTML = '<div style="padding: 15px; text-align: center; color: #757575;">Aucune ville trouvée</div>';
+        return;
+    }
+    
+    const filteredVilles = villes.filter(v => !selectedVilles.find(sv => sv.code === v.code));
+    
+    if (filteredVilles.length === 0) {
+        suggestions.innerHTML = '<div style="padding: 15px; text-align: center; color: #757575;">Toutes les villes sont sélectionnées</div>';
+        return;
+    }
+    
+    suggestions.innerHTML = filteredVilles.map(ville => `
+        <div class="ville-suggestion-item" onclick="addVille('${ville.code}')">
+            <div class="ville-suggestion-name">${ville.nom}</div>
+            <div class="ville-suggestion-code">${ville.codePostal} - ${ville.code}</div>
+        </div>
+    `).join('');
+}
+
+async function addVille(code) {
+    if (selectedVilles.find(v => v.code === code)) return;
+    
+    try {
+        const response = await fetch(`/admin/api/villes/details/${code}`);
+        const villeData = await response.json();
+        
+        selectedVilles.push(villeData);
+        updateSelectedVillesDisplay();
+        
+        await drawVillePolygon(villeData, selectedColor, false);
+        
+        document.getElementById('searchVilleInput').value = '';
+        document.getElementById('villeSuggestions').classList.remove('show');
+        
+        console.log('✓ Ville ajoutée:', villeData.nom);
+    } catch (error) {
+        console.error('Erreur lors de l\'ajout de la ville:', error);
+        alert('Erreur lors de l\'ajout de la ville');
+    }
+}
+
+function removeVille(code) {
+    const index = selectedVilles.findIndex(v => v.code === code);
+    if (index > -1) {
+        const ville = selectedVilles[index];
+        selectedVilles.splice(index, 1);
+        updateSelectedVillesDisplay();
+        
+        if (polygons[code]) {
+            map.removeLayer(polygons[code]);
+            delete polygons[code];
+        }
+        
+        console.log('✓ Ville retirée:', ville.nom);
+    }
+}
+
+function updateSelectedVillesDisplay() {
+    const container = document.getElementById('selectedVilles');
+    const count = document.getElementById('villesCount');
+    
+    count.textContent = selectedVilles.length;
+    
+    if (selectedVilles.length === 0) {
+        container.innerHTML = '<span style="color: #757575; font-size: 0.85rem;">Cliquez sur la carte ou utilisez la recherche</span>';
+        return;
+    }
+    
+    container.innerHTML = selectedVilles.map(ville => `
+        <span class="ville-tag">
+            ${ville.nom}
+            <i class="material-icons remove-ville" onclick="removeVille('${ville.code}')">close</i>
+        </span>
+    `).join('');
+}
+
+// ==================== MAP POLYGONS ====================
+async function drawVillePolygon(villeData, color, readonly = false) {
+    if (!villeData.contour) {
+        if (villeData.latitude && villeData.longitude) {
+            const marker = L.marker([villeData.latitude, villeData.longitude], {
+                icon: L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div style="background: ${color}; border: 2px solid #fff; border-radius: 50%; width: 12px; height: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); cursor: ${readonly ? 'default' : 'pointer'};"></div>`,
+                    iconSize: [12, 12],
+                    iconAnchor: [6, 6]
+                })
+            }).addTo(map);
+            
+            marker.bindPopup(`<strong>${villeData.nom}</strong><br><small>${villeData.codePostal}</small>`);
+            
+            if (!readonly && currentMode !== 'view') {
+                marker.on('click', function(e) {
+                    L.DomEvent.stopPropagation(e);
+                    if (confirm(`Retirer ${villeData.nom} ?`)) {
+                        removeVille(villeData.code);
+                    }
+                });
+            }
+            
+            polygons[villeData.code] = marker;
+        }
+        return;
+    }
+    
+    const coordinates = villeData.contour.coordinates;
+    let polygonCoords = [];
+    
+    if (villeData.contour.type === 'Polygon') {
+        polygonCoords = coordinates[0].map(coord => [coord[1], coord[0]]);
+    } else if (villeData.contour.type === 'MultiPolygon') {
+        polygonCoords = coordinates[0][0].map(coord => [coord[1], coord[0]]);
+    }
+    
+    if (polygonCoords.length === 0) return;
+    
+    const polygon = L.polygon(polygonCoords, {
+        color: color,
+        fillColor: color,
+        fillOpacity: 0.3,
+        weight: 2,
+        className: (readonly || currentMode === 'view') ? '' : 'clickable-polygon'
+    }).addTo(map);
+    
+    polygon.bindPopup(`<strong>${villeData.nom}</strong><br><small>${villeData.codePostal}</small>`);
+    
+    if (!readonly && currentMode !== 'view') {
+        polygon.on('mouseover', function() {
+            this.setStyle({ fillOpacity: 0.5, weight: 3 });
+        });
+        
+        polygon.on('mouseout', function() {
+            this.setStyle({ fillOpacity: 0.3, weight: 2 });
+        });
+        
+        polygon.on('click', function(e) {
+            L.DomEvent.stopPropagation(e);
+            
+            if (confirm(`Retirer ${villeData.nom} ?`)) {
+                removeVille(villeData.code);
+            }
+        });
+    }
+    
+    polygons[villeData.code] = polygon;
+}
+
+function clearMapPolygons() {
+    Object.values(polygons).forEach(polygon => map.removeLayer(polygon));
+    polygons = {};
+}
+
+// ==================== CLICK ON MAP TO ADD CITY ====================
+async function findVilleByCoordinates(lat, lng) {
+    const tempMarker = L.marker([lat, lng], {
+        icon: L.divIcon({
+            className: 'temp-marker',
+            html: '<div style="background: #3F51B5; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>',
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
+        })
+    }).addTo(map);
+    
+    try {
+        const response = await fetch(`https://geo.api.gouv.fr/communes?lat=${lat}&lon=${lng}&fields=nom,code,codesPostaux,centre&format=json`);
+        
+        if (!response.ok) throw new Error('Erreur API');
+        
+        const communes = await response.json();
+        map.removeLayer(tempMarker);
+        
+        if (communes.length > 0) {
+            const commune = communes[0];
+            
+            if (selectedVilles.find(v => v.code === commune.code)) {
+                if (confirm(`${commune.nom} est déjà sélectionnée. La retirer ?`)) {
+                    removeVille(commune.code);
+                }
+            } else {
+                await addVille(commune.code);
+                
+                const popup = L.popup()
+                    .setLatLng([lat, lng])
+                    .setContent(`<strong>${commune.nom}</strong><br><small>✓ Ajoutée !</small>`)
+                    .openOn(map);
+                
+                setTimeout(() => map.closePopup(popup), 1500);
+            }
+        } else {
+            alert('Aucune commune trouvée ici.');
+        }
+    } catch (error) {
+        map.removeLayer(tempMarker);
+        console.error('Erreur:', error);
+        alert('Erreur lors de la recherche.');
+    }
+}
+
+function selectColor(color) {
+    selectedColor = color;
+    initColorPicker();
+    
+    // Update all existing polygons with new color
+    Object.entries(polygons).forEach(([code, polygon]) => {
+        if (polygon.setStyle) {
+            polygon.setStyle({
+                color: selectedColor,
+                fillColor: selectedColor
+            });
+        } else if (polygon instanceof L.Marker) {
+            // Update marker color
+            const newIcon = L.divIcon({
+                className: 'custom-marker',
+                html: `<div style="background: ${selectedColor}; border: 2px solid #fff; border-radius: 50%; width: 12px; height: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); cursor: pointer;"></div>`,
+                iconSize: [12, 12],
+                iconAnchor: [6, 6]
+            });
+            polygon.setIcon(newIcon);
+        }
+    });
+}
+
+// Close suggestions when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#searchVilleInput') && !e.target.closest('#villeSuggestions')) {
+        document.getElementById('villeSuggestions').classList.remove('show');
+    }
+    if (!e.target.closest('.map-search-container')) {
+        document.getElementById('mapSearchSuggestions').classList.remove('show');
+    }
+});
+
+// ==================== MAP SEARCH FUNCTIONS ====================
+async function searchMapVilles() {
+    clearTimeout(mapSearchTimeout);
+    
+    const query = document.getElementById('mapSearchInput').value.trim();
+    const suggestions = document.getElementById('mapSearchSuggestions');
+    const clearBtn = document.getElementById('mapSearchClear');
+    
+    // Show/hide clear button
+    clearBtn.style.display = query.length > 0 ? 'block' : 'none';
+    
+    if (query.length < 2) {
+        suggestions.classList.remove('show');
+        return;
+    }
+    
+    suggestions.innerHTML = '<div style="padding: 15px; text-align: center; color: #757575;"><i class="material-icons" style="font-size: 20px; vertical-align: middle;">search</i> Recherche...</div>';
+    suggestions.classList.add('show');
+    
+    mapSearchTimeout = setTimeout(async () => {
+        try {
+            const response = await fetch(`/admin/api/villes/search?q=${encodeURIComponent(query)}`);
+            const villes = await response.json();
+            
+            displayMapSearchSuggestions(villes);
+        } catch (error) {
+            console.error('Erreur de recherche:', error);
+            suggestions.innerHTML = '<div style="padding: 15px; text-align: center; color: #757575;">Erreur de recherche</div>';
+        }
+    }, 300);
+}
+
+function displayMapSearchSuggestions(villes) {
+    const suggestions = document.getElementById('mapSearchSuggestions');
+    
+    if (villes.length === 0) {
+        suggestions.innerHTML = '<div style="padding: 15px; text-align: center; color: #757575;">Aucune ville trouvée</div>';
+        return;
+    }
+    
+    suggestions.innerHTML = villes.slice(0, 10).map(ville => `
+        <div class="map-search-suggestion-item" onclick="navigateToVille('${ville.code}')">
+            <i class="material-icons map-search-suggestion-icon">place</i>
+            <div class="map-search-suggestion-content">
+                <div class="map-search-suggestion-name">${ville.nom}</div>
+                <div class="map-search-suggestion-code">${ville.codePostal} - ${ville.code}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function navigateToVille(code) {
+    try {
+        const response = await fetch(`/admin/api/villes/details/${code}`);
+        const villeData = await response.json();
+        
+        if (!villeData.latitude || !villeData.longitude) {
+            alert('Coordonnées GPS non disponibles pour cette ville');
+            return;
+        }
+        
+        // Remove previous search marker if exists
+        if (mapSearchMarker) {
+            map.removeLayer(mapSearchMarker);
+        }
+        
+        // Create a temporary marker
+        mapSearchMarker = L.marker([villeData.latitude, villeData.longitude], {
+            icon: L.divIcon({
+                className: 'search-marker',
+                html: `
+                    <div style="
+                        background: #FF5722;
+                        width: 24px;
+                        height: 24px;
+                        border-radius: 50%;
+                        border: 3px solid white;
+                        box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+                        animation: pulse 2s infinite;
+                    "></div>
+                    <style>
+                        @keyframes pulse {
+                            0%, 100% { transform: scale(1); }
+                            50% { transform: scale(1.2); }
+                        }
+                    </style>
+                `,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            })
+        }).addTo(map);
+        
+        // Open popup
+        mapSearchMarker.bindPopup(`
+            <div style="text-align: center; min-width: 150px;">
+                <strong style="font-size: 1.1rem;">${villeData.nom}</strong><br>
+                <small style="color: #757575;">${villeData.codePostal}</small>
+            </div>
+        `).openPopup();
+        
+        // Fly to location
+        map.flyTo([villeData.latitude, villeData.longitude], 13, {
+            duration: 1.5,
+            easeLinearity: 0.25
+        });
+        
+        // Clear search
+        document.getElementById('mapSearchSuggestions').classList.remove('show');
+        
+        // Remove marker after 10 seconds
+        setTimeout(() => {
+            if (mapSearchMarker) {
+                map.removeLayer(mapSearchMarker);
+                mapSearchMarker = null;
+            }
+        }, 10000);
+        
+        console.log('✓ Navigation vers:', villeData.nom);
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la navigation vers la ville');
+    }
+}
+
+function clearMapSearch() {
+    document.getElementById('mapSearchInput').value = '';
+    document.getElementById('mapSearchSuggestions').classList.remove('show');
+    document.getElementById('mapSearchClear').style.display = 'none';
+    
+    // Remove search marker if exists
+    if (mapSearchMarker) {
+        map.removeLayer(mapSearchMarker);
+        mapSearchMarker = null;
+    }
+}
+</script>
+
+{% endblock %}

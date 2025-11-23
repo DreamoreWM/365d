@@ -1,0 +1,950 @@
+{% extends 'dashboard/layout.html.twig' %}
+
+{% block title %}Planning{% endblock %}
+
+{% block content %}
+<style>
+    .planning-container {
+        max-width: 1600px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 32px 24px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    body.dark-mode .page-header {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+
+    .page-header h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 400;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .filters-card {
+        background: var(--card-light);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .filters-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+
+    .filters-grid {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 16px;
+        align-items: end;
+    }
+
+    .main-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+    }
+
+    .prestations-section {
+        background: var(--card-light);
+        border-radius: 12px;
+        padding: 28px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .prestations-section {
+        background: var(--card-dark);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.5rem;
+        font-weight: 500;
+        color: var(--text-light);
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid var(--border-light);
+    }
+
+    body.dark-mode .section-title {
+        color: var(--text-dark);
+        border-bottom-color: var(--border-dark);
+    }
+
+    .section-title .material-icons {
+        color: var(--primary);
+        font-size: 28px;
+    }
+
+    .prestation-card {
+        background: rgba(63, 81, 181, 0.05);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border-left: 4px solid var(--primary);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: all 0.2s;
+    }
+
+    body.dark-mode .prestation-card {
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    .prestation-card:hover {
+        background: rgba(63, 81, 181, 0.1);
+        transform: translateX(4px);
+    }
+
+    body.dark-mode .prestation-card:hover {
+        background: rgba(63, 81, 181, 0.15);
+    }
+
+    .prestation-time {
+        width: 80px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 1.125rem;
+        color: var(--primary);
+    }
+
+    .prestation-info {
+        flex: 1;
+    }
+
+    .prestation-client {
+        font-weight: 500;
+        color: var(--text-light);
+        margin-bottom: 4px;
+    }
+
+    body.dark-mode .prestation-client {
+        color: var(--text-dark);
+    }
+
+    .prestation-details {
+        font-size: 0.875rem;
+        color: #757575;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    body.dark-mode .prestation-details {
+        color: #b0b0b0;
+    }
+
+    .prestation-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .badge-programme { background: #e3f2fd; color: #1565c0; }
+    .badge-en-cours { background: #fff3e0; color: #ff9800; }
+    .badge-termine { background: #e8f5e9; color: #2e7d32; }
+
+    body.dark-mode .badge-programme { background: rgba(21, 101, 192, 0.2); color: #64b5f6; }
+    body.dark-mode .badge-en-cours { background: rgba(255, 152, 0, 0.2); color: #ffb74d; }
+    body.dark-mode .badge-termine { background: rgba(46, 125, 50, 0.2); color: #81c784; }
+
+    .prestation-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .btn-icon {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        padding: 0;
+        border-radius: 50%;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #757575;
+    }
+
+    body.dark-mode .empty-state {
+        color: #b0b0b0;
+    }
+
+    .empty-state .material-icons {
+        font-size: 80px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    .create-form {
+        background: var(--card-light);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        position: sticky;
+        top: 24px;
+    }
+
+    body.dark-mode .create-form {
+        background: var(--card-dark);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+
+    .bons-list {
+        max-height: 400px;
+        overflow-y: auto;
+        margin-top: 16px;
+        padding: 12px;
+        background: rgba(63, 81, 181, 0.03);
+        border-radius: 8px;
+    }
+
+    body.dark-mode .bons-list {
+        background: rgba(63, 81, 181, 0.08);
+    }
+
+    .bon-item {
+        padding: 12px;
+        background: white;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 2px solid transparent;
+    }
+
+    body.dark-mode .bon-item {
+        background: #2a2a2a;
+    }
+
+    .bon-item:hover {
+        border-color: var(--primary);
+        transform: translateX(4px);
+    }
+
+    .bon-item.selected {
+        border-color: var(--primary);
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    .bon-item:active {
+        transform: scale(0.98);
+    }
+
+    .bon-client {
+        font-weight: 500;
+        color: var(--text-light);
+        margin-bottom: 4px;
+    }
+
+    body.dark-mode .bon-client {
+        color: var(--text-dark);
+    }
+
+    .bon-info {
+        font-size: 0.75rem;
+        color: #757575;
+    }
+
+    body.dark-mode .bon-info {
+        color: #b0b0b0;
+    }
+
+    .mdl-textfield {
+        width: 100%;
+        margin-bottom: 16px;
+    }
+
+    body.dark-mode #selectedBonDisplay {
+        background: rgba(63, 81, 181, 0.15);
+    }
+
+    body.dark-mode #noBonSelected {
+        background: rgba(255, 255, 255, 0.05);
+        color: #b0b0b0;
+    }
+
+    #bonSearchResults .bon-item:hover {
+        background: rgba(63, 81, 181, 0.08);
+    }
+
+    body.dark-mode #bonSearchResults .bon-item:hover {
+        background: rgba(63, 81, 181, 0.15);
+    }
+
+    .mdl-spinner {
+        margin: 0 auto;
+    }
+
+    @media (max-width: 1200px) {
+        .main-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .create-form {
+            position: static;
+        }
+
+        .filters-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* ==================== MODAL ==================== */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 9998;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .modal-overlay.open {
+        display: block;
+        opacity: 1;
+    }
+
+    .modal-container {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 900px;
+        max-height: 90vh;
+        background: var(--card-light);
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        z-index: 9999;
+        opacity: 0;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body.dark-mode .modal-container {
+        background: var(--card-dark);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-container.open {
+        display: block;
+        opacity: 1;
+    }
+
+    .modal-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 400;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
+
+    .modal-close:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .modal-body {
+        padding: 24px;
+        max-height: calc(90vh - 80px);
+        overflow-y: auto;
+    }
+
+    .search-box {
+        margin-bottom: 12px;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid var(--border-light);
+        border-radius: 8px;
+        font-size: 1rem;
+        background: white;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .search-box input {
+        background: #2a2a2a;
+        border-color: var(--border-dark);
+        color: var(--text-dark);
+    }
+
+    .search-box input:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+
+    .bon-details-footer {
+        position: sticky;
+        bottom: 0;
+        background: var(--card-light);
+        padding: 16px;
+        border-top: 2px solid var(--border-light);
+        margin: 0 -24px -24px;
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+    }
+
+    body.dark-mode .bon-details-footer {
+        background: var(--card-dark);
+        border-top-color: var(--border-dark);
+    }
+</style>
+
+<div class="planning-container">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1>
+            <i class="material-icons">calendar_today</i>
+            Planning des prestations
+        </h1>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-card">
+        <form method="get" class="filters-grid">
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ selectedDate ? 'is-dirty' : '' }}">
+                <input class="mdl-textfield__input" type="date" id="date" name="date" value="{{ selectedDate }}">
+                <label class="mdl-textfield__label" for="date">Date</label>
+            </div>
+
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ selectedEmployeId ? 'is-dirty' : '' }}">
+                <select class="mdl-textfield__input" id="employe" name="employe">
+                    <option value="">Tous les employés</option>
+                    {% for emp in employes %}
+                        <option value="{{ emp.id }}" {{ selectedEmployeId == emp.id ? 'selected' : '' }}>
+                            {{ emp.nom }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <label class="mdl-textfield__label" for="employe">Employé</label>
+            </div>
+
+            <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">search</i>
+                Filtrer
+            </button>
+        </form>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="main-grid">
+        
+        <!-- Prestations List -->
+        <div class="prestations-section">
+            <div class="section-title">
+                <i class="material-icons">event_note</i>
+                <span>Prestations du {{ selectedDate|date('d/m/Y') }} ({{ prestations|length }})</span>
+            </div>
+
+            {% if prestations is not empty %}
+                {% for prestation in prestations %}
+                    <div class="prestation-card">
+                        <div class="prestation-time">
+                            {{ prestation.datePrestation|date('H:i') }}
+                        </div>
+
+                        <div class="prestation-info">
+                            <div class="prestation-client">
+                                {{ prestation.bonDeCommande.clientNom }}
+                            </div>
+                            <div class="prestation-details">
+                                <span>
+                                    <i class="material-icons" style="font-size: 14px; vertical-align: middle;">person</i>
+                                    {{ prestation.employe ? prestation.employe.nom : 'Non assigné' }}
+                                </span>
+                                <span>
+                                    <i class="material-icons" style="font-size: 14px; vertical-align: middle;">location_on</i>
+                                    {{ prestation.bonDeCommande.clientAdresse|slice(0, 40) }}...
+                                </span>
+                                <span class="prestation-badge badge-{{ prestation.statut|replace({' ': '-', 'é': 'e'}) }}">
+                                    {{ prestation.statut }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="prestation-actions">
+                            <a href="{{ path('admin_prestation_show', {id: prestation.id}) }}" 
+                               class="mdl-button mdl-js-button mdl-button--icon btn-icon" 
+                               title="Voir" 
+                               style="color: #00897b;">
+                                <i class="material-icons">visibility</i>
+                            </a>
+                            <form method="post" 
+                                  action="{{ path('admin_planning_delete_prestation', {id: prestation.id}) }}" 
+                                  style="display: inline;"
+                                  onsubmit="return confirm('Supprimer cette prestation ?');">
+                                <button type="submit" 
+                                        class="mdl-button mdl-js-button mdl-button--icon btn-icon" 
+                                        title="Supprimer"
+                                        style="color: #d32f2f;">
+                                    <i class="material-icons">delete</i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="material-icons">event_busy</i>
+                    <h3>Aucune prestation</h3>
+                    <p>Pas de prestation prévue pour cette date{{ selectedEmployeId ? ' et cet employé' : '' }}</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Create Prestation Form -->
+        <div>
+            <div class="create-form">
+                <div class="section-title" style="margin-bottom: 20px; padding-bottom: 12px;">
+                    <i class="material-icons">add_circle</i>
+                    <span>Créer une prestation</span>
+                </div>
+
+                <form method="post" action="{{ path('admin_planning_create_prestation') }}">
+                    
+                    <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty">
+                        <input class="mdl-textfield__input" type="date" id="create_date" name="date" value="{{ selectedDate }}" required>
+                        <label class="mdl-textfield__label" for="create_date">Date</label>
+                    </div>
+
+                    <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty">
+                        <input class="mdl-textfield__input" type="time" id="heure" name="heure" value="09:00" required>
+                        <label class="mdl-textfield__label" for="heure">Heure</label>
+                    </div>
+
+                    <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ selectedEmployeId ? 'is-dirty' : '' }}">
+                        <select class="mdl-textfield__input" id="create_employe" name="employe" required>
+                            <option value="">Sélectionner...</option>
+                            {% for emp in employes %}
+                                <option value="{{ emp.id }}" {{ selectedEmployeId == emp.id ? 'selected' : '' }}>
+                                    {{ emp.nom }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <label class="mdl-textfield__label" for="create_employe">Employé</label>
+                    </div>
+
+                    <input type="hidden" id="selected_bon" name="bon" required>
+
+                    <div style="margin: 20px 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <strong style="color: var(--text-light);">Bon de commande :</strong>
+                            <button type="button" 
+                                    class="mdl-button mdl-js-button mdl-button--raised" 
+                                    onclick="openBonModal()"
+                                    style="height: 32px; line-height: 32px;">
+                                <i class="material-icons" style="vertical-align: middle; margin-right: 4px; font-size: 18px;">search</i>
+                                Rechercher
+                            </button>
+                        </div>
+                        
+                        <div id="selectedBonDisplay" style="display: none; padding: 16px; background: rgba(63, 81, 181, 0.1); border-radius: 8px; border-left: 4px solid var(--primary);">
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <div>
+                                    <div class="bon-client" id="selectedBonClient"></div>
+                                    <div class="bon-info" id="selectedBonInfo"></div>
+                                </div>
+                                <button type="button" 
+                                        class="mdl-button mdl-js-button mdl-button--icon" 
+                                        onclick="clearBonSelection()"
+                                        title="Effacer la sélection">
+                                    <i class="material-icons">close</i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="noBonSelected" style="padding: 16px; background: rgba(0, 0, 0, 0.05); border-radius: 8px; text-align: center; color: #757575;">
+                            <i class="material-icons" style="vertical-align: middle; font-size: 18px;">info</i>
+                            Aucun bon sélectionné - Utilisez la recherche
+                        </div>
+                    </div>
+
+                    <button type="submit" 
+                            class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent" 
+                            style="width: 100%; height: 48px;"
+                            id="submit-btn"
+                            disabled>
+                        <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">add</i>
+                        Créer la prestation
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Modal de recherche de bon de commande -->
+<div class="modal-overlay" id="bonCommandeModalOverlay" onclick="closeBonModal()"></div>
+<div class="modal-container" id="bonCommandeModal">
+    <div class="modal-header">
+        <h3>
+            <i class="material-icons">search</i>
+            Rechercher un bon de commande
+        </h3>
+        <button class="modal-close" onclick="closeBonModal()">
+            <i class="material-icons">close</i>
+        </button>
+    </div>
+    <div class="modal-body">
+        <div class="search-box">
+            <input type="text" 
+                   id="bonSearchInput" 
+                   placeholder="Rechercher par client, numéro, adresse..." 
+                   onkeyup="searchBons()">
+        </div>
+        
+        <div id="bonSearchResults" class="bons-list" style="max-height: 500px;">
+            <!-- Les résultats apparaîtront ici -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal de détails du bon de commande (modal imbriquée) -->
+<div class="modal-overlay" id="bonDetailsModalOverlay" onclick="closeBonDetailsModal()" style="z-index: 10000;"></div>
+<div class="modal-container" id="bonDetailsModal" style="z-index: 10001;">
+    <div class="modal-header">
+        <h3>
+            <i class="material-icons">receipt_long</i>
+            Détails du bon de commande
+        </h3>
+        <button class="modal-close" onclick="closeBonDetailsModal()">
+            <i class="material-icons">close</i>
+        </button>
+    </div>
+    <div class="modal-body" id="bonDetailsContent">
+        <!-- Le contenu sera chargé dynamiquement -->
+    </div>
+</div>
+
+<script>
+// Auto-upgrade MDL
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.mdl-textfield').forEach(field => {
+        const input = field.querySelector('input, select');
+        if (input && input.value) {
+            field.classList.add('is-dirty');
+        }
+    });
+});
+
+// ==================== MODAL MANAGEMENT ====================
+function openBonModal() {
+    document.getElementById('bonCommandeModalOverlay').classList.add('open');
+    document.getElementById('bonCommandeModal').classList.add('open');
+    document.getElementById('bonSearchInput').focus();
+    
+    // Charger les bons disponibles par défaut
+    loadDefaultBons();
+}
+
+async function loadDefaultBons() {
+    const resultsContainer = document.getElementById('bonSearchResults');
+    
+    // Afficher un loader
+    resultsContainer.innerHTML = `
+        <div class="empty-state" style="padding: 40px;">
+            <div class="mdl-spinner mdl-js-spinner is-active"></div>
+            <p style="margin-top: 16px;">Chargement...</p>
+        </div>
+    `;
+    
+    // Initialiser le spinner MDL
+    componentHandler.upgradeElement(resultsContainer.querySelector('.mdl-spinner'));
+    
+    try {
+        const response = await fetch('/admin/planning/bons-disponibles');
+        const bons = await response.json();
+        
+        displaySearchResults(bons);
+    } catch (error) {
+        console.error('Erreur de chargement:', error);
+        resultsContainer.innerHTML = `
+            <div class="empty-state" style="padding: 40px; color: #d32f2f;">
+                <i class="material-icons" style="font-size: 64px;">error</i>
+                <p>Erreur lors du chargement des bons de commande</p>
+            </div>
+        `;
+    }
+}
+
+function closeBonModal() {
+    document.getElementById('bonCommandeModalOverlay').classList.remove('open');
+    document.getElementById('bonCommandeModal').classList.remove('open');
+    document.getElementById('bonSearchInput').value = '';
+}
+
+// Fermer avec Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        if (document.getElementById('bonDetailsModal').classList.contains('open')) {
+            closeBonDetailsModal();
+        } else {
+            closeBonModal();
+        }
+    }
+});
+
+// ==================== BON DETAILS MODAL ====================
+async function viewBonDetails(bonId) {
+    const modal = document.getElementById('bonDetailsModal');
+    const overlay = document.getElementById('bonDetailsModalOverlay');
+    const content = document.getElementById('bonDetailsContent');
+    
+    // Ouvrir la modal
+    overlay.classList.add('open');
+    modal.classList.add('open');
+    
+    // Afficher un loader
+    content.innerHTML = `
+        <div class="empty-state" style="padding: 60px;">
+            <div class="mdl-spinner mdl-js-spinner is-active"></div>
+            <p style="margin-top: 16px;">Chargement des détails...</p>
+        </div>
+    `;
+    
+    // Initialiser le spinner MDL
+    componentHandler.upgradeElement(content.querySelector('.mdl-spinner'));
+    
+    try {
+        const response = await fetch(`/admin/bon-commande/${bonId}`);
+        const html = await response.text();
+        
+        // Parser le HTML pour extraire seulement le contenu du bon
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const mainContent = doc.querySelector('.page-content') || doc.querySelector('main') || doc.body;
+        
+        // Injecter le contenu
+        content.innerHTML = mainContent.innerHTML;
+        
+        // Upgrade les composants MDL dans le contenu chargé
+        componentHandler.upgradeAllRegistered();
+        
+        // Ajouter un bouton pour sélectionner ce bon
+        const selectBtn = document.createElement('div');
+        selectBtn.style.cssText = 'position: sticky; bottom: 0; background: var(--card-light); padding: 16px; border-top: 2px solid var(--border-light); margin: 0 -24px -24px; display: flex; gap: 12px; justify-content: flex-end;';
+        selectBtn.innerHTML = `
+            <button onclick="closeBonDetailsModal()" 
+                    class="mdl-button mdl-js-button mdl-button--raised">
+                Fermer
+            </button>
+            <button onclick="selectBonFromDetails(${bonId})" 
+                    class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">check</i>
+                Sélectionner ce bon
+            </button>
+        `;
+        content.appendChild(selectBtn);
+        componentHandler.upgradeAllRegistered();
+        
+    } catch (error) {
+        console.error('Erreur lors du chargement des détails:', error);
+        content.innerHTML = `
+            <div class="empty-state" style="padding: 60px; color: #d32f2f;">
+                <i class="material-icons" style="font-size: 64px;">error</i>
+                <p>Erreur lors du chargement des détails</p>
+            </div>
+        `;
+    }
+}
+
+function closeBonDetailsModal() {
+    document.getElementById('bonDetailsModalOverlay').classList.remove('open');
+    document.getElementById('bonDetailsModal').classList.remove('open');
+}
+
+function selectBonFromDetails(bonId) {
+    closeBonDetailsModal();
+    selectBonFromModal(bonId);
+}
+
+// ==================== SEARCH FUNCTIONALITY ====================
+let searchTimeout;
+
+async function searchBons() {
+    clearTimeout(searchTimeout);
+    
+    const query = document.getElementById('bonSearchInput').value.trim();
+    const resultsContainer = document.getElementById('bonSearchResults');
+    
+    if (query.length < 2) {
+        resultsContainer.innerHTML = `
+            <div class="empty-state" style="padding: 40px;">
+                <i class="material-icons" style="font-size: 64px;">search</i>
+                <p>Tapez au moins 2 caractères pour rechercher</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Afficher un loader
+    resultsContainer.innerHTML = `
+        <div class="empty-state" style="padding: 40px;">
+            <div class="mdl-spinner mdl-js-spinner is-active"></div>
+            <p style="margin-top: 16px;">Recherche en cours...</p>
+        </div>
+    `;
+    
+    // Initialiser le spinner MDL
+    componentHandler.upgradeElement(resultsContainer.querySelector('.mdl-spinner'));
+    
+    searchTimeout = setTimeout(async () => {
+        try {
+            const response = await fetch(`/admin/planning/search-bons?q=${encodeURIComponent(query)}`);
+            const bons = await response.json();
+            
+            displaySearchResults(bons);
+        } catch (error) {
+            console.error('Erreur de recherche:', error);
+            resultsContainer.innerHTML = `
+                <div class="empty-state" style="padding: 40px; color: #d32f2f;">
+                    <i class="material-icons" style="font-size: 64px;">error</i>
+                    <p>Erreur lors de la recherche</p>
+                </div>
+            `;
+        }
+    }, 300);
+}
+
+function displaySearchResults(bons) {
+    const resultsContainer = document.getElementById('bonSearchResults');
+    
+    if (bons.length === 0) {
+        resultsContainer.innerHTML = `
+            <div class="empty-state" style="padding: 40px;">
+                <i class="material-icons" style="font-size: 64px;">inbox</i>
+                <p>Aucun bon de commande trouvé</p>
+            </div>
+        `;
+        return;
+    }
+    
+    resultsContainer.innerHTML = bons.map(bon => `
+        <div class="bon-item" style="display: flex; justify-content: space-between; align-items: center;">
+            <div onclick="selectBonFromModal(${bon.id})" style="flex: 1; cursor: pointer;">
+                <div class="bon-client">${bon.clientNom}</div>
+                <div class="bon-info">
+                    <i class="material-icons" style="font-size: 12px; vertical-align: middle;">receipt</i>
+                    BC ${bon.numeroCommande || '#' + bon.id} •
+                    ${bon.nombrePrestations}/${bon.nombrePrestationsNecessaires} prestations •
+                    <i class="material-icons" style="font-size: 12px; vertical-align: middle;">location_on</i>
+                    ${bon.clientAdresse ? bon.clientAdresse.substring(0, 40) + '...' : 'N/A'}
+                </div>
+            </div>
+            <button onclick="viewBonDetails(${bon.id}); event.stopPropagation();" 
+                    class="mdl-button mdl-js-button mdl-button--icon" 
+                    title="Voir les détails"
+                    style="color: var(--primary);">
+                <i class="material-icons">visibility</i>
+            </button>
+        </div>
+    `).join('');
+    
+    // Upgrade MDL buttons
+    componentHandler.upgradeAllRegistered();
+}
+
+// ==================== SELECTION MANAGEMENT ====================
+async function selectBonFromModal(bonId) {
+    try {
+        const response = await fetch(`/admin/planning/bon/${bonId}`);
+        const bon = await response.json();
+        
+        // Mettre à jour le formulaire
+        document.getElementById('selected_bon').value = bonId;
+        document.getElementById('submit-btn').disabled = false;
+        
+        // Afficher le bon sélectionné
+        document.getElementById('selectedBonClient').textContent = bon.clientNom;
+        document.getElementById('selectedBonInfo').innerHTML = `
+            <i class="material-icons" style="font-size: 12px; vertical-align: middle;">receipt</i>
+            BC ${bon.numeroCommande || '#' + bon.id} •
+            ${bon.nombrePrestations}/${bon.nombrePrestationsNecessaires} prestations •
+            <i class="material-icons" style="font-size: 12px; vertical-align: middle;">location_on</i>
+            ${bon.clientAdresse || 'N/A'}
+        `;
+        
+        document.getElementById('selectedBonDisplay').style.display = 'block';
+        document.getElementById('noBonSelected').style.display = 'none';
+        
+        // Fermer la modal
+        closeBonModal();
+        
+    } catch (error) {
+        console.error('Erreur lors de la sélection:', error);
+        alert('Erreur lors de la sélection du bon de commande');
+    }
+}
+
+function clearBonSelection() {
+    document.getElementById('selected_bon').value = '';
+    document.getElementById('submit-btn').disabled = true;
+    document.getElementById('selectedBonDisplay').style.display = 'none';
+    document.getElementById('noBonSelected').style.display = 'block';
+}
+
+// Auto-submit filters on change
+['date', 'employe'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', function() {
+        this.form.submit();
+    });
+});
+</script>
+
+{% endblock %}
