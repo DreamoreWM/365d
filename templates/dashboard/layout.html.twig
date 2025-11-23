@@ -370,6 +370,14 @@
                 <i class="material-icons">people</i>
                 <span>Utilisateurs</span>
             </a>
+            <a href="{{ path('admin_planning_index') }}" class="submenu-item {{ app.request.get('_route') starts with 'admin_planning' ? 'active' : '' }}">
+                <i class="material-icons">calendar_today</i>
+                <span>Planning</span>
+            </a>
+            <a href="{{ path('admin_groupe_geo_index') }}" class="submenu-item {{ app.request.get('_route') starts with 'admin_groupe_geo' ? 'active' : '' }}">
+                <i class="material-icons">map</i>
+                <span>Groupes Géographiques</span>
+            </a>
         </div>
         
         <div class="menu-divider"></div>
@@ -438,6 +446,14 @@
             <a href="{{ path('admin_user_index') }}" class="submenu-item {{ app.request.get('_route') starts with 'admin_user' ? 'active' : '' }}">
                 <i class="material-icons">people</i>
                 <span>Utilisateurs</span>
+            </a>
+            <a href="{{ path('admin_planning_index') }}" class="submenu-item {{ app.request.get('_route') starts with 'admin_planning' ? 'active' : '' }}">
+                <i class="material-icons">calendar_today</i>
+                <span>Planning</span>
+            </a>
+            <a href="{{ path('admin_groupe_geo_index') }}" class="submenu-item {{ app.request.get('_route') starts with 'admin_groupe_geo' ? 'active' : '' }}">
+                <i class="material-icons">map</i>
+                <span>Groupes Géographiques</span>
             </a>
         </div>
         
