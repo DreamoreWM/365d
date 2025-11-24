@@ -21,6 +21,8 @@ class PrestationManager
      * - date > aujourd'hui => 'programmé'
      * - date < aujourd'hui :
      *     - si la prestation était 'programmé' => 'non effectué'
+     *     - si déjà 'non effectué' => on garde 'non effectué'
+     *     - si déjà 'terminé' => on garde 'terminé'
      *     - sinon => 'terminé'
      */
     public function updatePrestationStatut(Prestation $prestation): void
@@ -59,13 +61,18 @@ class PrestationManager
             return;
         }
 
-        // Sinon, on considère la prestation comme terminée (ou on laisse le statut existant)
+        // Si déjà non effectué ou terminé, on garde ce statut
+        if ($currentStatut === 'non effectué' || $currentStatut === 'terminé') {
+            // On ne change pas le statut
+            return;
+        }
+
+        // Sinon, on considère la prestation comme terminée
         $prestation->setStatut('terminé');
     }
 
     /**
      * Met à jour le statut / compteurs du bon de commande.
-     * (la logique ne change pas ici si tu l'as déjà adaptée aux nouvelles règles)
      */
     public function updateBonDeCommande(BonDeCommande $bon): void
     {
@@ -76,17 +83,10 @@ class PrestationManager
         $hasEnCours = false;
         $hasProgrammee = false;
 
-        $now = new \DateTimeImmutable('today');
-
+        // Pas besoin de re-modifier les statuts ici, 
+        // ils ont déjà été mis à jour par updatePrestationStatut
         foreach ($prestations as $p) {
             $statut = $p->getStatut();
-            $date = $p->getDatePrestation();
-
-            // Si programmée mais passée -> marquer la prestation 'non effectué'
-            if ($statut === 'programmé' && $date && $date->format('Y-m-d') < $now->format('Y-m-d')) {
-                $p->setStatut('non effectué');
-                $statut = 'non effectué';
-            }
 
             if ($statut === 'terminé') {
                 $terminees++;
@@ -131,7 +131,15 @@ class PrestationManager
         $bons = $this->em->getRepository(BonDeCommande::class)->findAll();
 
         foreach ($bons as $bon) {
+
+            // 1) Mettre à jour CHAQUE PRESTATION avant le bon
+            foreach ($bon->getPrestations() as $p) {
+                $this->updatePrestationStatut($p);
+            }
+
+            // 2) Puis mettre à jour le bon
             $this->updateBonDeCommande($bon);
         }
     }
+
 }
