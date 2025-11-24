@@ -818,6 +818,11 @@
                                             <i class="material-icons">check_circle</i>
                                             Terminé
                                         </span>
+                                    {% elseif bon.statut == 'en cours' %}
+                                        <span class="status-badge status-termine">
+                                            <i class="material-icons">check_circle</i>
+                                            En cours
+                                        </span>
                                     {% endif %}
                                 </td>
                                 <td style="text-align: center;">

@@ -104,6 +104,7 @@ class AppFixtures extends Fixture
                     $faker->dateTimeBetween('-40 days', 'now')
                 )
             );
+            $bon->setStatut('à programmer');
 
             // Ajout de 1 à 3 prestations au bon
             $count = rand(1, 3);

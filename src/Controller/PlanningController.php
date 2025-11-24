@@ -8,6 +8,7 @@ use App\Entity\BonDeCommande;
 use App\Repository\PrestationRepository;
 use App\Repository\UserRepository;
 use App\Repository\BonDeCommandeRepository;
+use App\Repository\GroupeGeographiqueRepository;
 use App\Service\PrestationManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -24,6 +25,7 @@ class PlanningController extends AbstractController
         private PrestationRepository $prestationRepo,
         private UserRepository $userRepo,
         private BonDeCommandeRepository $bonRepo,
+        private GroupeGeographiqueRepository $groupeGeoRepo,
         private PrestationManager $prestationManager
     ) {}
 
@@ -61,20 +63,15 @@ class PlanningController extends AbstractController
 
         $prestations = $qb->getQuery()->getResult();
 
-        // Bons de commande disponibles (non terminés)
-        $bonsDisponibles = $this->bonRepo->createQueryBuilder('b')
-            ->where('b.statut != :termine')
-            ->setParameter('termine', 'terminé')
-            ->orderBy('b.dateCommande', 'DESC')
-            ->getQuery()
-            ->getResult();
+        // Groupes géographiques pour le filtrage
+        $groupesGeo = $this->groupeGeoRepo->findAllActifs();
 
         return $this->render('admin/planning/index.html.twig', [
             'employes' => $employes,
             'selectedDate' => $selectedDate,
             'selectedEmployeId' => $selectedEmployeId,
             'prestations' => $prestations,
-            'bonsDisponibles' => $bonsDisponibles,
+            'groupesGeo' => $groupesGeo,
         ]);
     }
 
@@ -165,8 +162,9 @@ class PlanningController extends AbstractController
         ]);
     }
 
-    // src/Controller/Admin/PlanningController.php
-
+    // =====================================================
+    // RÉCUPÉRER LES BONS DISPONIBLES
+    // =====================================================
     #[Route('/bons-disponibles', name: 'admin_planning_bons_disponibles', methods: ['GET'])]
     public function bonsDisponibles(BonDeCommandeRepository $bonRepo): JsonResponse
     {
@@ -181,6 +179,12 @@ class PlanningController extends AbstractController
         
         $results = [];
         foreach ($bons as $bon) {
+            // Extraire le code postal de l'adresse
+            $codePostal = null;
+            if (preg_match('/\b(\d{5})\b/', $bon->getClientAdresse(), $matches)) {
+                $codePostal = $matches[1];
+            }
+            
             $results[] = [
                 'id' => $bon->getId(),
                 'clientNom' => $bon->getClientNom(),
@@ -189,33 +193,111 @@ class PlanningController extends AbstractController
                 'nombrePrestations' => $bon->getNombrePrestations() ?? 0,
                 'nombrePrestationsNecessaires' => $bon->getNombrePrestationsNecessaires(),
                 'dateCommande' => $bon->getDateCommande()?->format('d/m/Y'),
+                'statut' => $bon->getStatut(),
+                'codePostal' => $codePostal,
             ];
         }
         
         return $this->json($results);
     }
 
+    // =====================================================
+    // RECHERCHE DE BONS AVEC FILTRES AVANCÉS
+    // =====================================================
     #[Route('/search-bons', name: 'admin_planning_search_bons', methods: ['GET'])]
     public function searchBons(Request $request, BonDeCommandeRepository $bonRepo): JsonResponse
     {
         $query = $request->query->get('q', '');
+        $statut = $request->query->get('statut', '');
+        $groupeGeoId = $request->query->get('groupe_geo', '');
+        $sort = $request->query->get('sort', 'date_desc');
         
-        if (strlen($query) < 2) {
-            return $this->json([]);
+        // Si aucun filtre n'est appliqué et pas de recherche
+        if (strlen($query) < 2 && !$statut && !$groupeGeoId) {
+            // Retourner les bons disponibles par défaut
+            return $this->bonsDisponibles($bonRepo);
         }
         
-        $qb = $bonRepo->createQueryBuilder('b')
-            ->where('b.clientNom LIKE :query')
-            ->orWhere('b.clientAdresse LIKE :query')
-            ->orWhere('b.numeroCommande LIKE :query')
-            ->setParameter('query', '%' . $query . '%')
-            ->orderBy('b.dateCommande', 'DESC')
-            ->setMaxResults(20);
+        $qb = $bonRepo->createQueryBuilder('b');
+        
+        // Recherche textuelle
+        if (strlen($query) >= 2) {
+            $qb->andWhere('(b.clientNom LIKE :query OR b.clientAdresse LIKE :query OR b.numeroCommande LIKE :query)')
+               ->setParameter('query', '%' . $query . '%');
+        }
+        
+        // Filtre par statut
+        if ($statut) {
+            if ($statut === 'disponible') {
+                $qb->andWhere('(b.nombrePrestations < b.nombrePrestationsNecessaires OR b.nombrePrestations IS NULL)');
+            } else {
+                $qb->andWhere('b.statut = :statut')
+                   ->setParameter('statut', $statut);
+            }
+        }
+        
+        // Filtre par groupe géographique (basé sur le code postal dans l'adresse)
+        if ($groupeGeoId) {
+            $groupe = $this->groupeGeoRepo->find($groupeGeoId);
+            if ($groupe && !empty($groupe->getVilles())) {
+                // Créer une condition pour matcher les codes postaux
+                $codePostalConditions = [];
+                foreach ($groupe->getVilles() as $codePostal) {
+                    $codePostalConditions[] = "b.clientAdresse LIKE :cp_" . $codePostal;
+                    $qb->setParameter('cp_' . $codePostal, '% ' . $codePostal . ' %');
+                }
+                if (!empty($codePostalConditions)) {
+                    $qb->andWhere('(' . implode(' OR ', $codePostalConditions) . ')');
+                }
+            }
+        }
+        
+        // Tri
+        switch ($sort) {
+            case 'date_asc':
+                $qb->orderBy('b.dateCommande', 'ASC');
+                break;
+            case 'client_asc':
+                $qb->orderBy('b.clientNom', 'ASC');
+                break;
+            case 'client_desc':
+                $qb->orderBy('b.clientNom', 'DESC');
+                break;
+            case 'prestations':
+                $qb->orderBy('b.nombrePrestations', 'ASC');
+                break;
+            default:
+                $qb->orderBy('b.dateCommande', 'DESC');
+        }
+        
+        $qb->setMaxResults(100);
         
         $bons = $qb->getQuery()->getResult();
         
         $results = [];
         foreach ($bons as $bon) {
+            // Extraire le code postal de l'adresse
+            $codePostal = null;
+            if (preg_match('/\b(\d{5})\b/', $bon->getClientAdresse(), $matches)) {
+                $codePostal = $matches[1];
+            }
+            
+            // Déterminer le groupe géographique
+            $groupeGeo = null;
+            if ($codePostal) {
+                $groupes = $this->groupeGeoRepo->findAllActifs();
+                foreach ($groupes as $groupe) {
+                    if (in_array($codePostal, $groupe->getVilles())) {
+                        $groupeGeo = [
+                            'id' => $groupe->getId(),
+                            'nom' => $groupe->getNom(),
+                            'couleur' => $groupe->getCouleur()
+                        ];
+                        break;
+                    }
+                }
+            }
+            
             $results[] = [
                 'id' => $bon->getId(),
                 'clientNom' => $bon->getClientNom(),
@@ -224,15 +306,27 @@ class PlanningController extends AbstractController
                 'nombrePrestations' => $bon->getNombrePrestations() ?? 0,
                 'nombrePrestationsNecessaires' => $bon->getNombrePrestationsNecessaires(),
                 'dateCommande' => $bon->getDateCommande()?->format('d/m/Y'),
+                'statut' => $bon->getStatut(),
+                'codePostal' => $codePostal,
+                'groupeGeo' => $groupeGeo,
             ];
         }
         
         return $this->json($results);
     }
 
+    // =====================================================
+    // RÉCUPÉRER UN BON SPÉCIFIQUE
+    // =====================================================
     #[Route('/bon/{id}', name: 'admin_planning_get_bon', methods: ['GET'])]
     public function getBon(BonDeCommande $bon): JsonResponse
     {
+        // Extraire le code postal
+        $codePostal = null;
+        if (preg_match('/\b(\d{5})\b/', $bon->getClientAdresse(), $matches)) {
+            $codePostal = $matches[1];
+        }
+        
         return $this->json([
             'id' => $bon->getId(),
             'clientNom' => $bon->getClientNom(),
@@ -241,6 +335,50 @@ class PlanningController extends AbstractController
             'nombrePrestations' => $bon->getNombrePrestations() ?? 0,
             'nombrePrestationsNecessaires' => $bon->getNombrePrestationsNecessaires(),
             'dateCommande' => $bon->getDateCommande()?->format('d/m/Y'),
+            'statut' => $bon->getStatut(),
+            'codePostal' => $codePostal,
+        ]);
+    }
+
+    // =====================================================
+    // STATISTIQUES DU PLANNING
+    // =====================================================
+    #[Route('/stats', name: 'admin_planning_stats', methods: ['GET'])]
+    public function stats(Request $request): JsonResponse
+    {
+        $date = $request->query->get('date', date('Y-m-d'));
+        $dateObj = new \DateTimeImmutable($date);
+        
+        // Statistiques du jour
+        $statsJour = $this->prestationRepo->createQueryBuilder('p')
+            ->select('COUNT(p.id) as total')
+            ->addSelect('SUM(CASE WHEN p.statut = :programme THEN 1 ELSE 0 END) as programme')
+            ->addSelect('SUM(CASE WHEN p.statut = :en_cours THEN 1 ELSE 0 END) as en_cours')
+            ->addSelect('SUM(CASE WHEN p.statut = :termine THEN 1 ELSE 0 END) as termine')
+            ->where('DATE(p.datePrestation) = :date')
+            ->setParameter('programme', 'programmé')
+            ->setParameter('en_cours', 'en cours')
+            ->setParameter('termine', 'terminé')
+            ->setParameter('date', $date)
+            ->getQuery()
+            ->getSingleResult();
+        
+        // Charge par employé
+        $chargeEmployes = $this->prestationRepo->createQueryBuilder('p')
+            ->select('e.id, e.nom')
+            ->addSelect('COUNT(p.id) as nombre_prestations')
+            ->join('p.employe', 'e')
+            ->where('DATE(p.datePrestation) = :date')
+            ->setParameter('date', $date)
+            ->groupBy('e.id')
+            ->orderBy('nombre_prestations', 'DESC')
+            ->getQuery()
+            ->getResult();
+        
+        return $this->json([
+            'date' => $date,
+            'stats' => $statsJour,
+            'chargeEmployes' => $chargeEmployes,
         ]);
     }
 }

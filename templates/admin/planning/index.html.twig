@@ -51,6 +51,59 @@
         align-items: end;
     }
 
+    /* Stats Cards */
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .stat-card {
+        background: var(--card-light);
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    body.dark-mode .stat-card {
+        background: var(--card-dark);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+    }
+
+    .stat-card.primary::before { background: var(--primary); }
+    .stat-card.success::before { background: #4CAF50; }
+    .stat-card.warning::before { background: #FF9800; }
+    .stat-card.info::before { background: #00BCD4; }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 600;
+        margin: 8px 0;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: #757575;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    body.dark-mode .stat-label {
+        color: #b0b0b0;
+    }
+
     .main-grid {
         display: grid;
         grid-template-columns: 2fr 1fr;
@@ -91,11 +144,46 @@
         font-size: 28px;
     }
 
+    /* Timeline View */
+    .timeline-view {
+        position: relative;
+        padding-left: 30px;
+    }
+
+    .timeline-line {
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(to bottom, var(--primary), var(--primary-dark));
+    }
+
+    .timeline-item {
+        position: relative;
+        margin-bottom: 24px;
+    }
+
+    .timeline-dot {
+        position: absolute;
+        left: -24px;
+        top: 8px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--primary);
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    body.dark-mode .timeline-dot {
+        border-color: var(--card-dark);
+    }
+
     .prestation-card {
         background: rgba(63, 81, 181, 0.05);
         border-radius: 8px;
         padding: 16px;
-        margin-bottom: 12px;
         border-left: 4px solid var(--primary);
         display: flex;
         align-items: center;
@@ -110,6 +198,7 @@
     .prestation-card:hover {
         background: rgba(63, 81, 181, 0.1);
         transform: translateX(4px);
+        box-shadow: 0 4px 12px rgba(63, 81, 181, 0.2);
     }
 
     body.dark-mode .prestation-card:hover {
@@ -169,6 +258,17 @@
     body.dark-mode .badge-en-cours { background: rgba(255, 152, 0, 0.2); color: #ffb74d; }
     body.dark-mode .badge-termine { background: rgba(46, 125, 50, 0.2); color: #81c784; }
 
+    .geo-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        border-radius: 8px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: white;
+    }
+
     .prestation-actions {
         display: flex;
         gap: 8px;
@@ -212,107 +312,31 @@
         box-shadow: 0 2px 12px rgba(0,0,0,0.2);
     }
 
-    .bons-list {
-        max-height: 400px;
-        overflow-y: auto;
-        margin-top: 16px;
-        padding: 12px;
-        background: rgba(63, 81, 181, 0.03);
+    .quick-actions {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding: 16px;
+        background: rgba(63, 81, 181, 0.05);
         border-radius: 8px;
     }
 
-    body.dark-mode .bons-list {
-        background: rgba(63, 81, 181, 0.08);
-    }
-
-    .bon-item {
-        padding: 12px;
-        background: white;
-        border-radius: 6px;
-        margin-bottom: 8px;
-        cursor: pointer;
-        transition: all 0.2s;
-        border: 2px solid transparent;
-    }
-
-    body.dark-mode .bon-item {
-        background: #2a2a2a;
-    }
-
-    .bon-item:hover {
-        border-color: var(--primary);
-        transform: translateX(4px);
-    }
-
-    .bon-item.selected {
-        border-color: var(--primary);
+    body.dark-mode .quick-actions {
         background: rgba(63, 81, 181, 0.1);
     }
 
-    .bon-item:active {
-        transform: scale(0.98);
+    .quick-action-btn {
+        flex: 1;
+        height: 40px;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
     }
 
-    .bon-client {
-        font-weight: 500;
-        color: var(--text-light);
-        margin-bottom: 4px;
-    }
-
-    body.dark-mode .bon-client {
-        color: var(--text-dark);
-    }
-
-    .bon-info {
-        font-size: 0.75rem;
-        color: #757575;
-    }
-
-    body.dark-mode .bon-info {
-        color: #b0b0b0;
-    }
-
-    .mdl-textfield {
-        width: 100%;
-        margin-bottom: 16px;
-    }
-
-    body.dark-mode #selectedBonDisplay {
-        background: rgba(63, 81, 181, 0.15);
-    }
-
-    body.dark-mode #noBonSelected {
-        background: rgba(255, 255, 255, 0.05);
-        color: #b0b0b0;
-    }
-
-    #bonSearchResults .bon-item:hover {
-        background: rgba(63, 81, 181, 0.08);
-    }
-
-    body.dark-mode #bonSearchResults .bon-item:hover {
-        background: rgba(63, 81, 181, 0.15);
-    }
-
-    .mdl-spinner {
-        margin: 0 auto;
-    }
-
-    @media (max-width: 1200px) {
-        .main-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .create-form {
-            position: static;
-        }
-
-        .filters-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    /* ==================== MODAL ==================== */
+    /* Modal Améliorée */
     .modal-overlay {
         display: none;
         position: fixed;
@@ -324,6 +348,7 @@
         z-index: 9998;
         opacity: 0;
         transition: opacity 0.3s;
+        backdrop-filter: blur(5px);
     }
 
     .modal-overlay.open {
@@ -338,7 +363,7 @@
         left: 50%;
         transform: translate(-50%, -50%);
         width: 90%;
-        max-width: 900px;
+        max-width: 1000px;
         max-height: 90vh;
         background: var(--card-light);
         border-radius: 12px;
@@ -400,22 +425,37 @@
         overflow-y: auto;
     }
 
+    /* Search & Filters Section in Modal */
+    .search-filters-section {
+        background: rgba(63, 81, 181, 0.05);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+
+    body.dark-mode .search-filters-section {
+        background: rgba(63, 81, 181, 0.1);
+    }
+
     .search-box {
-        margin-bottom: 12px;
+        margin-bottom: 16px;
     }
 
     .search-box input {
         width: 100%;
-        padding: 12px 16px;
+        padding: 12px 16px 12px 48px;
         border: 2px solid var(--border-light);
         border-radius: 8px;
         font-size: 1rem;
         background: white;
         color: var(--text-light);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236c757d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cpath d='m21 21-4.35-4.35'%3E%3C/path%3E%3C/svg%3E");
+        background-position: 16px center;
+        background-repeat: no-repeat;
     }
 
     body.dark-mode .search-box input {
-        background: #2a2a2a;
+        background-color: #2a2a2a;
         border-color: var(--border-dark);
         color: var(--text-dark);
     }
@@ -425,21 +465,189 @@
         border-color: var(--primary);
     }
 
-    .bon-details-footer {
-        position: sticky;
-        bottom: 0;
-        background: var(--card-light);
-        padding: 16px;
-        border-top: 2px solid var(--border-light);
-        margin: 0 -24px -24px;
-        display: flex;
+    .filters-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 12px;
-        justify-content: flex-end;
     }
 
-    body.dark-mode .bon-details-footer {
-        background: var(--card-dark);
-        border-top-color: var(--border-dark);
+    .filter-select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 2px solid var(--border-light);
+        border-radius: 8px;
+        font-size: 0.875rem;
+        background: white;
+        color: var(--text-light);
+        cursor: pointer;
+    }
+
+    body.dark-mode .filter-select {
+        background: #2a2a2a;
+        border-color: var(--border-dark);
+        color: var(--text-dark);
+    }
+
+    .filter-select:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+
+    /* Results List in Modal */
+    .bons-list {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    .bon-item {
+        padding: 16px;
+        background: white;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 2px solid transparent;
+        position: relative;
+    }
+
+    body.dark-mode .bon-item {
+        background: #2a2a2a;
+    }
+
+    .bon-item:hover {
+        border-color: var(--primary);
+        transform: translateX(4px);
+        box-shadow: 0 4px 12px rgba(63, 81, 181, 0.15);
+    }
+
+    .bon-item.selected {
+        border-color: var(--primary);
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    .bon-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 8px;
+    }
+
+    .bon-client {
+        font-weight: 500;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .bon-client {
+        color: var(--text-dark);
+    }
+
+    .bon-info {
+        font-size: 0.75rem;
+        color: #757575;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    body.dark-mode .bon-info {
+        color: #b0b0b0;
+    }
+
+    .bon-info-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .bon-info-item .material-icons {
+        font-size: 14px;
+    }
+
+    .bon-progress {
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .progress-bar {
+        flex: 1;
+        height: 6px;
+        background: #e0e0e0;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    body.dark-mode .progress-bar {
+        background: #424242;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: var(--primary);
+        transition: width 0.3s;
+    }
+
+    .progress-text {
+        font-size: 0.7rem;
+        color: #757575;
+        min-width: 60px;
+        text-align: right;
+    }
+
+    body.dark-mode .progress-text {
+        color: #b0b0b0;
+    }
+
+    /* Loading State */
+    .loading-spinner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px;
+    }
+
+    .spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid rgba(63, 81, 181, 0.1);
+        border-top-color: var(--primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+        .main-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .create-form {
+            position: static;
+        }
+
+        .filters-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .stats-row {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .stats-row {
+            grid-template-columns: 1fr;
+        }
+
+        .filters-row {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 
@@ -480,6 +688,11 @@
         </form>
     </div>
 
+    <!-- Stats Cards -->
+    <div class="stats-row" id="statsRow">
+        <!-- Chargé dynamiquement -->
+    </div>
+
     <!-- Main Grid -->
     <div class="main-grid">
         
@@ -491,52 +704,67 @@
             </div>
 
             {% if prestations is not empty %}
-                {% for prestation in prestations %}
-                    <div class="prestation-card">
-                        <div class="prestation-time">
-                            {{ prestation.datePrestation|date('H:i') }}
-                        </div>
+                <div class="timeline-view">
+                    <div class="timeline-line"></div>
+                    {% for prestation in prestations %}
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="prestation-card">
+                                <div class="prestation-time">
+                                    {{ prestation.datePrestation|date('H:i') }}
+                                </div>
 
-                        <div class="prestation-info">
-                            <div class="prestation-client">
-                                {{ prestation.bonDeCommande.clientNom }}
-                            </div>
-                            <div class="prestation-details">
-                                <span>
-                                    <i class="material-icons" style="font-size: 14px; vertical-align: middle;">person</i>
-                                    {{ prestation.employe ? prestation.employe.nom : 'Non assigné' }}
-                                </span>
-                                <span>
-                                    <i class="material-icons" style="font-size: 14px; vertical-align: middle;">location_on</i>
-                                    {{ prestation.bonDeCommande.clientAdresse|slice(0, 40) }}...
-                                </span>
-                                <span class="prestation-badge badge-{{ prestation.statut|replace({' ': '-', 'é': 'e'}) }}">
-                                    {{ prestation.statut }}
-                                </span>
-                            </div>
-                        </div>
+                                <div class="prestation-info">
+                                    <div class="prestation-client">
+                                        {{ prestation.bonDeCommande.clientNom }}
+                                    </div>
+                                    <div class="prestation-details">
+                                        <span class="bon-info-item">
+                                            <i class="material-icons">person</i>
+                                            {{ prestation.employe ? prestation.employe.nom : 'Non assigné' }}
+                                        </span>
+                                        <span class="bon-info-item">
+                                            <i class="material-icons">location_on</i>
+                                            {{ prestation.bonDeCommande.clientAdresse|slice(0, 40) }}...
+                                        </span>
+                                        {% if prestation.bonDeCommande.clientAdresse matches '/\\b(\\d{5})\\b/' %}
+                                            {% set codePostal = prestation.bonDeCommande.clientAdresse|split(' ')|filter(v => v matches '/^\\d{5}$/')|first %}
+                                            {% if codePostal %}
+                                                <span class="geo-badge" style="background: #9C27B0;">
+                                                    <i class="material-icons" style="font-size: 12px;">place</i>
+                                                    {{ codePostal }}
+                                                </span>
+                                            {% endif %}
+                                        {% endif %}
+                                        <span class="prestation-badge badge-{{ prestation.statut|replace({' ': '-', 'é': 'e'}) }}">
+                                            {{ prestation.statut }}
+                                        </span>
+                                    </div>
+                                </div>
 
-                        <div class="prestation-actions">
-                            <a href="{{ path('admin_prestation_show', {id: prestation.id}) }}" 
-                               class="mdl-button mdl-js-button mdl-button--icon btn-icon" 
-                               title="Voir" 
-                               style="color: #00897b;">
-                                <i class="material-icons">visibility</i>
-                            </a>
-                            <form method="post" 
-                                  action="{{ path('admin_planning_delete_prestation', {id: prestation.id}) }}" 
-                                  style="display: inline;"
-                                  onsubmit="return confirm('Supprimer cette prestation ?');">
-                                <button type="submit" 
-                                        class="mdl-button mdl-js-button mdl-button--icon btn-icon" 
-                                        title="Supprimer"
-                                        style="color: #d32f2f;">
-                                    <i class="material-icons">delete</i>
-                                </button>
-                            </form>
+                                <div class="prestation-actions">
+                                    <a href="{{ path('admin_prestation_show', {id: prestation.id}) }}" 
+                                       class="mdl-button mdl-js-button mdl-button--icon btn-icon" 
+                                       title="Voir" 
+                                       style="color: #00897b;">
+                                        <i class="material-icons">visibility</i>
+                                    </a>
+                                    <form method="post" 
+                                          action="{{ path('admin_planning_delete_prestation', {id: prestation.id}) }}" 
+                                          style="display: inline;"
+                                          onsubmit="return confirm('Supprimer cette prestation ?');">
+                                        <button type="submit" 
+                                                class="mdl-button mdl-js-button mdl-button--icon btn-icon" 
+                                                title="Supprimer"
+                                                style="color: #d32f2f;">
+                                            <i class="material-icons">delete</i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                {% endfor %}
+                    {% endfor %}
+                </div>
             {% else %}
                 <div class="empty-state">
                     <i class="material-icons">event_busy</i>
@@ -552,6 +780,19 @@
                 <div class="section-title" style="margin-bottom: 20px; padding-bottom: 12px;">
                     <i class="material-icons">add_circle</i>
                     <span>Créer une prestation</span>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('09:00')">
+                        <i class="material-icons" style="font-size: 18px;">wb_sunny</i> 9h00
+                    </button>
+                    <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('14:00')">
+                        <i class="material-icons" style="font-size: 18px;">wb_twilight</i> 14h00
+                    </button>
+                    <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setToday()">
+                        <i class="material-icons" style="font-size: 18px;">today</i> Aujourd'hui
+                    </button>
                 </div>
 
                 <form method="post" action="{{ path('admin_planning_create_prestation') }}">
@@ -629,7 +870,7 @@
 
 </div>
 
-<!-- Modal de recherche de bon de commande -->
+<!-- Modal de recherche de bon de commande améliorée -->
 <div class="modal-overlay" id="bonCommandeModalOverlay" onclick="closeBonModal()"></div>
 <div class="modal-container" id="bonCommandeModal">
     <div class="modal-header">
@@ -642,14 +883,42 @@
         </button>
     </div>
     <div class="modal-body">
-        <div class="search-box">
-            <input type="text" 
-                   id="bonSearchInput" 
-                   placeholder="Rechercher par client, numéro, adresse..." 
-                   onkeyup="searchBons()">
+        <!-- Search & Filters Section -->
+        <div class="search-filters-section">
+            <div class="search-box">
+                <input type="text" 
+                       id="bonSearchInput" 
+                       placeholder="Rechercher par client, numéro, adresse..." 
+                       onkeyup="searchBons()">
+            </div>
+            
+            <div class="filters-row">
+                <select class="filter-select" id="filterStatut" onchange="searchBons()">
+                    <option value="">Tous les statuts</option>
+                    <option value="disponible">Disponible</option>
+                    <option value="à programmer">À programmer</option>
+                    <option value="programmé">Programmé</option>
+                    <option value="terminé">Terminé</option>
+                </select>
+                
+                <select class="filter-select" id="filterGroupe" onchange="searchBons()">
+                    <option value="">Tous les groupes géographiques</option>
+                    {% for groupe in groupesGeo %}
+                        <option value="{{ groupe.id }}" data-color="{{ groupe.couleur }}">{{ groupe.nom }}</option>
+                    {% endfor %}
+                </select>
+                
+                <select class="filter-select" id="filterSort" onchange="searchBons()">
+                    <option value="date_desc">Plus récent</option>
+                    <option value="date_asc">Plus ancien</option>
+                    <option value="client_asc">Client A-Z</option>
+                    <option value="client_desc">Client Z-A</option>
+                    <option value="prestations">Moins de prestations</option>
+                </select>
+            </div>
         </div>
         
-        <div id="bonSearchResults" class="bons-list" style="max-height: 500px;">
+        <div id="bonSearchResults" class="bons-list">
             <!-- Les résultats apparaîtront ici -->
         </div>
     </div>
@@ -681,7 +950,54 @@ document.addEventListener('DOMContentLoaded', function() {
             field.classList.add('is-dirty');
         }
     });
+    
+    // Load stats on page load
+    loadStats();
 });
+
+// ==================== QUICK ACTIONS ====================
+function setTime(time) {
+    document.getElementById('heure').value = time;
+    document.getElementById('heure').parentElement.classList.add('is-dirty');
+}
+
+function setToday() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('create_date').value = today;
+    document.getElementById('create_date').parentElement.classList.add('is-dirty');
+}
+
+// ==================== STATS LOADING ====================
+async function loadStats() {
+    const statsRow = document.getElementById('statsRow');
+    const selectedDate = document.getElementById('date').value;
+    
+    try {
+        const response = await fetch(`/admin/planning/stats?date=${selectedDate}`);
+        const data = await response.json();
+        
+        statsRow.innerHTML = `
+            <div class="stat-card primary">
+                <div class="stat-label">Total prestations</div>
+                <div class="stat-value">${data.stats.total || 0}</div>
+            </div>
+            <div class="stat-card info">
+                <div class="stat-label">Programmées</div>
+                <div class="stat-value">${data.stats.programme || 0}</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-label">En cours</div>
+                <div class="stat-value">${data.stats.en_cours || 0}</div>
+            </div>
+            <div class="stat-card success">
+                <div class="stat-label">Terminées</div>
+                <div class="stat-value">${data.stats.termine || 0}</div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Erreur lors du chargement des stats:', error);
+    }
+}
 
 // ==================== MODAL MANAGEMENT ====================
 function openBonModal() {
@@ -689,38 +1005,13 @@ function openBonModal() {
     document.getElementById('bonCommandeModal').classList.add('open');
     document.getElementById('bonSearchInput').focus();
     
-    // Charger les bons disponibles par défaut
-    loadDefaultBons();
-}
-
-async function loadDefaultBons() {
-    const resultsContainer = document.getElementById('bonSearchResults');
+    // Reset filters
+    document.getElementById('filterStatut').value = 'disponible';
+    document.getElementById('filterGroupe').value = '';
+    document.getElementById('filterSort').value = 'date_desc';
     
-    // Afficher un loader
-    resultsContainer.innerHTML = `
-        <div class="empty-state" style="padding: 40px;">
-            <div class="mdl-spinner mdl-js-spinner is-active"></div>
-            <p style="margin-top: 16px;">Chargement...</p>
-        </div>
-    `;
-    
-    // Initialiser le spinner MDL
-    componentHandler.upgradeElement(resultsContainer.querySelector('.mdl-spinner'));
-    
-    try {
-        const response = await fetch('/admin/planning/bons-disponibles');
-        const bons = await response.json();
-        
-        displaySearchResults(bons);
-    } catch (error) {
-        console.error('Erreur de chargement:', error);
-        resultsContainer.innerHTML = `
-            <div class="empty-state" style="padding: 40px; color: #d32f2f;">
-                <i class="material-icons" style="font-size: 64px;">error</i>
-                <p>Erreur lors du chargement des bons de commande</p>
-            </div>
-        `;
-    }
+    // Load default bons with filters
+    searchBons();
 }
 
 function closeBonModal() {
@@ -746,37 +1037,27 @@ async function viewBonDetails(bonId) {
     const overlay = document.getElementById('bonDetailsModalOverlay');
     const content = document.getElementById('bonDetailsContent');
     
-    // Ouvrir la modal
     overlay.classList.add('open');
     modal.classList.add('open');
     
-    // Afficher un loader
     content.innerHTML = `
-        <div class="empty-state" style="padding: 60px;">
-            <div class="mdl-spinner mdl-js-spinner is-active"></div>
+        <div class="loading-spinner">
+            <div class="spinner"></div>
             <p style="margin-top: 16px;">Chargement des détails...</p>
         </div>
     `;
-    
-    // Initialiser le spinner MDL
-    componentHandler.upgradeElement(content.querySelector('.mdl-spinner'));
     
     try {
         const response = await fetch(`/admin/bon-commande/${bonId}`);
         const html = await response.text();
         
-        // Parser le HTML pour extraire seulement le contenu du bon
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
         const mainContent = doc.querySelector('.page-content') || doc.querySelector('main') || doc.body;
         
-        // Injecter le contenu
         content.innerHTML = mainContent.innerHTML;
-        
-        // Upgrade les composants MDL dans le contenu chargé
         componentHandler.upgradeAllRegistered();
         
-        // Ajouter un bouton pour sélectionner ce bon
         const selectBtn = document.createElement('div');
         selectBtn.style.cssText = 'position: sticky; bottom: 0; background: var(--card-light); padding: 16px; border-top: 2px solid var(--border-light); margin: 0 -24px -24px; display: flex; gap: 12px; justify-content: flex-end;';
         selectBtn.innerHTML = `
@@ -821,32 +1102,28 @@ async function searchBons() {
     clearTimeout(searchTimeout);
     
     const query = document.getElementById('bonSearchInput').value.trim();
+    const statut = document.getElementById('filterStatut').value;
+    const groupeGeo = document.getElementById('filterGroupe').value;
+    const sort = document.getElementById('filterSort').value;
     const resultsContainer = document.getElementById('bonSearchResults');
     
-    if (query.length < 2) {
-        resultsContainer.innerHTML = `
-            <div class="empty-state" style="padding: 40px;">
-                <i class="material-icons" style="font-size: 64px;">search</i>
-                <p>Tapez au moins 2 caractères pour rechercher</p>
-            </div>
-        `;
-        return;
-    }
-    
-    // Afficher un loader
     resultsContainer.innerHTML = `
-        <div class="empty-state" style="padding: 40px;">
-            <div class="mdl-spinner mdl-js-spinner is-active"></div>
+        <div class="loading-spinner">
+            <div class="spinner"></div>
             <p style="margin-top: 16px;">Recherche en cours...</p>
         </div>
     `;
     
-    // Initialiser le spinner MDL
-    componentHandler.upgradeElement(resultsContainer.querySelector('.mdl-spinner'));
-    
     searchTimeout = setTimeout(async () => {
         try {
-            const response = await fetch(`/admin/planning/search-bons?q=${encodeURIComponent(query)}`);
+            const params = new URLSearchParams({
+                q: query,
+                statut: statut,
+                groupe_geo: groupeGeo,
+                sort: sort
+            });
+            
+            const response = await fetch(`/admin/planning/search-bons?${params}`);
             const bons = await response.json();
             
             displaySearchResults(bons);
@@ -875,28 +1152,61 @@ function displaySearchResults(bons) {
         return;
     }
     
-    resultsContainer.innerHTML = bons.map(bon => `
-        <div class="bon-item" style="display: flex; justify-content: space-between; align-items: center;">
-            <div onclick="selectBonFromModal(${bon.id})" style="flex: 1; cursor: pointer;">
-                <div class="bon-client">${bon.clientNom}</div>
-                <div class="bon-info">
-                    <i class="material-icons" style="font-size: 12px; vertical-align: middle;">receipt</i>
-                    BC ${bon.numeroCommande || '#' + bon.id} •
-                    ${bon.nombrePrestations}/${bon.nombrePrestationsNecessaires} prestations •
-                    <i class="material-icons" style="font-size: 12px; vertical-align: middle;">location_on</i>
-                    ${bon.clientAdresse ? bon.clientAdresse.substring(0, 40) + '...' : 'N/A'}
+    resultsContainer.innerHTML = bons.map(bon => {
+        const progress = bon.nombrePrestationsNecessaires > 0 
+            ? (bon.nombrePrestations / bon.nombrePrestationsNecessaires * 100).toFixed(0)
+            : 0;
+            
+        const geoHtml = bon.groupeGeo 
+            ? `<span class="geo-badge" style="background: ${bon.groupeGeo.couleur};">
+                   <i class="material-icons" style="font-size: 12px;">place</i>
+                   ${bon.groupeGeo.nom}
+               </span>`
+            : bon.codePostal 
+                ? `<span class="geo-badge" style="background: #757575;">
+                       <i class="material-icons" style="font-size: 12px;">place</i>
+                       ${bon.codePostal}
+                   </span>`
+                : '';
+        
+        return `
+            <div class="bon-item">
+                <div class="bon-item-header">
+                    <div onclick="selectBonFromModal(${bon.id})" style="flex: 1; cursor: pointer;">
+                        <div class="bon-client">${bon.clientNom}</div>
+                        <div class="bon-info">
+                            <span class="bon-info-item">
+                                <i class="material-icons">receipt</i>
+                                BC ${bon.numeroCommande || '#' + bon.id}
+                            </span>
+                            <span class="bon-info-item">
+                                <i class="material-icons">event</i>
+                                ${bon.dateCommande || 'N/A'}
+                            </span>
+                            <span class="bon-info-item">
+                                <i class="material-icons">location_on</i>
+                                ${bon.clientAdresse ? bon.clientAdresse.substring(0, 30) + '...' : 'N/A'}
+                            </span>
+                            ${geoHtml}
+                        </div>
+                        <div class="bon-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${progress}%;"></div>
+                            </div>
+                            <div class="progress-text">${bon.nombrePrestations}/${bon.nombrePrestationsNecessaires}</div>
+                        </div>
+                    </div>
+                    <button onclick="viewBonDetails(${bon.id}); event.stopPropagation();" 
+                            class="mdl-button mdl-js-button mdl-button--icon" 
+                            title="Voir les détails"
+                            style="color: var(--primary);">
+                        <i class="material-icons">visibility</i>
+                    </button>
                 </div>
             </div>
-            <button onclick="viewBonDetails(${bon.id}); event.stopPropagation();" 
-                    class="mdl-button mdl-js-button mdl-button--icon" 
-                    title="Voir les détails"
-                    style="color: var(--primary);">
-                <i class="material-icons">visibility</i>
-            </button>
-        </div>
-    `).join('');
+        `;
+    }).join('');
     
-    // Upgrade MDL buttons
     componentHandler.upgradeAllRegistered();
 }
 
@@ -906,24 +1216,28 @@ async function selectBonFromModal(bonId) {
         const response = await fetch(`/admin/planning/bon/${bonId}`);
         const bon = await response.json();
         
-        // Mettre à jour le formulaire
         document.getElementById('selected_bon').value = bonId;
         document.getElementById('submit-btn').disabled = false;
         
-        // Afficher le bon sélectionné
         document.getElementById('selectedBonClient').textContent = bon.clientNom;
         document.getElementById('selectedBonInfo').innerHTML = `
-            <i class="material-icons" style="font-size: 12px; vertical-align: middle;">receipt</i>
-            BC ${bon.numeroCommande || '#' + bon.id} •
-            ${bon.nombrePrestations}/${bon.nombrePrestationsNecessaires} prestations •
-            <i class="material-icons" style="font-size: 12px; vertical-align: middle;">location_on</i>
-            ${bon.clientAdresse || 'N/A'}
+            <span class="bon-info-item">
+                <i class="material-icons">receipt</i>
+                BC ${bon.numeroCommande || '#' + bon.id}
+            </span>
+            <span class="bon-info-item">
+                <i class="material-icons">check_circle</i>
+                ${bon.nombrePrestations}/${bon.nombrePrestationsNecessaires} prestations
+            </span>
+            <span class="bon-info-item">
+                <i class="material-icons">location_on</i>
+                ${bon.clientAdresse || 'N/A'}
+            </span>
         `;
         
         document.getElementById('selectedBonDisplay').style.display = 'block';
         document.getElementById('noBonSelected').style.display = 'none';
         
-        // Fermer la modal
         closeBonModal();
         
     } catch (error) {

@@ -458,6 +458,11 @@
                                 <i class="material-icons">check_circle</i>
                                 Terminé
                             </span>
+                        {% elseif bon.statut == 'en cours' %}
+                            <span class="status-badge status-termine">
+                                <i class="material-icons">pending</i>
+                                En cours
+                            </span>
                         {% endif %}
                     </div>
                 </div>
@@ -505,6 +510,9 @@
                                 {% elseif prestation.statut == 'terminé' %}
                                     <i class="material-icons" style="font-size: 16px;">check_circle</i>
                                     Terminé
+                                {% elseif prestation.statut == 'en cours' %}
+                                    <i class="material-icons" style="font-size: 16px;">pending</i>
+                                    En cours
                                 {% endif %}
                             </span>
                         </div>
