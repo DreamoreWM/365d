@@ -105,7 +105,7 @@ public function terminer(Prestation $prestation, EntityManagerInterface $em): Re
             $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
         }
 
-        $html = $this->renderView('prestation_user/pdf_export.html.twig', [
+        $html = $this->renderView('prestation_user/pdf.html.twig', [
             'prestation' => $prestation,
             'logo_base64' => $logoBase64,
         ]);
