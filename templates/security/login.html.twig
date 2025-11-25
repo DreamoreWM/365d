@@ -3,59 +3,388 @@
 {% block title %}Connexion{% endblock %}
 
 {% block body %}
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+        padding: 20px;
+    }
 
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-4">
+    .login-container {
+        width: 100%;
+        max-width: 420px;
+        animation: slideUp 0.5s ease;
+    }
 
-            <div class="card shadow">
-                <div class="card-body">
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 
-                    <h3 class="text-center mb-4">Connexion</h3>
+    .login-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        overflow: hidden;
+    }
 
-                    {% if error %}
-                        <div class="alert alert-danger">
-                            {{ error.messageKey|trans(error.messageData, 'security') }}
-                        </div>
-                    {% endif %}
+    .login-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px 30px;
+        text-align: center;
+        position: relative;
+    }
 
-                    <form method="post" action="{{ path('app_login') }}">
+    .login-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 200px;
+        height: 200px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+    }
 
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Email</label>
-                            <input 
-                                type="text" 
-                                id="username" 
-                                name="_username" 
-                                class="form-control"
-                                value="{{ last_username }}"
-                                required
-                                autofocus
-                            >
-                        </div>
+    /* Remplacez uniquement la partie .logo-container et .logo-container img */
+    .logo-container {
+        width: auto;
+        height: 60px;
+        margin: 0 auto 25px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        z-index: 1;
+        /* Pas de background blanc ni de box-shadow */
+    }
 
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Mot de passe</label>
-                            <input 
-                                type="password" 
-                                id="password" 
-                                name="_password" 
-                                class="form-control"
-                                required
-                            >
-                        </div>
+    .logo-container img {
+        max-width: 320px;
+        max-height: 120px;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+    }
 
-                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+    .logo-placeholder {
+        font-size: 40px;
+        color: #667eea;
+        font-weight: bold;
+    }
 
-                        <button class="btn btn-primary w-100" type="submit">Se connecter</button>
+    .login-header h2 {
+        color: white;
+        margin: 0;
+        font-size: 28px;
+        font-weight: 600;
+        position: relative;
+        z-index: 1;
+    }
 
-                    </form>
+    .login-subtitle {
+        color: rgba(255,255,255,0.9);
+        margin-top: 8px;
+        font-size: 14px;
+        position: relative;
+        z-index: 1;
+    }
 
-                </div>
+    .login-body {
+        padding: 40px 30px;
+    }
+
+    .form-group {
+        margin-bottom: 25px;
+        position: relative;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        color: #4a5568;
+        font-weight: 500;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 12px 15px 12px 45px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 16px;
+        transition: all 0.3s;
+        background: #f7fafc;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: #667eea;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(102,126,234,0.1);
+    }
+
+    .input-icon {
+        position: absolute;
+        left: 15px;
+        top: 42px;
+        color: #a0aec0;
+        font-size: 20px;
+        transition: color 0.3s;
+    }
+
+    .form-input:focus ~ .input-icon {
+        color: #667eea;
+    }
+
+    .error-message {
+        background: #fed7d7;
+        color: #c53030;
+        padding: 12px 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .error-icon {
+        font-size: 20px;
+    }
+
+    .btn-login {
+        width: 100%;
+        padding: 14px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        box-shadow: 0 4px 15px rgba(102,126,234,0.4);
+    }
+
+    .btn-login:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 7px 20px rgba(102,126,234,0.5);
+    }
+
+    .btn-login:active {
+        transform: translateY(0);
+    }
+
+    .remember-forgot {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+        font-size: 14px;
+    }
+
+    .remember-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #4a5568;
+    }
+
+    .remember-checkbox input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .forgot-link {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.3s;
+    }
+
+    .forgot-link:hover {
+        color: #764ba2;
+        text-decoration: underline;
+    }
+
+    .login-footer {
+        text-align: center;
+        padding: 20px;
+        background: #f7fafc;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .login-footer p {
+        margin: 0;
+        color: #718096;
+        font-size: 14px;
+    }
+
+    .login-footer a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .login-footer a:hover {
+        text-decoration: underline;
+    }
+
+    /* Material Icons */
+    .material-icons {
+        font-family: 'Material Icons';
+        font-weight: normal;
+        font-style: normal;
+        font-size: 24px;
+        display: inline-block;
+        line-height: 1;
+        text-transform: none;
+        letter-spacing: normal;
+        word-wrap: normal;
+        white-space: nowrap;
+        direction: ltr;
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 480px) {
+        .login-container {
+            padding: 0 10px;
+        }
+
+        .login-header {
+            padding: 30px 20px;
+        }
+
+        .login-body {
+            padding: 30px 20px;
+        }
+
+        .login-header h2 {
+            font-size: 24px;
+        }
+
+        .btn-login {
+            padding: 12px;
+            font-size: 15px;
+        }
+    }
+
+    /* Animation pour les erreurs */
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+
+    .error-message {
+        animation: shake 0.5s ease;
+    }
+</style>
+
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <div class="logo-container">
+                {% if logo_exists %}
+                    <img src="{{ asset('images/logo.png') }}" alt="Logo">
+                {% else %}
+                    <span class="logo-placeholder">ENI</span>
+                {% endif %}
             </div>
+            <h2>Connexion</h2>
+            <p class="login-subtitle">Accédez à votre espace</p>
+        </div>
 
+        <div class="login-body">
+            {% if error %}
+                <div class="error-message">
+                    <i class="material-icons error-icon">error_outline</i>
+                    <span>{{ error.messageKey|trans(error.messageData, 'security') }}</span>
+                </div>
+            {% endif %}
+
+            <form method="post" action="{{ path('app_login') }}">
+                <div class="form-group">
+                    <label for="username" class="form-label">Adresse email</label>
+                    <input 
+                        type="email" 
+                        id="username" 
+                        name="_username" 
+                        class="form-input"
+                        value="{{ last_username }}"
+                        placeholder="exemple@email.com"
+                        required
+                        autofocus
+                    >
+                    <i class="material-icons input-icon">email</i>
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">Mot de passe</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="_password" 
+                        class="form-input"
+                        placeholder="••••••••"
+                        required
+                    >
+                    <i class="material-icons input-icon">lock</i>
+                </div>
+
+                <div class="remember-forgot">
+                    <label class="remember-checkbox">
+                        <input type="checkbox" name="_remember_me">
+                        <span>Se souvenir de moi</span>
+                    </label>
+                    <a href="#" class="forgot-link">Mot de passe oublié ?</a>
+                </div>
+
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+                <button class="btn-login" type="submit">
+                    Se connecter
+                </button>
+            </form>
+        </div>
+
+        <div class="login-footer">
+            <p>© 2024 SENI Services - Tous droits réservés</p>
         </div>
     </div>
 </div>
+
+<script>
+    // Animation au focus des inputs
+    document.querySelectorAll('.form-input').forEach(input => {
+        input.addEventListener('focus', function() {
+            this.parentElement.classList.add('focused');
+        });
+        
+        input.addEventListener('blur', function() {
+            if (!this.value) {
+                this.parentElement.classList.remove('focused');
+            }
+        });
+    });
+</script>
 
 {% endblock %}

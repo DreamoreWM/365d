@@ -325,6 +325,43 @@
                 width: 280px;
             }
         }
+
+    .sidebar-header {
+        height: var(--topbar-height);
+        display: flex;
+        align-items: center;
+        padding: 0 20px;
+        background: var(--primary);
+        color: white;
+        font-size: 1.5rem;
+        font-weight: 500;
+        gap: 12px;  /* Espace entre logo et texte */
+    }
+
+    .sidebar-logo {
+        height: 40px;  /* Hauteur fixe */
+        width: auto;   /* Largeur automatique pour garder les proportions */
+        max-width: 120px;  /* Largeur max pour les logos rectangulaires */
+        object-fit: contain;
+    }
+
+    .sidebar-title {
+        font-size: 1.3rem;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    /* Pour mobile, logo un peu plus petit */
+    @media (max-width: 768px) {
+        .sidebar-logo {
+            height: 35px;
+            max-width: 100px;
+        }
+        
+        .sidebar-title {
+            font-size: 1.2rem;
+        }
+    }
     </style>
 </head>
 
@@ -333,8 +370,8 @@
 <!-- SIDEBAR DESKTOP -->
 <nav class="sidebar d-none d-lg-block">
     <div class="sidebar-header">
-        <i class="material-icons" style="margin-right: 12px;">dashboard</i>
-        Mon App
+        <img src="{{ asset('images/logo.png') }}" alt="Logo" class="sidebar-logo">
+        <span class="sidebar-title">Services 4D</span>
     </div>
     <div class="sidebar-menu">
         <a href="{{ path('app_dashboard') }}" class="menu-item {{ app.request.get('_route') == 'app_dashboard' ? 'active' : '' }}">
@@ -390,6 +427,12 @@
             <i class="material-icons">brightness_4</i>
             <span>Thème sombre</span>
         </a>
+        <div class="menu-divider"></div>
+
+        <a href="{{ path('app_logout') }}" class="menu-item logout-item">
+            <i class="material-icons">logout</i>
+            <span>Déconnexion</span>
+        </a>
     </div>
 </nav>
 
@@ -398,7 +441,10 @@
     <button class="icon-button" id="menu-button">
         <i class="material-icons">menu</i>
     </button>
-    <div class="topbar-title">Mon App</div>
+    <div class="sidebar-header">
+        <img src="{{ asset('images/logo.png') }}" alt="Logo" class="sidebar-logo">
+        <span class="sidebar-title">Services 4D</span>
+    </div>
     <button class="icon-button" id="theme-toggle-mobile">
         <i class="material-icons">brightness_4</i>
     </button>
