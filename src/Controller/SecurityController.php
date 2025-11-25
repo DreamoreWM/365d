@@ -18,9 +18,13 @@ class SecurityController extends AbstractController
         // last username entered by the user
         $lastUsername = $authenticationUtils->getLastUsername();
 
+        $logoPath = $this->getParameter('kernel.project_dir') . '/public/images/logo.png';
+        $logoExists = file_exists($logoPath);
+
         return $this->render('security/login.html.twig', [
             'last_username' => $lastUsername,
             'error' => $error,
+            'logo_exists' => $logoExists, // Passer cette variable
         ]);
     }
 
