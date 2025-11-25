@@ -74,14 +74,16 @@
     <!-- HEADER avec logo -->
     <div class="header">
         <div class="header-left">
-            <img src="{{ absolute_url(asset('images/logo.png')) }}" alt="Logo ENI">
+            {% if logo_base64 %}
+                <img src="{{ logo_base64 }}" alt="Logo ENI" style="max-width: 150px;">
+            {% endif %}
         </div>
         <div class="header-right">
             <strong>PA DES VOILES</strong><br>
             99 VOIE DES TRAMS<br>
             59118 WAMBRECHIES
         </div>
-    </div>
+</div>
 
     <h1>FICHE INTERVENTION</h1>
 
