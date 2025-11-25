@@ -328,7 +328,7 @@
                 <div class="info-content">
                     <div class="info-label">Numéro commande</div>
                     <div class="info-value">
-                        {{ prestation.bonDeCommande.numeroCommande ?? 'N/A' }}
+                        {{ prestation.bonDeCommande ? prestation.bonDeCommande.numeroCommande : 'N/A' }}
                     </div>
                 </div>
             </div>
@@ -397,7 +397,7 @@
                 <div class="info-content">
                     <div class="info-label">Type de prestation</div>
                     <div class="info-value">
-                        {{ prestation.bonDeCommande.typePrestation?.nom ?? 'Non défini' }}
+                        {{ prestation.bonDeCommande.typePrestation ? prestation.bonDeCommande.typePrestation.nom : 'Non défini' }}
                     </div>
                 </div>
             </div>
