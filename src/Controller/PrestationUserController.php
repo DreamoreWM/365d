@@ -92,18 +92,28 @@ public function terminer(Prestation $prestation, EntityManagerInterface $em): Re
         $options = new Options();
         $options->set('isHtml5ParserEnabled', true);
         $options->set('isRemoteEnabled', true);
+        $options->set('isPhpEnabled', true);
 
         $dompdf = new Dompdf($options);
 
-        $html = $this->renderView('prestation_user/pdf.html.twig', [
+        // Passer le chemin absolu de l'image
+        $logoPath = $this->getParameter('kernel.project_dir') . '/public/images/logo.png';
+        $logoBase64 = '';
+        
+        if (file_exists($logoPath)) {
+            $logoData = file_get_contents($logoPath);
+            $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
+        }
+
+        $html = $this->renderView('prestation_user/pdf_export.html.twig', [
             'prestation' => $prestation,
+            'logo_base64' => $logoBase64,
         ]);
 
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4');
         $dompdf->render();
 
-        // ⚠️ Pas de StreamedResponse, sinon téléchargement forcé !
         $pdfOutput = $dompdf->output();
 
         $response = new Response($pdfOutput);
@@ -114,4 +124,4 @@ public function terminer(Prestation $prestation, EntityManagerInterface $em): Re
     }
 
 
-}
+}   
