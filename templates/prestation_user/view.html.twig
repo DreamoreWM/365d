@@ -314,26 +314,130 @@
         </h2>
     </div>
 
-    <!-- Info Card -->
+    <!-- Informations du Bon de Commande -->
     <div class="info-card">
+        <div class="info-title">
+            <i class="material-icons">assignment</i> Bon de commande
+        </div>
+
         <div class="info-grid">
+
+            <!-- Numéro de commande -->
+            <div class="info-block">
+                <i class="material-icons">receipt</i>
+                <div class="info-content">
+                    <div class="info-label">Numéro commande</div>
+                    <div class="info-value">
+                        {{ prestation.bonDeCommande.numeroCommande ?? 'N/A' }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Client -->
+            <div class="info-block">
+                <i class="material-icons">person</i>
+                <div class="info-content">
+                    <div class="info-label">Client</div>
+                    <div class="info-value">
+                        {{ prestation.bonDeCommande.clientNom }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Adresse complète -->
             <div class="info-block">
                 <i class="material-icons">location_on</i>
                 <div class="info-content">
                     <div class="info-label">Adresse</div>
-                    <div class="info-value">{{ prestation.bonDeCommande.clientAdresse }}</div>
+                    <div class="info-value">
+                        {{ prestation.bonDeCommande.clientAdresse }}
+                        {% if prestation.bonDeCommande.clientComplementAdresse %}
+                            <br>{{ prestation.bonDeCommande.clientComplementAdresse }}
+                        {% endif %}
+                    </div>
                 </div>
             </div>
 
+            <!-- Téléphone -->
+            <div class="info-block">
+                <i class="material-icons">phone</i>
+                <div class="info-content">
+                    <div class="info-label">Téléphone</div>
+                    <div class="info-value">
+                        {{ prestation.bonDeCommande.clientTelephone }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Email -->
+            <div class="info-block">
+                <i class="material-icons">email</i>
+                <div class="info-content">
+                    <div class="info-label">Email</div>
+                    <div class="info-value">
+                        {{ prestation.bonDeCommande.clientEmail }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Date commande -->
             <div class="info-block">
                 <i class="material-icons">event</i>
                 <div class="info-content">
-                    <div class="info-label">Date et heure</div>
-                    <div class="info-value">{{ prestation.datePrestation|date('d/m/Y à H:i') }}</div>
+                    <div class="info-label">Date commande</div>
+                    <div class="info-value">
+                        {{ prestation.bonDeCommande.dateCommande|date('d/m/Y à H:i') }}
+                    </div>
                 </div>
             </div>
+
+            <!-- Type de prestation -->
+            <div class="info-block">
+                <i class="material-icons">work</i>
+                <div class="info-content">
+                    <div class="info-label">Type de prestation</div>
+                    <div class="info-value">
+                        {{ prestation.bonDeCommande.typePrestation?.nom ?? 'Non défini' }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statut -->
+            <div class="info-block">
+                <i class="material-icons">flag</i>
+                <div class="info-content">
+                    <div class="info-label">Statut</div>
+                    <div class="info-value">
+                        {{ prestation.bonDeCommande.statut }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nombre de prestations -->
+            <div class="info-block">
+                <i class="material-icons">format_list_numbered</i>
+                <div class="info-content">
+                    <div class="info-label">Prestations créées</div>
+                    <div class="info-value">
+                        {{ prestation.bonDeCommande.nombrePrestations }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nombre de prestations nécessaires -->
+            <div class="info-block">
+                <i class="material-icons">check_circle</i>
+                <div class="info-content">
+                    <div class="info-label">Prestations nécessaires</div>
+                    <div class="info-value">
+                        {{ prestation.bonDeCommande.nombrePrestationsNecessaires }}
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
+
 
     <!-- Success Messages -->
     {% for message in app.flashes('success') %}

@@ -716,7 +716,7 @@
 
                                 <div class="prestation-info">
                                     <div class="prestation-client">
-                                        {{ prestation.bonDeCommande.clientNom }}
+                                        {{ prestation.bonDeCommande ? prestation.bonDeCommande.clientNom : '—' }}
                                     </div>
                                     <div class="prestation-details">
                                         <span class="bon-info-item">
@@ -725,9 +725,9 @@
                                         </span>
                                         <span class="bon-info-item">
                                             <i class="material-icons">location_on</i>
-                                            {{ prestation.bonDeCommande.clientAdresse|slice(0, 40) }}...
+                                        {{ prestation.bonDeCommande ? prestation.bonDeCommande.clientAdresse|slice(0, 40) ~ '...' : 'Adresse indisponible' }}
                                         </span>
-                                        {% if prestation.bonDeCommande.clientAdresse matches '/\\b(\\d{5})\\b/' %}
+                                        {% if prestation.bonDeCommande and prestation.bonDeCommande.clientAdresse matches '/\\b(\\d{5})\\b/' %}
                                             {% set codePostal = prestation.bonDeCommande.clientAdresse|split(' ')|filter(v => v matches '/^\\d{5}$/')|first %}
                                             {% if codePostal %}
                                                 <span class="geo-badge" style="background: #9C27B0;">
