@@ -97,9 +97,31 @@ class BonDeCommandeController extends AbstractController
     {
         // Mise à jour du statut avant affichage
         $this->prestationManager->updateBonDeCommande($bon);
+        
+        // Vérifier la dernière prestation (la plus récente)
+        $derniereNonEffectuee = false;
+        $dernierePrestation = null;
+        
+        $prestations = $bon->getPrestations()->toArray();
+        if (count($prestations) > 0) {
+            // Trier les prestations par date (la plus récente en dernier)
+            usort($prestations, function($a, $b) {
+                return $a->getDatePrestation() <=> $b->getDatePrestation();
+            });
+            
+            // Prendre la dernière prestation (la plus récente)
+            $dernierePrestation = end($prestations);
+            
+            // Vérifier si elle est non effectuée
+            if ($dernierePrestation && $dernierePrestation->getStatut() === 'non effectué') {
+                $derniereNonEffectuee = true;
+            }
+        }
 
         return $this->render('admin/bon_commande/show.html.twig', [
             'bon' => $bon,
+            'derniereNonEffectuee' => $derniereNonEffectuee,
+            'dernierePrestation' => $dernierePrestation,
         ]);
     }
 

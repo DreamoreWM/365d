@@ -339,7 +339,28 @@
 </style>
 
 <div class="detail-container">
-    
+
+    {% if derniereNonEffectuee %}
+    <div class="alert-warning">
+        <i class="material-icons">warning</i>
+        <div class="alert-content">
+            <div class="alert-title">⚠️ Dernière prestation non effectuée</div>
+            <div class="alert-message">
+                La dernière prestation du {{ dernierePrestation.datePrestation|date('d/m/Y à H:i') }} 
+                n'a pas été effectuée.
+                {% if dernierePrestation.employe %}
+                    Elle était assignée à {{ dernierePrestation.employe.nom }}.
+                {% endif %}
+                {% if dernierePrestation.id %}
+                    <a href="{{ path('admin_prestation_show', {id: dernierePrestation.id}) }}" class="alert-link">
+                        Voir la prestation →
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+        
     <!-- Header -->
     <div class="detail-header">
         <div class="detail-header-left">
