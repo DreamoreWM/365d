@@ -2,23 +2,54 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
 use App\Repository\TypePrestationRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: TypePrestationRepository::class)]
+#[ApiResource(
+    operations: [
+        new GetCollection(
+            security: "is_granted('ROLE_USER')",
+        ),
+        new Get(
+            security: "is_granted('ROLE_USER')",
+        ),
+        new Post(
+            security: "is_granted('ROLE_ADMIN')",
+        ),
+        new Patch(
+            security: "is_granted('ROLE_ADMIN')",
+        ),
+        new Delete(
+            security: "is_granted('ROLE_ADMIN')",
+        ),
+    ],
+    normalizationContext: ['groups' => ['type:read']],
+    denormalizationContext: ['groups' => ['type:write']],
+)]
 class TypePrestation
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['type:read', 'prestation:read', 'bon:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 100)]
+    #[Groups(['type:read', 'type:write', 'prestation:read', 'bon:read'])]
     private ?string $nom = null;
 
     #[ORM\Column(type: 'integer')]
+    #[Groups(['type:read', 'type:write', 'bon:read'])]
     private ?int $nombrePrestationsNecessaires = 1;
 
     #[ORM\OneToMany(mappedBy: 'typePrestation', targetEntity: Prestation::class)]

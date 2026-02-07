@@ -2,61 +2,109 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
 use App\Repository\BonDeCommandeRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: BonDeCommandeRepository::class)]
+#[ApiResource(
+    operations: [
+        new GetCollection(
+            security: "is_granted('ROLE_USER')",
+        ),
+        new Get(
+            security: "is_granted('ROLE_USER')",
+        ),
+        new Post(
+            security: "is_granted('ROLE_ADMIN')",
+        ),
+        new Patch(
+            security: "is_granted('ROLE_ADMIN')",
+        ),
+        new Delete(
+            security: "is_granted('ROLE_ADMIN')",
+        ),
+    ],
+    normalizationContext: ['groups' => ['bon:read']],
+    denormalizationContext: ['groups' => ['bon:write']],
+)]
+#[ApiFilter(SearchFilter::class, properties: [
+    'statut' => 'exact',
+    'clientNom' => 'partial',
+    'numeroCommande' => 'exact',
+])]
 class BonDeCommande
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['bon:read', 'prestation:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 100)]
+    #[Groups(['bon:read', 'bon:write', 'prestation:read'])]
     private ?string $clientNom = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['bon:read', 'bon:write'])]
     private ?string $clientAdresse = null;
 
     #[ORM\Column(length: 50)]
+    #[Groups(['bon:read', 'bon:write'])]
     private ?string $clientTelephone = null;
 
     #[ORM\Column(length: 180)]
+    #[Groups(['bon:read', 'bon:write'])]
     private ?string $clientEmail = null;
 
     #[ORM\Column]
+    #[Groups(['bon:read', 'bon:write'])]
     private ?\DateTimeImmutable $dateCommande = null;
 
     #[ORM\OneToMany(mappedBy: 'bonDeCommande', targetEntity: Prestation::class, cascade: ['persist', 'remove'])]
+    #[Groups(['bon:read'])]
     private Collection $prestations;
 
     #[ORM\Column(length: 50)]
+    #[Groups(['bon:read', 'prestation:read'])]
     private ?string $statut = 'à programmer';
 
     #[ORM\Column(type: 'integer')]
+    #[Groups(['bon:read'])]
     private int $nombrePrestations = 0;
 
     #[ORM\ManyToOne(targetEntity: TypePrestation::class)]
+    #[Groups(['bon:read', 'bon:write'])]
     private ?TypePrestation $typePrestation = null;
 
     #[ORM\Column(type: 'integer')]
+    #[Groups(['bon:read'])]
     private int $nombrePrestationsNecessaires = 0;
 
     #[ORM\Column(length: 50, nullable: true)]
+    #[Groups(['bon:read', 'bon:write', 'prestation:read'])]
     private ?string $numeroCommande = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['bon:read', 'bon:write'])]
     private ?string $clientComplementAdresse = null;
 
-    
+
     public function __construct()
     {
         $this->prestations = new ArrayCollection();
         $this->dateCommande = new \DateTimeImmutable();
-        $this->statut = 'à programmer'; // 👈 FIX : statut par défaut correct
+        $this->statut = 'à programmer';
         $this->nombrePrestations = 0;
         $this->nombrePrestationsNecessaires = 0;
     }

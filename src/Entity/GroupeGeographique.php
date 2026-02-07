@@ -2,40 +2,80 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Doctrine\Orm\Filter\BooleanFilter;
+use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
 use App\Repository\GroupeGeographiqueRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: GroupeGeographiqueRepository::class)]
+#[ApiResource(
+    operations: [
+        new GetCollection(
+            security: "is_granted('ROLE_USER')",
+        ),
+        new Get(
+            security: "is_granted('ROLE_USER')",
+        ),
+        new Post(
+            security: "is_granted('ROLE_ADMIN')",
+        ),
+        new Patch(
+            security: "is_granted('ROLE_ADMIN')",
+        ),
+        new Delete(
+            security: "is_granted('ROLE_ADMIN')",
+        ),
+    ],
+    normalizationContext: ['groups' => ['geo:read']],
+    denormalizationContext: ['groups' => ['geo:write']],
+)]
+#[ApiFilter(BooleanFilter::class, properties: ['actif'])]
 class GroupeGeographique
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['geo:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['geo:read', 'geo:write'])]
     private ?string $nom = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['geo:read', 'geo:write'])]
     private ?string $description = null;
 
     #[ORM\Column(length: 7)]
+    #[Groups(['geo:read', 'geo:write'])]
     private ?string $couleur = null;
 
     #[ORM\Column(type: Types::JSON)]
+    #[Groups(['geo:read', 'geo:write'])]
     private array $villes = [];
 
     #[ORM\Column(type: Types::JSON)]
-    private array $villesData = []; // Stocke {code, nom, contour, latitude, longitude}
+    #[Groups(['geo:read', 'geo:write'])]
+    private array $villesData = [];
 
     #[ORM\Column]
+    #[Groups(['geo:read'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column]
+    #[Groups(['geo:read'])]
     private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\Column]
+    #[Groups(['geo:read', 'geo:write'])]
     private ?bool $actif = true;
 
     public function __construct()
