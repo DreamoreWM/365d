@@ -588,6 +588,78 @@
 
     </div>
 
+    <!-- Prochaine prestation prévue -->
+    {% set prochainePrestation = null %}
+    {% for p in bon.prestations %}
+        {% if p.statut in ['programmé', 'en cours'] and p.datePrestation|date('Y-m-d H:i') >= "now"|date('Y-m-d H:i') %}
+            {% if prochainePrestation is null or p.datePrestation < prochainePrestation.datePrestation %}
+                {% set prochainePrestation = p %}
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+
+    {% if prochainePrestation %}
+    <div class="info-card" style="margin-bottom: 24px; border-left: 4px solid #1565c0;">
+        <div class="info-card-title">
+            <i class="material-icons">upcoming</i>
+            <span>Prochaine prestation prévue</span>
+        </div>
+
+        <div class="info-row">
+            <i class="material-icons">event</i>
+            <div class="info-row-content">
+                <div class="info-label">Date et heure</div>
+                <div class="info-value" style="font-weight: 500;">{{ prochainePrestation.datePrestation|date('d/m/Y à H:i') }}</div>
+            </div>
+        </div>
+
+        <div class="info-row">
+            <i class="material-icons">person</i>
+            <div class="info-row-content">
+                <div class="info-label">Employé assigné</div>
+                <div class="info-value">
+                    {% if prochainePrestation.employe %}
+                        {{ prochainePrestation.employe.nom }}
+                    {% else %}
+                        <span style="color: #e65100;">Non assigné</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="info-row">
+            <i class="material-icons">category</i>
+            <div class="info-row-content">
+                <div class="info-label">Type</div>
+                <div class="info-value">{{ prochainePrestation.typePrestation ? prochainePrestation.typePrestation.nom : '-' }}</div>
+            </div>
+        </div>
+
+        <div class="info-row">
+            <i class="material-icons">info</i>
+            <div class="info-row-content">
+                <div class="info-label">Statut</div>
+                <div class="info-value">
+                    <span class="prestation-status {{ prochainePrestation.statut }}">
+                        {% if prochainePrestation.statut == 'programmé' %}
+                            <i class="material-icons" style="font-size: 16px;">event</i> Programmé
+                        {% elseif prochainePrestation.statut == 'en cours' %}
+                            <i class="material-icons" style="font-size: 16px;">pending</i> En cours
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 16px;">
+            <a href="{{ path('admin_prestation_show', {id: prochainePrestation.id}) }}" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" style="width: 100%;">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">visibility</i>
+                Voir cette prestation
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Prestations List -->
     <div class="prestations-card">
         <div class="prestations-header">
