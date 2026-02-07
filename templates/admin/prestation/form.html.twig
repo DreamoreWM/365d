@@ -235,15 +235,15 @@
 
             <div class="form-grid full">
                 <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ prestation.employe ? 'is-dirty' : '' }}">
-                    <select class="mdl-textfield__input" id="employe" name="employe">
-                        <option value="">Non assigné</option>
+                    <select class="mdl-textfield__input" id="employe" name="employe" required>
+                        <option value="">Sélectionner un employé...</option>
                         {% for emp in employes %}
                             <option value="{{ emp.id }}" {{ prestation.employe and prestation.employe.id == emp.id ? 'selected' : '' }}>
                                 {{ emp.nom }} - {{ emp.email }}
                             </option>
                         {% endfor %}
                     </select>
-                    <label class="mdl-textfield__label" for="employe">Employé assigné</label>
+                    <label class="mdl-textfield__label" for="employe">Employé assigné *</label>
                 </div>
             </div>
 

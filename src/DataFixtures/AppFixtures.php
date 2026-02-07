@@ -83,6 +83,7 @@ class AppFixtures extends Fixture
                 \DateTimeImmutable::createFromMutable($date)
             );
 
+            $prestation->setEmploye($faker->randomElement($users));
             $prestation->setStatut('programmé'); // IMPORTANT
 
             $prestations[] = $prestation;

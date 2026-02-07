@@ -228,8 +228,8 @@ class PrestationController extends AbstractController
         }
 
         // Validation basique
-        if (!$prestation->getDatePrestation()) {
-            $this->addFlash('danger', 'La date de prestation est obligatoire');
+        if (!$prestation->getDatePrestation() || !$employeId) {
+            $this->addFlash('danger', !$prestation->getDatePrestation() ? 'La date de prestation est obligatoire' : 'L\'employé est obligatoire');
             return $this->redirectToRoute($isNew ? 'admin_prestation_new' : 'admin_prestation_edit', 
                 $isNew ? [] : ['id' => $prestation->getId()]
             );

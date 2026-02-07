@@ -25,6 +25,7 @@ class Prestation
     private ?string $description = null;
 
     #[ORM\ManyToOne(inversedBy: 'prestations')]
+    #[ORM\JoinColumn(nullable: false)]
     private ?User $employe = null;
 
     #[ORM\ManyToOne(inversedBy: 'prestations')]
