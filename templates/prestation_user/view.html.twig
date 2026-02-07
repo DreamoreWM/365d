@@ -439,6 +439,57 @@
     </div>
 
 
+    <!-- Prestations précédentes pour ce bon de commande -->
+    {% set autresPrestations = prestation.bonDeCommande.prestations|filter(p => p.id != prestation.id and p.statut == 'terminé') %}
+    {% if autresPrestations|length > 0 %}
+    <div class="section-card">
+        <div class="section-title">
+            <i class="material-icons">history</i>
+            <span>Interventions précédentes ({{ autresPrestations|length }})</span>
+        </div>
+
+        <div class="helper-text">
+            <i class="material-icons">info</i>
+            <span>Récapitulatif des interventions déjà effectuées pour ce bon de commande</span>
+        </div>
+
+        {% for autre in autresPrestations %}
+        <div style="padding: 16px; margin-bottom: 12px; background: rgba(63, 81, 181, 0.05); border-radius: 8px; border-left: 4px solid #2e7d32;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 500; color: var(--text-light); margin-bottom: 6px;">
+                        <i class="material-icons" style="font-size: 18px; color: var(--primary);">event</i>
+                        {{ autre.datePrestation|date('d/m/Y à H:i') }}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: #757575;">
+                        <i class="material-icons" style="font-size: 16px;">person</i>
+                        {{ autre.employe ? autre.employe.nom : 'Non assigné' }}
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <a href="{{ path('prestation_pdf', {id: autre.id}) }}" target="_blank" class="mdl-button mdl-js-button mdl-button--raised" style="background: #e8f5e9; color: #2e7d32;">
+                        <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">picture_as_pdf</i>
+                        PDF
+                    </a>
+                </div>
+            </div>
+
+            {% if autre.description %}
+            <div style="padding: 10px; background: rgba(63, 81, 181, 0.03); border-radius: 4px; border-left: 3px solid var(--primary); font-size: 0.9rem; color: var(--text-light); line-height: 1.5; max-height: 100px; overflow-y: auto;">
+                {{ autre.description|raw }}
+            </div>
+            {% endif %}
+
+            {% if autre.signature %}
+            <div style="margin-top: 10px;">
+                <img src="{{ autre.signature }}" alt="Signature" style="max-width: 150px; max-height: 60px; border: 1px solid var(--border-light); border-radius: 4px; background: white;">
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- Success Messages -->
     {% for message in app.flashes('success') %}
         <div class="alert-success">
