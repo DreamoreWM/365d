@@ -559,8 +559,8 @@
                             </div>
                             <div class="prestation-date">
                                 {{ prestation.datePrestation|date('d/m/Y à H:i') }}
-                                <span class="status-badge status-{{ prestation.statut|replace({' ': '-', 'é': 'e'}) }}">
-                                    {{ prestation.statut }}
+                                <span class="status-badge status-{{ prestation.statut.value|replace({' ': '-', 'é': 'e'}) }}">
+                                    {{ prestation.statut.value }}
                                 </span>
                             </div>
                         </div>

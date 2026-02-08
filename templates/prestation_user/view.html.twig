@@ -408,7 +408,7 @@
                 <div class="info-content">
                     <div class="info-label">Statut</div>
                     <div class="info-value">
-                        {{ prestation.bonDeCommande.statut }}
+                        {{ prestation.bonDeCommande.statut.value }}
                     </div>
                 </div>
             </div>
@@ -440,7 +440,7 @@
 
 
     <!-- Prestations précédentes pour ce bon de commande -->
-    {% set autresPrestations = prestation.bonDeCommande.prestations|filter(p => p.id != prestation.id and p.statut == 'terminé') %}
+    {% set autresPrestations = prestation.bonDeCommande.prestations|filter(p => p.id != prestation.id and p.statut.value == 'terminé') %}
     {% if autresPrestations|length > 0 %}
     <div class="section-card">
         <div class="section-title">
@@ -566,7 +566,7 @@
         </div>
     </form>
 
-    {% if prestation.statut == 'terminé' %}
+    {% if prestation.statut.value == 'terminé' %}
     <!-- Aperçu PDF -->
     <div class="section-card">
         <div class="section-title">

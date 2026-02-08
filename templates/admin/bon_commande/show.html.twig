@@ -550,22 +550,22 @@
                 <div class="info-row-content">
                     <div class="info-label">Statut</div>
                     <div class="info-value">
-                        {% if bon.statut == 'à programmer' %}
+                        {% if bon.statut.value == 'à programmer' %}
                             <span class="status-badge status-a-programmer">
                                 <i class="material-icons">schedule</i>
                                 À programmer
                             </span>
-                        {% elseif bon.statut == 'programmé' %}
+                        {% elseif bon.statut.value == 'programmé' %}
                             <span class="status-badge status-programme">
                                 <i class="material-icons">event</i>
                                 Programmé
                             </span>
-                        {% elseif bon.statut == 'terminé' %}
+                        {% elseif bon.statut.value == 'terminé' %}
                             <span class="status-badge status-termine">
                                 <i class="material-icons">check_circle</i>
                                 Terminé
                             </span>
-                        {% elseif bon.statut == 'en cours' %}
+                        {% elseif bon.statut.value == 'en cours' %}
                             <span class="status-badge status-a-programmer">
                                 <i class="material-icons">pending</i>
                                 En cours
@@ -591,7 +591,7 @@
     <!-- Prochaine prestation prévue -->
     {% set prochainePrestation = null %}
     {% for p in bon.prestations %}
-        {% if p.statut in ['programmé', 'en cours'] and p.datePrestation|date('Y-m-d H:i') >= "now"|date('Y-m-d H:i') %}
+        {% if p.statut.value in ['programmé', 'en cours'] and p.datePrestation|date('Y-m-d H:i') >= "now"|date('Y-m-d H:i') %}
             {% if prochainePrestation is null or p.datePrestation < prochainePrestation.datePrestation %}
                 {% set prochainePrestation = p %}
             {% endif %}
@@ -640,10 +640,10 @@
             <div class="info-row-content">
                 <div class="info-label">Statut</div>
                 <div class="info-value">
-                    <span class="prestation-status {{ prochainePrestation.statut }}">
-                        {% if prochainePrestation.statut == 'programmé' %}
+                    <span class="prestation-status {{ prochainePrestation.statut.value }}">
+                        {% if prochainePrestation.statut.value == 'programmé' %}
                             <i class="material-icons" style="font-size: 16px;">event</i> Programmé
-                        {% elseif prochainePrestation.statut == 'en cours' %}
+                        {% elseif prochainePrestation.statut.value == 'en cours' %}
                             <i class="material-icons" style="font-size: 16px;">pending</i> En cours
                         {% endif %}
                     </span>
@@ -683,17 +683,17 @@
                                 {{ prestation.datePrestation|date('d/m/Y à H:i') }}
                             </div>
                             <div>
-                                <span class="prestation-status {{ prestation.statut }}">
-                                    {% if prestation.statut == 'programmé' %}
+                                <span class="prestation-status {{ prestation.statut.value }}">
+                                    {% if prestation.statut.value == 'programmé' %}
                                         <i class="material-icons" style="font-size: 16px;">event</i>
                                         Programmé
-                                    {% elseif prestation.statut == 'terminé' %}
+                                    {% elseif prestation.statut.value == 'terminé' %}
                                         <i class="material-icons" style="font-size: 16px;">check_circle</i>
                                         Terminé
-                                    {% elseif prestation.statut == 'en cours' %}
+                                    {% elseif prestation.statut.value == 'en cours' %}
                                         <i class="material-icons" style="font-size: 16px;">pending</i>
                                         En cours
-                                    {% elseif prestation.statut == 'non effectué' %}
+                                    {% elseif prestation.statut.value == 'non effectué' %}
                                         <i class="material-icons" style="font-size: 16px;">cancel</i>
                                         Non effectué
                                     {% endif %}
@@ -738,7 +738,7 @@
 
                     <!-- Actions -->
                     <div class="prestation-actions">
-                        {% if prestation.statut == 'terminé' %}
+                        {% if prestation.statut.value == 'terminé' %}
                             <a href="{{ path('prestation_pdf', {id: prestation.id}) }}" target="_blank" class="mdl-button mdl-js-button mdl-button--raised" style="background: #e8f5e9; color: #2e7d32;">
                                 <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">picture_as_pdf</i>
                                 Télécharger le PDF

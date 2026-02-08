@@ -311,17 +311,17 @@
                 <div class="info-row-content">
                     <div class="info-label">Statut</div>
                     <div class="info-value">
-                        {% set statusClass = 'status-' ~ prestation.statut|replace({' ': '-', 'é': 'e'}) %}
+                        {% set statusClass = 'status-' ~ prestation.statut.value|replace({' ': '-', 'é': 'e'}) %}
                         <span class="status-badge {{ statusClass }}">
-                            {% if prestation.statut == 'à programmer' %}
+                            {% if prestation.statut.value == 'à programmer' %}
                                 <i class="material-icons">schedule</i>À programmer
-                            {% elseif prestation.statut == 'programmé' %}
+                            {% elseif prestation.statut.value == 'programmé' %}
                                 <i class="material-icons">event</i>Programmé
-                            {% elseif prestation.statut == 'en cours' %}
+                            {% elseif prestation.statut.value == 'en cours' %}
                                 <i class="material-icons">pending</i>En cours
-                            {% elseif prestation.statut == 'terminé' %}
+                            {% elseif prestation.statut.value == 'terminé' %}
                                 <i class="material-icons">check_circle</i>Terminé
-                            {% elseif prestation.statut == 'non effectué' %}
+                            {% elseif prestation.statut.value == 'non effectué' %}
                                 <i class="material-icons">cancel</i>Non effectué
                             {% endif %}
                         </span>
@@ -444,7 +444,7 @@
     </div>
 
     <!-- PDF Recap -->
-    {% if prestation.statut == 'terminé' %}
+    {% if prestation.statut.value == 'terminé' %}
     <div class="description-card" style="margin-top: 24px;">
         <div class="info-card-title">
             <i class="material-icons">picture_as_pdf</i>

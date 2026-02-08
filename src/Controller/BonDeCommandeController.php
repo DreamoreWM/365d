@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\BonDeCommande;
 use App\Entity\TypePrestation;
+use App\Enum\StatutPrestation;
 use App\Repository\BonDeCommandeRepository;
 use App\Service\PrestationManager;
 use Doctrine\ORM\EntityManagerInterface;
@@ -113,7 +114,7 @@ class BonDeCommandeController extends AbstractController
             $dernierePrestation = end($prestations);
             
             // Vérifier si elle est non effectuée
-            if ($dernierePrestation && $dernierePrestation->getStatut() === 'non effectué') {
+            if ($dernierePrestation && $dernierePrestation->getStatut() === StatutPrestation::NON_EFFECTUE) {
                 $derniereNonEffectuee = true;
             }
         }

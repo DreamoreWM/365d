@@ -11,6 +11,7 @@ use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
+use App\Enum\StatutPrestation;
 use App\Repository\PrestationRepository;
 use App\State\MyPrestationsProvider;
 use App\State\PrestationStateProcessor;
@@ -100,9 +101,9 @@ class Prestation
     #[Groups(['prestation:read', 'prestation:write'])]
     private ?TypePrestation $typePrestation = null;
 
-    #[ORM\Column(length: 50, nullable: true)]
+    #[ORM\Column(length: 50, nullable: true, enumType: StatutPrestation::class)]
     #[Groups(['prestation:read', 'bon:read'])]
-    private ?string $statut = null;
+    private ?StatutPrestation $statut = null;
 
     #[ORM\Column(type: 'text', nullable: true)]
     #[Groups(['prestation:read', 'prestation:signature'])]
@@ -119,12 +120,12 @@ class Prestation
         return $this;
     }
 
-    public function getStatut(): ?string
+    public function getStatut(): ?StatutPrestation
     {
         return $this->statut;
     }
 
-    public function setStatut(string $statut): self
+    public function setStatut(StatutPrestation $statut): self
     {
         $this->statut = $statut;
         return $this;

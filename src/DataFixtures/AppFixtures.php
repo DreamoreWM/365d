@@ -6,6 +6,8 @@ use App\Entity\User;
 use App\Entity\Prestation;
 use App\Entity\BonDeCommande;
 use App\Entity\TypePrestation;
+use App\Enum\StatutPrestation;
+use App\Enum\StatutBonDeCommande;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 use Faker\Factory;
@@ -84,7 +86,7 @@ class AppFixtures extends Fixture
             );
 
             $prestation->setEmploye($faker->randomElement($users));
-            $prestation->setStatut('programmé'); // IMPORTANT
+            $prestation->setStatut(StatutPrestation::PROGRAMME);
 
             $prestations[] = $prestation;
             $manager->persist($prestation);
@@ -105,7 +107,7 @@ class AppFixtures extends Fixture
                     $faker->dateTimeBetween('-40 days', 'now')
                 )
             );
-            $bon->setStatut('à programmer');
+            $bon->setStatut(StatutBonDeCommande::A_PROGRAMMER);
 
             // Ajout de 1 à 3 prestations au bon
             $count = rand(1, 3);

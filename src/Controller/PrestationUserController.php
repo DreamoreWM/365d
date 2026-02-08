@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Prestation;
+use App\Enum\StatutPrestation;
 use App\Repository\PrestationRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -77,7 +78,7 @@ public function terminer(Prestation $prestation, EntityManagerInterface $em): Re
 {
     $this->denyAccessUnlessGranted('ROLE_USER');
 
-    $prestation->setStatut('terminé');
+    $prestation->setStatut(StatutPrestation::TERMINE);
     $em->flush();
 
     $this->addFlash('success', 'Prestation terminée avec succès !');

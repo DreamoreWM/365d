@@ -736,8 +736,8 @@
                                                 </span>
                                             {% endif %}
                                         {% endif %}
-                                        <span class="prestation-badge badge-{{ prestation.statut|replace({' ': '-', 'é': 'e'}) }}">
-                                            {{ prestation.statut }}
+                                        <span class="prestation-badge badge-{{ prestation.statut.value|replace({' ': '-', 'é': 'e'}) }}">
+                                            {{ prestation.statut.value }}
                                         </span>
                                     </div>
                                 </div>

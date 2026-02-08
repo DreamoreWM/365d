@@ -5,6 +5,7 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Entity\Prestation;
+use App\Enum\StatutPrestation;
 use App\Service\PrestationManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
@@ -23,7 +24,7 @@ class TerminatePrestationProcessor implements ProcessorInterface
             throw new BadRequestHttpException('Invalid entity.');
         }
 
-        $data->setStatut('terminé');
+        $data->setStatut(StatutPrestation::TERMINE);
         $this->em->flush();
 
         if ($data->getBonDeCommande()) {

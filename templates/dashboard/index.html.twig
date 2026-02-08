@@ -424,7 +424,7 @@
             <div class="stat-header">
                 <div class="stat-content">
                     <div class="stat-label">En cours</div>
-                    <div class="stat-value">{{ app.user.prestations|filter(p => p.statut == 'en cours')|length }}</div>
+                    <div class="stat-value">{{ app.user.prestations|filter(p => p.statut.value == 'en cours')|length }}</div>
                 </div>
                 <div class="stat-icon orange">
                     <i class="material-icons">pending</i>
@@ -440,7 +440,7 @@
             <div class="stat-header">
                 <div class="stat-content">
                     <div class="stat-label">Terminées</div>
-                    <div class="stat-value">{{ app.user.prestations|filter(p => p.statut == 'terminé')|length }}</div>
+                    <div class="stat-value">{{ app.user.prestations|filter(p => p.statut.value == 'terminé')|length }}</div>
                 </div>
                 <div class="stat-icon green">
                     <i class="material-icons">check_circle</i>
@@ -456,7 +456,7 @@
             <div class="stat-header">
                 <div class="stat-content">
                     <div class="stat-label">Programmées</div>
-                    <div class="stat-value">{{ app.user.prestations|filter(p => p.statut == 'programmé')|length }}</div>
+                    <div class="stat-value">{{ app.user.prestations|filter(p => p.statut.value == 'programmé')|length }}</div>
                 </div>
                 <div class="stat-icon purple">
                     <i class="material-icons">schedule</i>
@@ -560,14 +560,14 @@
                         </div>
                         <div class="recent-subtitle">
                             {{ prestation.datePrestation|date('d/m/Y à H:i') }} • 
-                            {% if prestation.statut == 'terminé' %}
+                            {% if prestation.statut.value == 'terminé' %}
                                 ✅ Terminé
-                            {% elseif prestation.statut == 'en cours' %}
+                            {% elseif prestation.statut.value == 'en cours' %}
                                 ⏳ En cours
-                            {% elseif prestation.statut == 'programmé' %}
+                            {% elseif prestation.statut.value == 'programmé' %}
                                 📅 Programmé
                             {% else %}
-                                {{ prestation.statut }}
+                                {{ prestation.statut.value }}
                             {% endif %}
                         </div>
                     </div>

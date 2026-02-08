@@ -4,6 +4,8 @@ namespace App\Service;
 
 use App\Entity\Prestation;
 use App\Entity\BonDeCommande;
+use App\Enum\StatutPrestation;
+use App\Enum\StatutBonDeCommande;
 use Doctrine\ORM\EntityManagerInterface;
 
 class PrestationManager
@@ -16,21 +18,21 @@ class PrestationManager
      * Met à jour le statut d'une prestation selon la date et le statut actuel.
      *
      * Règles :
-     * - pas de date => 'à programmer'
-     * - date == aujourd'hui (comparaison jour seul) => 'en cours'
-     * - date > aujourd'hui => 'programmé'
+     * - pas de date => A_PROGRAMMER
+     * - date == aujourd'hui (comparaison jour seul) => EN_COURS
+     * - date > aujourd'hui => PROGRAMME
      * - date < aujourd'hui :
-     *     - si la prestation était 'programmé' => 'non effectué'
-     *     - si déjà 'non effectué' => on garde 'non effectué'
-     *     - si déjà 'terminé' => on garde 'terminé'
-     *     - sinon => 'terminé'
+     *     - si la prestation était PROGRAMME => NON_EFFECTUE
+     *     - si déjà NON_EFFECTUE => on garde NON_EFFECTUE
+     *     - si déjà TERMINE => on garde TERMINE
+     *     - sinon => TERMINE
      */
     public function updatePrestationStatut(Prestation $prestation): void
     {
         $date = $prestation->getDatePrestation();
 
         if (!$date) {
-            $prestation->setStatut('à programmer');
+            $prestation->setStatut(StatutPrestation::A_PROGRAMMER);
             return;
         }
 
@@ -42,33 +44,32 @@ class PrestationManager
 
         // Aujourd'hui
         if ($dateDay === $todayDay) {
-            $prestation->setStatut('en cours');
+            $prestation->setStatut(StatutPrestation::EN_COURS);
             return;
         }
 
         // Futur
         if ($date > $today) {
-            $prestation->setStatut('programmé');
+            $prestation->setStatut(StatutPrestation::PROGRAMME);
             return;
         }
 
         // Date passée
-        $currentStatut = $prestation->getStatut() ?? '';
+        $currentStatut = $prestation->getStatut();
 
         // Si elle était programmée et la date est passée => non effectué
-        if ($currentStatut === 'programmé') {
-            $prestation->setStatut('non effectué');
+        if ($currentStatut === StatutPrestation::PROGRAMME) {
+            $prestation->setStatut(StatutPrestation::NON_EFFECTUE);
             return;
         }
 
         // Si déjà non effectué ou terminé, on garde ce statut
-        if ($currentStatut === 'non effectué' || $currentStatut === 'terminé') {
-            // On ne change pas le statut
+        if ($currentStatut === StatutPrestation::NON_EFFECTUE || $currentStatut === StatutPrestation::TERMINE) {
             return;
         }
 
         // Sinon, on considère la prestation comme terminée
-        $prestation->setStatut('terminé');
+        $prestation->setStatut(StatutPrestation::TERMINE);
     }
 
     /**
@@ -83,23 +84,21 @@ class PrestationManager
         $hasEnCours = false;
         $hasProgrammee = false;
 
-        // Pas besoin de re-modifier les statuts ici, 
-        // ils ont déjà été mis à jour par updatePrestationStatut
         foreach ($prestations as $p) {
             $statut = $p->getStatut();
 
-            if ($statut === 'terminé') {
+            if ($statut === StatutPrestation::TERMINE) {
                 $terminees++;
-            } elseif ($statut === 'non effectué') {
+            } elseif ($statut === StatutPrestation::NON_EFFECTUE) {
                 $hasNonEffectuee = true;
-            } elseif ($statut === 'en cours') {
+            } elseif ($statut === StatutPrestation::EN_COURS) {
                 $hasEnCours = true;
-            } elseif ($statut === 'programmé') {
+            } elseif ($statut === StatutPrestation::PROGRAMME) {
                 $hasProgrammee = true;
             }
         }
 
-        // Compteur : on ne compte QUE les prestations terminées (selon ta règle)
+        // Compteur : on ne compte QUE les prestations terminées
         $bon->setNombrePrestations($terminees);
 
         if ($bon->getTypePrestation()) {
@@ -108,18 +107,20 @@ class PrestationManager
             );
         }
 
+        // Détermination du statut du bon de commande
+        // FIX: vérifier le quota AVANT les non effectuées
         if ($prestations->isEmpty()) {
-            $bon->setStatut('à programmer');
-        } elseif ($hasNonEffectuee) {
-            $bon->setStatut('à programmer');
+            $bon->setStatut(StatutBonDeCommande::A_PROGRAMMER);
         } elseif ($terminees >= $bon->getNombrePrestationsNecessaires() && $bon->getNombrePrestationsNecessaires() > 0) {
-            $bon->setStatut('terminé');
+            $bon->setStatut(StatutBonDeCommande::TERMINE);
         } elseif ($hasEnCours) {
-            $bon->setStatut('en cours');
+            $bon->setStatut(StatutBonDeCommande::EN_COURS);
         } elseif ($hasProgrammee) {
-            $bon->setStatut('programmé');
+            $bon->setStatut(StatutBonDeCommande::PROGRAMME);
+        } elseif ($hasNonEffectuee) {
+            $bon->setStatut(StatutBonDeCommande::A_PROGRAMMER);
         } else {
-            $bon->setStatut('à programmer');
+            $bon->setStatut(StatutBonDeCommande::A_PROGRAMMER);
         }
 
         $this->em->persist($bon);

@@ -283,7 +283,7 @@
             <div class="stat-icon programmer"><i class="material-icons">schedule</i></div>
             <div class="stat-content">
                 <div class="stat-label">À programmer</div>
-                <div class="stat-value">{{ prestations|filter(p => p.statut == 'à programmer')|length }}</div>
+                <div class="stat-value">{{ prestations|filter(p => p.statut.value == 'à programmer')|length }}</div>
             </div>
         </div>
 
@@ -291,7 +291,7 @@
             <div class="stat-icon programme"><i class="material-icons">event</i></div>
             <div class="stat-content">
                 <div class="stat-label">Programmé</div>
-                <div class="stat-value">{{ prestations|filter(p => p.statut == 'programmé')|length }}</div>
+                <div class="stat-value">{{ prestations|filter(p => p.statut.value == 'programmé')|length }}</div>
             </div>
         </div>
 
@@ -299,7 +299,7 @@
             <div class="stat-icon en-cours"><i class="material-icons">pending</i></div>
             <div class="stat-content">
                 <div class="stat-label">En cours</div>
-                <div class="stat-value">{{ prestations|filter(p => p.statut == 'en cours')|length }}</div>
+                <div class="stat-value">{{ prestations|filter(p => p.statut.value == 'en cours')|length }}</div>
             </div>
         </div>
 
@@ -307,7 +307,7 @@
             <div class="stat-icon termine"><i class="material-icons">check_circle</i></div>
             <div class="stat-content">
                 <div class="stat-label">Terminé</div>
-                <div class="stat-value">{{ prestations|filter(p => p.statut == 'terminé')|length }}</div>
+                <div class="stat-value">{{ prestations|filter(p => p.statut.value == 'terminé')|length }}</div>
             </div>
         </div>
 
@@ -315,7 +315,7 @@
             <div class="stat-icon non-effectue"><i class="material-icons">cancel</i></div>
             <div class="stat-content">
                 <div class="stat-label">Non effectué</div>
-                <div class="stat-value">{{ prestations|filter(p => p.statut == 'non effectué')|length }}</div>
+                <div class="stat-value">{{ prestations|filter(p => p.statut.value == 'non effectué')|length }}</div>
             </div>
         </div>
     </div>
@@ -427,17 +427,17 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% set statusClass = 'status-' ~ prestation.statut|replace({' ': '-', 'é': 'e'}) %}
+                                    {% set statusClass = 'status-' ~ prestation.statut.value|replace({' ': '-', 'é': 'e'}) %}
                                     <span class="status-badge {{ statusClass }}">
-                                        {% if prestation.statut == 'à programmer' %}
+                                        {% if prestation.statut.value == 'à programmer' %}
                                             <i class="material-icons">schedule</i>À programmer
-                                        {% elseif prestation.statut == 'programmé' %}
+                                        {% elseif prestation.statut.value == 'programmé' %}
                                             <i class="material-icons">event</i>Programmé
-                                        {% elseif prestation.statut == 'en cours' %}
+                                        {% elseif prestation.statut.value == 'en cours' %}
                                             <i class="material-icons">pending</i>En cours
-                                        {% elseif prestation.statut == 'terminé' %}
+                                        {% elseif prestation.statut.value == 'terminé' %}
                                             <i class="material-icons">check_circle</i>Terminé
-                                        {% elseif prestation.statut == 'non effectué' %}
+                                        {% elseif prestation.statut.value == 'non effectué' %}
                                             <i class="material-icons">cancel</i>Non effectué
                                         {% endif %}
                                     </span>

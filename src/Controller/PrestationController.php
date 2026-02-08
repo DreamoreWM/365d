@@ -6,6 +6,7 @@ use App\Entity\Prestation;
 use App\Entity\BonDeCommande;
 use App\Entity\User;
 use App\Entity\TypePrestation;
+use App\Enum\StatutPrestation;
 use App\Repository\PrestationRepository;
 use App\Service\PrestationManager;
 use Doctrine\ORM\EntityManagerInterface;
@@ -91,7 +92,7 @@ class PrestationController extends AbstractController
     public function new(Request $request): Response
     {
         $prestation = new Prestation();
-        $prestation->setStatut('à programmer');
+        $prestation->setStatut(StatutPrestation::A_PROGRAMMER);
         $prestation->setDescription('');
 
         // Pré-remplissage si lié à un bon

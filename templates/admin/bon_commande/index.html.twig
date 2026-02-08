@@ -692,7 +692,7 @@
             </div>
             <div class="stat-content">
                 <div class="stat-label">À programmer</div>
-                <div class="stat-value">{{ bonDeCommandes|filter(b => b.statut == 'à programmer')|length }}</div>
+                <div class="stat-value">{{ bonDeCommandes|filter(b => b.statut.value == 'à programmer')|length }}</div>
             </div>
         </div>
 
@@ -702,7 +702,7 @@
             </div>
             <div class="stat-content">
                 <div class="stat-label">Programmé</div>
-                <div class="stat-value">{{ bonDeCommandes|filter(b => b.statut == 'programmé')|length }}</div>
+                <div class="stat-value">{{ bonDeCommandes|filter(b => b.statut.value == 'programmé')|length }}</div>
             </div>
         </div>
 
@@ -712,7 +712,7 @@
             </div>
             <div class="stat-content">
                 <div class="stat-label">Terminé</div>
-                <div class="stat-value">{{ bonDeCommandes|filter(b => b.statut == 'terminé')|length }}</div>
+                <div class="stat-value">{{ bonDeCommandes|filter(b => b.statut.value == 'terminé')|length }}</div>
             </div>
         </div>
     </div>
@@ -803,22 +803,22 @@
                                     </div>
                                 </td>
                                 <td>
-                                    {% if bon.statut == 'à programmer' %}
+                                    {% if bon.statut.value == 'à programmer' %}
                                         <span class="status-badge status-a-programmer">
                                             <i class="material-icons">schedule</i>
                                             À programmer
                                         </span>
-                                    {% elseif bon.statut == 'programmé' %}
+                                    {% elseif bon.statut.value == 'programmé' %}
                                         <span class="status-badge status-programme">
                                             <i class="material-icons">event</i>
                                             Programmé
                                         </span>
-                                    {% elseif bon.statut == 'terminé' %}
+                                    {% elseif bon.statut.value == 'terminé' %}
                                         <span class="status-badge status-termine">
                                             <i class="material-icons">check_circle</i>
                                             Terminé
                                         </span>
-                                    {% elseif bon.statut == 'en cours' %}
+                                    {% elseif bon.statut.value == 'en cours' %}
                                         <span class="status-badge status-termine">
                                             <i class="material-icons">check_circle</i>
                                             En cours

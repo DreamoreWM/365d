@@ -5,6 +5,8 @@ namespace App\Tests\Service;
 use App\Entity\Prestation;
 use App\Entity\BonDeCommande;
 use App\Entity\TypePrestation;
+use App\Enum\StatutPrestation;
+use App\Enum\StatutBonDeCommande;
 use App\Service\PrestationManager;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -36,7 +38,7 @@ class PrestationManagerTest extends TestCase
 
         $manager->updatePrestationStatut($p);
 
-        $this->assertEquals('programmé', $p->getStatut());
+        $this->assertEquals(StatutPrestation::PROGRAMME, $p->getStatut());
     }
 
     public function testPrestationStatutEnCours()
@@ -48,7 +50,7 @@ class PrestationManagerTest extends TestCase
 
         $manager->updatePrestationStatut($p);
 
-        $this->assertEquals('en cours', $p->getStatut());
+        $this->assertEquals(StatutPrestation::EN_COURS, $p->getStatut());
     }
 
     public function testPrestationStatutTermine()
@@ -60,7 +62,7 @@ class PrestationManagerTest extends TestCase
 
         $manager->updatePrestationStatut($p);
 
-        $this->assertEquals('terminé', $p->getStatut());
+        $this->assertEquals(StatutPrestation::TERMINE, $p->getStatut());
     }
 
     public function testPrestationNonEffectuee()
@@ -70,45 +72,38 @@ class PrestationManagerTest extends TestCase
         $prestation = new Prestation();
         $prestation->setDatePrestation((new \DateTimeImmutable())->modify('-3 days'));
 
-        // le manager doit détecter que la prestation programmée en retard devient "non effectué"
-        $prestation->setStatut('programmé');
+        $prestation->setStatut(StatutPrestation::PROGRAMME);
 
         $manager->updatePrestationStatut($prestation);
 
-        $this->assertSame('non effectué', $prestation->getStatut());
+        $this->assertSame(StatutPrestation::NON_EFFECTUE, $prestation->getStatut());
     }
 
-    /**
-     * Test que les statuts 'non effectué' et 'terminé' sont préservés
-     * lors d'appels successifs à updatePrestationStatut
-     */
     public function testPrestationStatutNonEffectueEtTermineRestentStables()
     {
         $manager = $this->createManager();
 
-        // Test 1: 'non effectué' doit rester 'non effectué'
+        // Test 1: NON_EFFECTUE doit rester NON_EFFECTUE
         $p1 = new Prestation();
         $p1->setDatePrestation((new \DateTimeImmutable())->modify('-3 days'));
-        $p1->setStatut('non effectué');
+        $p1->setStatut(StatutPrestation::NON_EFFECTUE);
 
         $manager->updatePrestationStatut($p1);
-        $this->assertEquals('non effectué', $p1->getStatut(), "Le statut 'non effectué' doit être préservé");
+        $this->assertEquals(StatutPrestation::NON_EFFECTUE, $p1->getStatut(), "Le statut NON_EFFECTUE doit être préservé");
 
-        // Deuxième appel pour vérifier la stabilité
         $manager->updatePrestationStatut($p1);
-        $this->assertEquals('non effectué', $p1->getStatut(), "Le statut 'non effectué' doit rester stable après plusieurs appels");
+        $this->assertEquals(StatutPrestation::NON_EFFECTUE, $p1->getStatut(), "Le statut NON_EFFECTUE doit rester stable après plusieurs appels");
 
-        // Test 2: 'terminé' doit rester 'terminé'
+        // Test 2: TERMINE doit rester TERMINE
         $p2 = new Prestation();
         $p2->setDatePrestation((new \DateTimeImmutable())->modify('-3 days'));
-        $p2->setStatut('terminé');
+        $p2->setStatut(StatutPrestation::TERMINE);
 
         $manager->updatePrestationStatut($p2);
-        $this->assertEquals('terminé', $p2->getStatut(), "Le statut 'terminé' doit être préservé");
+        $this->assertEquals(StatutPrestation::TERMINE, $p2->getStatut(), "Le statut TERMINE doit être préservé");
 
-        // Deuxième appel pour vérifier la stabilité
         $manager->updatePrestationStatut($p2);
-        $this->assertEquals('terminé', $p2->getStatut(), "Le statut 'terminé' doit rester stable après plusieurs appels");
+        $this->assertEquals(StatutPrestation::TERMINE, $p2->getStatut(), "Le statut TERMINE doit rester stable après plusieurs appels");
     }
 
     public function testPrestationNonEffectueeNeComptePasDansBon()
@@ -120,30 +115,21 @@ class PrestationManagerTest extends TestCase
         $type->setNombrePrestationsNecessaires(2);
         $bon->setTypePrestation($type);
 
-        // Prestations
         $p1 = new Prestation();
-        $p1->setStatut('terminé');
+        $p1->setStatut(StatutPrestation::TERMINE);
 
         $p2 = new Prestation();
-        $p2->setStatut('programmé');
-        $p2->setDatePrestation(new \DateTimeImmutable('-2 days')); // dépassée → non effectuée
+        $p2->setStatut(StatutPrestation::PROGRAMME);
+        $p2->setDatePrestation(new \DateTimeImmutable('-2 days'));
 
         $bon->addPrestation($p1);
         $bon->addPrestation($p2);
 
-        // IMPORTANT: Il faut d'abord mettre à jour le statut de la prestation dépassée
         $manager->updatePrestationStatut($p2);
-        
-        // Ensuite mettre à jour le bon
         $manager->updateBonDeCommande($bon);
 
-        // ✔ La prestation p2 doit être passée à "non effectué"
-        $this->assertEquals('non effectué', $p2->getStatut());
-
-        // ✔ Le bon doit repasser à "à programmer"
-        $this->assertEquals('à programmer', $bon->getStatut());
-
-        // ✔ Une seule prestation terminée doit être comptée
+        $this->assertEquals(StatutPrestation::NON_EFFECTUE, $p2->getStatut());
+        $this->assertEquals(StatutBonDeCommande::A_PROGRAMMER, $bon->getStatut());
         $this->assertEquals(1, $bon->getNombrePrestations());
     }
 
@@ -155,91 +141,66 @@ class PrestationManagerTest extends TestCase
 
         $manager = new PrestationManager($em);
 
-        // Bon de commande
         $bon = new BonDeCommande();
         $bon->setNombrePrestationsNecessaires(1);
 
-        // Prestation programmée pour hier
         $prestation = new Prestation();
-        $prestation->setDatePrestation(
-            (new \DateTimeImmutable('yesterday'))
-        );
-        $prestation->setStatut('programmé');
+        $prestation->setDatePrestation(new \DateTimeImmutable('yesterday'));
+        $prestation->setStatut(StatutPrestation::PROGRAMME);
 
         $bon->addPrestation($prestation);
 
-        // Mise à jour
         $manager->updatePrestationStatut($prestation);
         $manager->updateBonDeCommande($bon);
 
-        // Vérifications
-        $this->assertSame(
-            'non effectué',
-            $prestation->getStatut(),
-            "La prestation programmée dans le passé doit devenir 'non effectué'"
-        );
-
-        $this->assertSame(
-            'à programmer',
-            $bon->getStatut(),
-            "Le bon doit repasser en 'à programmer' car une prestation est non effectuée"
-        );
+        $this->assertSame(StatutPrestation::NON_EFFECTUE, $prestation->getStatut());
+        $this->assertSame(StatutBonDeCommande::A_PROGRAMMER, $bon->getStatut());
     }
 
-    /**
-     * Test du scénario complet de double exécution du cron
-     * pour vérifier que les statuts ne changent pas incorrectement
-     */
     public function testDoubleExecutionCronStatutsStables()
     {
         $manager = $this->createManager();
 
-        // Création d'un bon avec plusieurs prestations
         $bon = new BonDeCommande();
         $type = new TypePrestation();
         $type->setNombrePrestationsNecessaires(3);
         $bon->setTypePrestation($type);
 
-        // Prestation 1: programmée dans le futur
         $p1 = new Prestation();
         $p1->setDatePrestation((new \DateTimeImmutable())->modify('+5 days'));
-        $p1->setStatut('programmé');
+        $p1->setStatut(StatutPrestation::PROGRAMME);
 
-        // Prestation 2: programmée hier (va devenir non effectué)
         $p2 = new Prestation();
         $p2->setDatePrestation((new \DateTimeImmutable())->modify('-1 day'));
-        $p2->setStatut('programmé');
+        $p2->setStatut(StatutPrestation::PROGRAMME);
 
-        // Prestation 3: aujourd'hui (va devenir en cours)
         $p3 = new Prestation();
         $p3->setDatePrestation(new \DateTimeImmutable('today'));
-        $p3->setStatut('programmé');
+        $p3->setStatut(StatutPrestation::PROGRAMME);
 
         $bon->addPrestation($p1);
         $bon->addPrestation($p2);
         $bon->addPrestation($p3);
 
-        // === PREMIÈRE EXÉCUTION DU CRON ===
+        // === PREMIÈRE EXÉCUTION ===
         $manager->updatePrestationStatut($p1);
         $manager->updatePrestationStatut($p2);
         $manager->updatePrestationStatut($p3);
         $manager->updateBonDeCommande($bon);
 
-        // Vérifications après première exécution
-        $this->assertEquals('programmé', $p1->getStatut(), "P1 doit rester programmé (date future)");
-        $this->assertEquals('non effectué', $p2->getStatut(), "P2 doit devenir non effectué (date passée)");
-        $this->assertEquals('en cours', $p3->getStatut(), "P3 doit devenir en cours (aujourd'hui)");
+        $this->assertEquals(StatutPrestation::PROGRAMME, $p1->getStatut());
+        $this->assertEquals(StatutPrestation::NON_EFFECTUE, $p2->getStatut());
+        $this->assertEquals(StatutPrestation::EN_COURS, $p3->getStatut());
 
-        // === DEUXIÈME EXÉCUTION DU CRON ===
+        // === DEUXIÈME EXÉCUTION ===
         $manager->updatePrestationStatut($p1);
         $manager->updatePrestationStatut($p2);
         $manager->updatePrestationStatut($p3);
         $manager->updateBonDeCommande($bon);
 
-        // Vérifications après deuxième exécution - les statuts doivent rester stables
-        $this->assertEquals('programmé', $p1->getStatut(), "P1 doit toujours être programmé");
-        $this->assertEquals('non effectué', $p2->getStatut(), "P2 doit rester non effectué et ne pas passer à terminé");
-        $this->assertEquals('en cours', $p3->getStatut(), "P3 doit rester en cours");
+        $this->assertEquals(StatutPrestation::PROGRAMME, $p1->getStatut());
+        $this->assertEquals(StatutPrestation::NON_EFFECTUE, $p2->getStatut());
+        $this->assertEquals(StatutPrestation::EN_COURS, $p3->getStatut());
     }
 
     /*
@@ -257,15 +218,39 @@ class PrestationManagerTest extends TestCase
         $type->setNombrePrestationsNecessaires(2);
         $bon->setTypePrestation($type);
 
-        $p1 = new Prestation(); $p1->setStatut('terminé');
-        $p2 = new Prestation(); $p2->setStatut('terminé');
+        $p1 = new Prestation(); $p1->setStatut(StatutPrestation::TERMINE);
+        $p2 = new Prestation(); $p2->setStatut(StatutPrestation::TERMINE);
 
         $bon->addPrestation($p1);
         $bon->addPrestation($p2);
 
         $manager->updateBonDeCommande($bon);
 
-        $this->assertEquals('terminé', $bon->getStatut());
+        $this->assertEquals(StatutBonDeCommande::TERMINE, $bon->getStatut());
+        $this->assertEquals(2, $bon->getNombrePrestations());
+    }
+
+    public function testBonDeCommandeTermineQuandQuotaAtteintMemeAvecNonEffectuee()
+    {
+        $manager = $this->createManager();
+
+        $bon = new BonDeCommande();
+        $type = new TypePrestation();
+        $type->setNombrePrestationsNecessaires(2);
+        $bon->setTypePrestation($type);
+
+        $p1 = new Prestation(); $p1->setStatut(StatutPrestation::TERMINE);
+        $p2 = new Prestation(); $p2->setStatut(StatutPrestation::TERMINE);
+        $p3 = new Prestation(); $p3->setStatut(StatutPrestation::NON_EFFECTUE);
+
+        $bon->addPrestation($p1);
+        $bon->addPrestation($p2);
+        $bon->addPrestation($p3);
+
+        $manager->updateBonDeCommande($bon);
+
+        // Le quota est atteint (2 terminées sur 2 nécessaires), terminé malgré la non effectuée
+        $this->assertEquals(StatutBonDeCommande::TERMINE, $bon->getStatut());
         $this->assertEquals(2, $bon->getNombrePrestations());
     }
 
@@ -278,14 +263,14 @@ class PrestationManagerTest extends TestCase
         $type->setNombrePrestationsNecessaires(3);
         $bon->setTypePrestation($type);
 
-        $p = new Prestation(); 
-        $p->setStatut('en cours');
+        $p = new Prestation();
+        $p->setStatut(StatutPrestation::EN_COURS);
 
         $bon->addPrestation($p);
 
         $manager->updateBonDeCommande($bon);
 
-        $this->assertEquals('en cours', $bon->getStatut());
+        $this->assertEquals(StatutBonDeCommande::EN_COURS, $bon->getStatut());
     }
 
     public function testBonDeCommandeProgramme()
@@ -298,13 +283,13 @@ class PrestationManagerTest extends TestCase
         $bon->setTypePrestation($type);
 
         $p = new Prestation();
-        $p->setStatut('programmé');
+        $p->setStatut(StatutPrestation::PROGRAMME);
 
         $bon->addPrestation($p);
 
         $manager->updateBonDeCommande($bon);
 
-        $this->assertEquals('programmé', $bon->getStatut());
+        $this->assertEquals(StatutBonDeCommande::PROGRAMME, $bon->getStatut());
     }
 
     public function testBonDeCommandeAProgrammerSiPrestationNonEffectuee()
@@ -314,13 +299,13 @@ class PrestationManagerTest extends TestCase
         $bon = new BonDeCommande();
 
         $p = new Prestation();
-        $p->setStatut('non effectué');
+        $p->setStatut(StatutPrestation::NON_EFFECTUE);
 
         $bon->addPrestation($p);
 
         $manager->updateBonDeCommande($bon);
 
-        $this->assertEquals('à programmer', $bon->getStatut());
+        $this->assertEquals(StatutBonDeCommande::A_PROGRAMMER, $bon->getStatut());
         $this->assertEquals(0, $bon->getNombrePrestations());
     }
 
@@ -332,59 +317,46 @@ class PrestationManagerTest extends TestCase
 
         $manager->updateBonDeCommande($bon);
 
-        $this->assertEquals('à programmer', $bon->getStatut());
+        $this->assertEquals(StatutBonDeCommande::A_PROGRAMMER, $bon->getStatut());
     }
 
     public function testCronUpdateAllBonDeCommande()
     {
-        // 1) Fake repository qui étend EntityRepository
         $fakeRepo = $this->getMockBuilder(\Doctrine\ORM\EntityRepository::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['findAll'])
             ->getMock();
 
-        // 2) Préparation des données
         $bon = new BonDeCommande();
         $type = new TypePrestation();
         $type->setNombrePrestationsNecessaires(1);
         $bon->setTypePrestation($type);
 
-        // Prestation future -> programmé
         $p1 = new Prestation();
-        $p1->setStatut('programmé');
+        $p1->setStatut(StatutPrestation::PROGRAMME);
         $p1->setDatePrestation((new \DateTimeImmutable())->modify('+2 days'));
 
-        // Prestation passée -> doit devenir "non effectué"
         $p2 = new Prestation();
-        $p2->setStatut('programmé');
+        $p2->setStatut(StatutPrestation::PROGRAMME);
         $p2->setDatePrestation((new \DateTimeImmutable())->modify('-1 day'));
 
         $bon->addPrestation($p1);
         $bon->addPrestation($p2);
 
-        // Le repository renvoie notre bon
         $fakeRepo->method('findAll')->willReturn([$bon]);
 
-        // 3) Mock EntityManager
         $em = $this->createMock(EntityManagerInterface::class);
-
         $em->method('getRepository')->willReturn($fakeRepo);
-
-        // Persist / flush neutres
         $em->method('persist');
         $em->method('flush');
 
-        // 4) Manager
         $manager = new PrestationManager($em);
-
-        // 5) Execution du cron
         $manager->updateAllBonDeCommande();
 
-        // 6) Vérifications
-        $this->assertEquals('programmé', $p1->getStatut());
-        $this->assertEquals('non effectué', $p2->getStatut());
-        $this->assertEquals('à programmer', $bon->getStatut());
+        $this->assertEquals(StatutPrestation::PROGRAMME, $p1->getStatut());
+        $this->assertEquals(StatutPrestation::NON_EFFECTUE, $p2->getStatut());
+        // Le bon a une prestation programmée, donc il est PROGRAMME (pas A_PROGRAMMER)
+        // La non effectuée ne bloque pas le statut tant qu'il y a du travail planifié
+        $this->assertEquals(StatutBonDeCommande::PROGRAMME, $bon->getStatut());
     }
-
-
 }

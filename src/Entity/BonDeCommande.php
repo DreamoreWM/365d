@@ -10,6 +10,8 @@ use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
+use App\Enum\StatutBonDeCommande;
+use App\Enum\StatutPrestation;
 use App\Repository\BonDeCommandeRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -75,9 +77,9 @@ class BonDeCommande
     #[Groups(['bon:read'])]
     private Collection $prestations;
 
-    #[ORM\Column(length: 50)]
+    #[ORM\Column(length: 50, enumType: StatutBonDeCommande::class)]
     #[Groups(['bon:read', 'prestation:read'])]
-    private ?string $statut = 'à programmer';
+    private StatutBonDeCommande $statut = StatutBonDeCommande::A_PROGRAMMER;
 
     #[ORM\Column(type: 'integer')]
     #[Groups(['bon:read'])]
@@ -104,7 +106,7 @@ class BonDeCommande
     {
         $this->prestations = new ArrayCollection();
         $this->dateCommande = new \DateTimeImmutable();
-        $this->statut = 'à programmer';
+        $this->statut = StatutBonDeCommande::A_PROGRAMMER;
         $this->nombrePrestations = 0;
         $this->nombrePrestationsNecessaires = 0;
     }
@@ -225,12 +227,12 @@ class BonDeCommande
         return 'Bon #' . $this->id . ' - ' . $this->clientNom;
     }
 
-    public function getStatut(): ?string
+    public function getStatut(): StatutBonDeCommande
     {
         return $this->statut;
     }
 
-    public function setStatut(string $statut): self
+    public function setStatut(StatutBonDeCommande $statut): self
     {
         $this->statut = $statut;
         return $this;
@@ -252,7 +254,7 @@ class BonDeCommande
         $this->nombrePrestations = $this->prestations->count();
 
         if ($this->prestations->isEmpty()) {
-            $this->statut = 'à programmer';
+            $this->statut = StatutBonDeCommande::A_PROGRAMMER;
             return;
         }
 
@@ -260,20 +262,20 @@ class BonDeCommande
         $oneProgrammee = false;
 
         foreach ($this->prestations as $p) {
-            if ($p->getStatut() === 'programmé') {
+            if ($p->getStatut() === StatutPrestation::PROGRAMME) {
                 $oneProgrammee = true;
                 $allTerminees = false;
-            } elseif ($p->getStatut() !== 'terminé') {
+            } elseif ($p->getStatut() !== StatutPrestation::TERMINE) {
                 $allTerminees = false;
             }
         }
 
         if ($allTerminees) {
-            $this->statut = 'terminé';
+            $this->statut = StatutBonDeCommande::TERMINE;
         } elseif ($oneProgrammee) {
-            $this->statut = 'programmé';
+            $this->statut = StatutBonDeCommande::PROGRAMME;
         } else {
-            $this->statut = 'à programmer';
+            $this->statut = StatutBonDeCommande::A_PROGRAMMER;
         }
     }
 

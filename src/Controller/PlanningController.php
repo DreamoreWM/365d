@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Prestation;
 use App\Entity\User;
 use App\Entity\BonDeCommande;
+use App\Enum\StatutPrestation;
 use App\Repository\PrestationRepository;
 use App\Repository\UserRepository;
 use App\Repository\BonDeCommandeRepository;
@@ -193,7 +194,7 @@ class PlanningController extends AbstractController
                 'nombrePrestations' => $bon->getNombrePrestations() ?? 0,
                 'nombrePrestationsNecessaires' => $bon->getNombrePrestationsNecessaires(),
                 'dateCommande' => $bon->getDateCommande()?->format('d/m/Y'),
-                'statut' => $bon->getStatut(),
+                'statut' => $bon->getStatut()->value,
                 'codePostal' => $codePostal,
             ];
         }
@@ -306,7 +307,7 @@ class PlanningController extends AbstractController
                 'nombrePrestations' => $bon->getNombrePrestations() ?? 0,
                 'nombrePrestationsNecessaires' => $bon->getNombrePrestationsNecessaires(),
                 'dateCommande' => $bon->getDateCommande()?->format('d/m/Y'),
-                'statut' => $bon->getStatut(),
+                'statut' => $bon->getStatut()->value,
                 'codePostal' => $codePostal,
                 'groupeGeo' => $groupeGeo,
             ];
@@ -335,7 +336,7 @@ class PlanningController extends AbstractController
             'nombrePrestations' => $bon->getNombrePrestations() ?? 0,
             'nombrePrestationsNecessaires' => $bon->getNombrePrestationsNecessaires(),
             'dateCommande' => $bon->getDateCommande()?->format('d/m/Y'),
-            'statut' => $bon->getStatut(),
+            'statut' => $bon->getStatut()->value,
             'codePostal' => $codePostal,
         ]);
     }
@@ -356,9 +357,9 @@ class PlanningController extends AbstractController
             ->addSelect('SUM(CASE WHEN p.statut = :en_cours THEN 1 ELSE 0 END) as en_cours')
             ->addSelect('SUM(CASE WHEN p.statut = :termine THEN 1 ELSE 0 END) as termine')
             ->where('DATE(p.datePrestation) = :date')
-            ->setParameter('programme', 'programmé')
-            ->setParameter('en_cours', 'en cours')
-            ->setParameter('termine', 'terminé')
+            ->setParameter('programme', StatutPrestation::PROGRAMME->value)
+            ->setParameter('en_cours', StatutPrestation::EN_COURS->value)
+            ->setParameter('termine', StatutPrestation::TERMINE->value)
             ->setParameter('date', $date)
             ->getQuery()
             ->getSingleResult();
