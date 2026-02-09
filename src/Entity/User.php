@@ -94,6 +94,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Groups(['user:read', 'user:write'])]
     private ?string $signature = null;
 
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $tokenValidAfter = null;
+
     public function __construct()
     {
         $this->prestations = new ArrayCollection();
@@ -234,6 +237,23 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             }
         }
 
+        return $this;
+    }
+
+    public function getTokenValidAfter(): ?\DateTimeImmutable
+    {
+        return $this->tokenValidAfter;
+    }
+
+    public function setTokenValidAfter(?\DateTimeImmutable $tokenValidAfter): static
+    {
+        $this->tokenValidAfter = $tokenValidAfter;
+        return $this;
+    }
+
+    public function invalidateTokens(): static
+    {
+        $this->tokenValidAfter = new \DateTimeImmutable();
         return $this;
     }
 
