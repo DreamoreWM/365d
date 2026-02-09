@@ -39,11 +39,12 @@ class PrestationController extends AbstractController
         $dateDebut = $request->query->get('date_debut', '');
         $dateFin = $request->query->get('date_fin', '');
 
+        $tab = $request->query->get('tab', 'tous');
+
         $qb = $this->repository->createQueryBuilder('p')
             ->leftJoin('p.bonDeCommande', 'b')
             ->leftJoin('p.employe', 'e')
-            ->leftJoin('p.typePrestation', 't')
-            ->orderBy('p.datePrestation', 'DESC');
+            ->leftJoin('p.typePrestation', 't');
 
         // Filtre de recherche
         if ($search) {
@@ -76,12 +77,31 @@ class PrestationController extends AbstractController
                ->setParameter('dateFin', new \DateTimeImmutable($dateFin . ' 23:59:59'));
         }
 
+        // Filtre par onglet
+        if ($tab === 'non_effectue') {
+            $qb->andWhere('p.statut = :statutTab')
+               ->setParameter('statutTab', StatutPrestation::NON_EFFECTUE);
+        } elseif ($tab === 'programme') {
+            $qb->andWhere('p.statut = :statutTab')
+               ->setParameter('statutTab', StatutPrestation::PROGRAMME);
+        } elseif ($tab === 'en_cours') {
+            $qb->andWhere('p.statut = :statutTab')
+               ->setParameter('statutTab', StatutPrestation::EN_COURS);
+        } elseif ($tab === 'termines') {
+            $qb->andWhere('p.statut = :statutTab')
+               ->setParameter('statutTab', StatutPrestation::TERMINE);
+        }
+
+        // Tri : non effectué et en cours en premier, puis par date
+        $qb->addOrderBy('p.datePrestation', 'ASC');
+
         $prestations = $qb->getQuery()->getResult();
         $employes = $this->em->getRepository(User::class)->findAll();
 
         return $this->render('admin/prestation/index.html.twig', [
             'prestations' => $prestations,
             'employes' => $employes,
+            'currentTab' => $tab,
         ]);
     }
 

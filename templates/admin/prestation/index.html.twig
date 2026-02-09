@@ -249,6 +249,16 @@
         .data-table th, .data-table td { padding: 12px 8px; }
     }
 
+    .tab-nav { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+    .tab-nav a { padding: 8px 16px; border-radius: 20px; text-decoration: none; font-size: 14px; font-weight: 500; color: var(--text-secondary); background: var(--surface); border: 1px solid var(--divider); transition: all 0.2s; }
+    .tab-nav a:hover { background: var(--primary-light); color: var(--primary); }
+    .tab-nav a.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    tr.row-urgent { background-color: rgba(220, 53, 69, 0.08) !important; }
+    tr.row-warning { background-color: rgba(255, 193, 7, 0.08) !important; }
+    body.dark-mode tr.row-urgent { background-color: rgba(220, 53, 69, 0.15) !important; }
+    body.dark-mode tr.row-warning { background-color: rgba(255, 193, 7, 0.15) !important; }
+
     @media (max-width: 768px) {
         .stats-row { grid-template-columns: 1fr; }
         .action-buttons { flex-direction: column; }
@@ -320,6 +330,15 @@
         </div>
     </div>
 
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+        <a href="{{ path('admin_prestation_index', app.request.query.all|merge({tab: 'tous'})) }}" class="{{ currentTab == 'tous' ? 'active' : '' }}">Tous</a>
+        <a href="{{ path('admin_prestation_index', app.request.query.all|merge({tab: 'non_effectue'})) }}" class="{{ currentTab == 'non_effectue' ? 'active' : '' }}">Non effectué</a>
+        <a href="{{ path('admin_prestation_index', app.request.query.all|merge({tab: 'programme'})) }}" class="{{ currentTab == 'programme' ? 'active' : '' }}">Programmé</a>
+        <a href="{{ path('admin_prestation_index', app.request.query.all|merge({tab: 'en_cours'})) }}" class="{{ currentTab == 'en_cours' ? 'active' : '' }}">En cours</a>
+        <a href="{{ path('admin_prestation_index', app.request.query.all|merge({tab: 'termines'})) }}" class="{{ currentTab == 'termines' ? 'active' : '' }}">Terminé</a>
+    </div>
+
     <!-- Filter Card -->
     <div class="filter-card">
         <form method="get" class="filter-form" id="filter-form">
@@ -384,7 +403,7 @@
                     </thead>
                     <tbody>
                         {% for prestation in prestations %}
-                            <tr>
+                            <tr{% if prestation.statut.value == 'non effectué' %} class="row-urgent"{% elseif prestation.statut.value == 'en cours' %} class="row-warning"{% endif %}>
                                 <td>
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <i class="material-icons" style="color: var(--primary); font-size: 20px;">event</i>

@@ -101,6 +101,10 @@ class BonDeCommande
     #[Groups(['bon:read', 'bon:write'])]
     private ?string $clientComplementAdresse = null;
 
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    #[Groups(['bon:read', 'bon:write'])]
+    private ?\DateTimeImmutable $dateLimiteExecution = null;
+
 
     public function __construct()
     {
@@ -299,5 +303,44 @@ class BonDeCommande
     {
         $this->clientComplementAdresse = $clientComplementAdresse;
         return $this;
+    }
+
+    public function getDateLimiteExecution(): ?\DateTimeImmutable
+    {
+        return $this->dateLimiteExecution;
+    }
+
+    public function setDateLimiteExecution(?\DateTimeImmutable $dateLimiteExecution): self
+    {
+        $this->dateLimiteExecution = $dateLimiteExecution;
+        return $this;
+    }
+
+    public function hasNonEffectuee(): bool
+    {
+        foreach ($this->prestations as $p) {
+            if ($p->getStatut() === StatutPrestation::NON_EFFECTUE) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function isDeadlineProche(int $joursAlerte = 7): bool
+    {
+        if ($this->dateLimiteExecution === null) {
+            return false;
+        }
+        $now = new \DateTimeImmutable();
+        $diff = $now->diff($this->dateLimiteExecution);
+        return !$diff->invert && $diff->days <= $joursAlerte;
+    }
+
+    public function isDeadlineDepassee(): bool
+    {
+        if ($this->dateLimiteExecution === null) {
+            return false;
+        }
+        return $this->dateLimiteExecution < new \DateTimeImmutable('today');
     }
 }

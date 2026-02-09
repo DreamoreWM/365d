@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\BonDeCommande;
 use App\Entity\TypePrestation;
+use App\Enum\StatutBonDeCommande;
 use App\Enum\StatutPrestation;
 use App\Repository\BonDeCommandeRepository;
 use App\Service\PrestationManager;
@@ -34,15 +35,17 @@ class BonDeCommandeController extends AbstractController
 
         $search = $request->query->get('search', '');
         $statut = $request->query->get('statut', '');
+        $tab = $request->query->get('tab', 'tous');
 
         $qb = $this->repository->createQueryBuilder('b')
-            ->orderBy('b.dateCommande', 'DESC');
+            ->leftJoin('b.prestations', 'p')
+            ->addSelect('p');
 
         // Filtre de recherche
         if ($search) {
-            $qb->andWhere('b.clientNom LIKE :search 
-                        OR b.clientEmail LIKE :search 
-                        OR b.clientTelephone LIKE :search 
+            $qb->andWhere('b.clientNom LIKE :search
+                        OR b.clientEmail LIKE :search
+                        OR b.clientTelephone LIKE :search
                         OR b.numeroCommande LIKE :search')
                ->setParameter('search', '%' . $search . '%');
         }
@@ -53,10 +56,56 @@ class BonDeCommandeController extends AbstractController
                ->setParameter('statut', $statut);
         }
 
+        // Filtre par onglet
+        if ($tab === 'urgents') {
+            // Urgents = bons "à programmer" uniquement (pas terminés, pas déjà programmés)
+            // avec une prestation non effectuée OU une deadline proche
+            $qb->andWhere('b.statut = :aProgrammer')
+               ->andWhere(
+                $qb->expr()->orX(
+                    'p.statut = :nonEffectue',
+                    '(b.dateLimiteExecution IS NOT NULL AND b.dateLimiteExecution <= :deadlineProche)'
+                )
+            )
+            ->setParameter('nonEffectue', StatutPrestation::NON_EFFECTUE)
+            ->setParameter('deadlineProche', new \DateTimeImmutable('+7 days'))
+            ->setParameter('aProgrammer', StatutBonDeCommande::A_PROGRAMMER);
+        } elseif ($tab === 'a_programmer') {
+            $qb->andWhere('b.statut = :statutTab')
+               ->setParameter('statutTab', StatutBonDeCommande::A_PROGRAMMER);
+        } elseif ($tab === 'en_cours') {
+            $qb->andWhere('b.statut IN (:statutsTab)')
+               ->setParameter('statutsTab', [StatutBonDeCommande::PROGRAMME, StatutBonDeCommande::EN_COURS]);
+        } elseif ($tab === 'termines') {
+            $qb->andWhere('b.statut = :statutTab')
+               ->setParameter('statutTab', StatutBonDeCommande::TERMINE);
+        }
+
+        // Tri prioritaire : urgents d'abord, puis deadline proche, puis date commande
+        $qb->addOrderBy('b.statut', 'ASC') // à programmer < programmé < en cours < terminé
+           ->addOrderBy('b.dateLimiteExecution', 'ASC') // deadline la plus proche d'abord
+           ->addOrderBy('b.dateCommande', 'DESC');
+
         $bonDeCommandes = $qb->getQuery()->getResult();
+
+        // Compter les urgents pour le badge (seulement les bons "à programmer")
+        $urgentsCount = $this->repository->createQueryBuilder('b2')
+            ->select('COUNT(DISTINCT b2.id)')
+            ->leftJoin('b2.prestations', 'p2')
+            ->where('b2.statut = :aProgrammer2')
+            ->andWhere(
+                'p2.statut = :nonEffectue2 OR (b2.dateLimiteExecution IS NOT NULL AND b2.dateLimiteExecution <= :deadlineProche2)'
+            )
+            ->setParameter('nonEffectue2', StatutPrestation::NON_EFFECTUE)
+            ->setParameter('deadlineProche2', new \DateTimeImmutable('+7 days'))
+            ->setParameter('aProgrammer2', StatutBonDeCommande::A_PROGRAMMER)
+            ->getQuery()
+            ->getSingleScalarResult();
 
         return $this->render('admin/bon_commande/index.html.twig', [
             'bonDeCommandes' => $bonDeCommandes,
+            'currentTab' => $tab,
+            'urgentsCount' => (int) $urgentsCount,
         ]);
     }
 
@@ -264,6 +313,14 @@ class BonDeCommandeController extends AbstractController
         $bon->setClientTelephone($request->request->get('clientTelephone'));
         $bon->setClientAdresse($request->request->get('clientAdresse'));
         $bon->setClientComplementAdresse($request->request->get('clientComplementAdresse'));
+
+        // Date limite d'exécution
+        $dateLimite = $request->request->get('dateLimiteExecution');
+        if ($dateLimite) {
+            $bon->setDateLimiteExecution(new \DateTimeImmutable($dateLimite));
+        } else {
+            $bon->setDateLimiteExecution(null);
+        }
 
         // Type de prestation
         $typePrestationId = $request->request->get('typePrestation');

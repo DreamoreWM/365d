@@ -388,6 +388,12 @@
         opacity: 0.5;
     }
 
+    .deadline-depassee { color: #dc3545; font-weight: 600; }
+    .deadline-proche { color: #fd7e14; font-weight: 500; }
+    .badge-deadline { font-size: 10px; padding: 2px 6px; border-radius: 8px; margin-left: 4px; display: inline-block; }
+    .badge-deadline-red { background: #dc3545; color: white; }
+    .badge-deadline-orange { background: #fd7e14; color: white; }
+
     @media (max-width: 768px) {
         .detail-header {
             padding: 24px 16px;
@@ -570,6 +576,26 @@
                                 <i class="material-icons">pending</i>
                                 En cours
                             </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <i class="material-icons">timer</i>
+                <div class="info-row-content">
+                    <div class="info-label">Date limite d'exécution</div>
+                    <div class="info-value">
+                        {% if bon.dateLimiteExecution %}
+                            {% if bon.isDeadlineDepassee() %}
+                                <span class="deadline-depassee">{{ bon.dateLimiteExecution|date('d/m/Y') }} <span class="badge-deadline badge-deadline-red">DÉPASSÉE</span></span>
+                            {% elseif bon.isDeadlineProche() %}
+                                <span class="deadline-proche">{{ bon.dateLimiteExecution|date('d/m/Y') }} <span class="badge-deadline badge-deadline-orange">< 7j</span></span>
+                            {% else %}
+                                {{ bon.dateLimiteExecution|date('d/m/Y') }}
+                            {% endif %}
+                        {% else %}
+                            <span style="color: var(--text-secondary)">Non définie</span>
                         {% endif %}
                     </div>
                 </div>

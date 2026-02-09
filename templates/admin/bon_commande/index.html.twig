@@ -419,6 +419,26 @@
         }
     }
 
+    /* ==================== TAB NAVIGATION ==================== */
+    .tab-nav { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+    .tab-nav a { padding: 8px 16px; border-radius: 20px; text-decoration: none; font-size: 14px; font-weight: 500; color: var(--text-secondary); background: var(--surface); border: 1px solid var(--divider); transition: all 0.2s; }
+    .tab-nav a:hover { background: var(--primary-light); color: var(--primary); }
+    .tab-nav a.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .tab-badge { background: #dc3545; color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px; margin-left: 4px; }
+
+    /* ==================== ROW HIGHLIGHTING ==================== */
+    tr.row-urgent { background-color: rgba(220, 53, 69, 0.08) !important; }
+    tr.row-warning { background-color: rgba(255, 193, 7, 0.08) !important; }
+    body.dark-mode tr.row-urgent { background-color: rgba(220, 53, 69, 0.15) !important; }
+    body.dark-mode tr.row-warning { background-color: rgba(255, 193, 7, 0.15) !important; }
+
+    /* ==================== DEADLINE STYLES ==================== */
+    .deadline-depassee { color: #dc3545; font-weight: 600; }
+    .deadline-proche { color: #fd7e14; font-weight: 500; }
+    .badge-deadline { font-size: 10px; padding: 2px 6px; border-radius: 8px; margin-left: 4px; }
+    .badge-deadline-red { background: #dc3545; color: white; }
+    .badge-deadline-orange { background: #fd7e14; color: white; }
+
     /* ==================== MODAL OCR ==================== */
     .modal-overlay {
         display: none;
@@ -717,6 +737,20 @@
         </div>
     </div>
 
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+        <a href="{{ path('admin_bon_commande_index', app.request.query.all|merge({tab: 'tous'})) }}" class="{{ currentTab == 'tous' ? 'active' : '' }}">Tous</a>
+        <a href="{{ path('admin_bon_commande_index', app.request.query.all|merge({tab: 'urgents'})) }}" class="{{ currentTab == 'urgents' ? 'active' : '' }}">
+            Urgents
+            {% if urgentsCount > 0 %}
+                <span class="tab-badge">{{ urgentsCount }}</span>
+            {% endif %}
+        </a>
+        <a href="{{ path('admin_bon_commande_index', app.request.query.all|merge({tab: 'a_programmer'})) }}" class="{{ currentTab == 'a_programmer' ? 'active' : '' }}">À programmer</a>
+        <a href="{{ path('admin_bon_commande_index', app.request.query.all|merge({tab: 'en_cours'})) }}" class="{{ currentTab == 'en_cours' ? 'active' : '' }}">En cours</a>
+        <a href="{{ path('admin_bon_commande_index', app.request.query.all|merge({tab: 'termines'})) }}" class="{{ currentTab == 'termines' ? 'active' : '' }}">Terminés</a>
+    </div>
+
     <!-- Filter Card -->
     <div class="filter-card">
         <form method="get" class="filter-form" id="filter-form">
@@ -754,6 +788,7 @@
                             <th>Contact</th>
                             <th>Type</th>
                             <th>Date commande</th>
+                            <th>Date limite</th>
                             <th>Prestations</th>
                             <th>Statut</th>
                             <th style="text-align: center;">Actions</th>
@@ -761,7 +796,7 @@
                     </thead>
                     <tbody>
                         {% for bon in bonDeCommandes %}
-                            <tr>
+                            <tr class="{{ (bon.statut.value == 'à programmer' and (bon.hasNonEffectuee() or bon.isDeadlineDepassee())) ? 'row-urgent' : ((bon.statut.value == 'à programmer' and bon.isDeadlineProche()) ? 'row-warning' : '') }}">
                                 <td>
                                     <strong>{{ bon.numeroCommande ?? '#' ~ bon.id }}</strong>
                                 </td>
@@ -795,6 +830,25 @@
                                 </td>
                                 <td>
                                     {{ bon.dateCommande|date('d/m/Y') }}
+                                </td>
+                                <td>
+                                    {% if bon.dateLimiteExecution %}
+                                        {% if bon.isDeadlineDepassee() %}
+                                            <span class="deadline-depassee">
+                                                {{ bon.dateLimiteExecution|date('d/m/Y') }}
+                                                <span class="badge-deadline badge-deadline-red">DÉPASSÉE</span>
+                                            </span>
+                                        {% elseif bon.isDeadlineProche() %}
+                                            <span class="deadline-proche">
+                                                {{ bon.dateLimiteExecution|date('d/m/Y') }}
+                                                <span class="badge-deadline badge-deadline-orange">&lt; 7j</span>
+                                            </span>
+                                        {% else %}
+                                            {{ bon.dateLimiteExecution|date('d/m/Y') }}
+                                        {% endif %}
+                                    {% else %}
+                                        —
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <div style="display: flex; align-items: center; gap: 6px;">
@@ -844,18 +898,8 @@
                 </table>
             </div>
 
-            <!-- Pagination (exemple basique) -->
-            <div class="pagination">
-                <button disabled>
-                    <i class="material-icons">chevron_left</i>
-                </button>
-                <a href="#" class="active">1</a>
-                <a href="#">2</a>
-                <a href="#">3</a>
-                <button>
-                    <i class="material-icons">chevron_right</i>
-                </button>
-            </div>
+            <!-- Pagination -->
+            <div class="pagination" id="pagination-container"></div>
         {% else %}
             <div class="empty-state">
                 <i class="material-icons">inbox</i>
@@ -1073,6 +1117,42 @@ document.getElementById('search')?.addEventListener('input', function() {
 document.getElementById('statut')?.addEventListener('change', function() {
     document.getElementById('filter-form').submit();
 });
+
+// ==================== PAGINATION ====================
+(function() {
+    const ROWS_PER_PAGE = 15;
+    const tbody = document.querySelector('.data-table tbody');
+    if (!tbody) return;
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const totalPages = Math.ceil(rows.length / ROWS_PER_PAGE);
+    let currentPage = 1;
+
+    function showPage(page) {
+        currentPage = page;
+        rows.forEach((row, i) => {
+            row.style.display = (i >= (page - 1) * ROWS_PER_PAGE && i < page * ROWS_PER_PAGE) ? '' : 'none';
+        });
+        renderPagination();
+    }
+
+    function renderPagination() {
+        const container = document.getElementById('pagination-container');
+        if (!container || totalPages <= 1) { if (container) container.style.display = 'none'; return; }
+        let html = `<button onclick="window.__paginate(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="material-icons">chevron_left</i></button>`;
+        for (let p = 1; p <= totalPages; p++) {
+            html += `<a href="#" onclick="event.preventDefault();window.__paginate(${p})" class="${p === currentPage ? 'active' : ''}">${p}</a>`;
+        }
+        html += `<button onclick="window.__paginate(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="material-icons">chevron_right</i></button>`;
+        container.innerHTML = html;
+    }
+
+    window.__paginate = function(page) {
+        if (page < 1 || page > totalPages) return;
+        showPage(page);
+    };
+
+    showPage(1);
+})();
 </script>
 
 {% endblock %}

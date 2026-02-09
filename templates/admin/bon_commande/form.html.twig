@@ -194,6 +194,14 @@
                 </div>
             </div>
 
+            <div class="form-grid">
+                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%">
+                    <input class="mdl-textfield__input" type="date" id="dateLimiteExecution" name="dateLimiteExecution"
+                           value="{{ bon.dateLimiteExecution ? bon.dateLimiteExecution|date('Y-m-d') : '' }}">
+                    <label class="mdl-textfield__label" for="dateLimiteExecution">Date limite d'exécution</label>
+                </div>
+            </div>
+
             <!-- Informations client -->
             <div class="section-title">
                 <i class="material-icons">person</i>
