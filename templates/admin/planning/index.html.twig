@@ -3,6 +3,9 @@
 {% block title %}Planning{% endblock %}
 
 {% block content %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+
 <style>
     .planning-container {
         max-width: 1600px;
@@ -16,6 +19,11 @@
         border-radius: 12px;
         margin-bottom: 24px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
     }
 
     body.dark-mode .page-header {
@@ -29,6 +37,439 @@
         display: flex;
         align-items: center;
         gap: 12px;
+    }
+
+    .view-toggle {
+        display: flex;
+        gap: 4px;
+        background: rgba(255,255,255,0.15);
+        border-radius: 8px;
+        padding: 4px;
+    }
+
+    .view-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        background: transparent;
+        color: rgba(255,255,255,0.7);
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+
+    .view-btn:hover {
+        background: rgba(255,255,255,0.1);
+        color: white;
+    }
+
+    .view-btn.active {
+        background: rgba(255,255,255,0.25);
+        color: white;
+    }
+
+    .view-btn .material-icons {
+        font-size: 20px;
+    }
+
+    /* ========== CALENDAR VIEW ========== */
+    .calendar-section {
+        display: none;
+    }
+
+    .calendar-section.active {
+        display: block;
+    }
+
+    .calendar-layout {
+        display: grid;
+        grid-template-columns: 220px 1fr 320px;
+        gap: 24px;
+    }
+
+    /* Employee Panel */
+    .employee-panel {
+        background: var(--card-light);
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        position: sticky;
+        top: 24px;
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+    }
+
+    body.dark-mode .employee-panel {
+        background: var(--card-dark);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+
+    .panel-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 1rem;
+        font-weight: 500;
+        color: var(--text-light);
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid var(--border-light);
+    }
+
+    body.dark-mode .panel-header {
+        color: var(--text-dark);
+        border-bottom-color: var(--border-dark);
+    }
+
+    .panel-header .material-icons {
+        color: var(--primary);
+        font-size: 22px;
+    }
+
+    .employee-actions {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .employee-actions button {
+        flex: 1;
+        padding: 6px 8px;
+        border: 1px solid var(--border-light);
+        border-radius: 6px;
+        background: transparent;
+        color: var(--text-light);
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    body.dark-mode .employee-actions button {
+        border-color: var(--border-dark);
+        color: var(--text-dark);
+    }
+
+    .employee-actions button:hover {
+        background: rgba(63, 81, 181, 0.1);
+        border-color: var(--primary);
+    }
+
+    .employee-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .employee-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.875rem;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .employee-item {
+        color: var(--text-dark);
+    }
+
+    .employee-item:hover {
+        background: rgba(63, 81, 181, 0.05);
+    }
+
+    body.dark-mode .employee-item:hover {
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    .employee-item.unchecked {
+        opacity: 0.4;
+    }
+
+    .employee-item.unchecked .employee-color-dot {
+        background: #ccc !important;
+    }
+
+    .employee-color-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    .employee-item input[type="checkbox"] {
+        display: none;
+    }
+
+    .employee-item span {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .employee-count {
+        font-size: 0.7rem;
+        background: rgba(63, 81, 181, 0.1);
+        color: var(--primary);
+        padding: 2px 6px;
+        border-radius: 8px;
+        min-width: 20px;
+        text-align: center;
+    }
+
+    body.dark-mode .employee-count {
+        background: rgba(63, 81, 181, 0.2);
+    }
+
+    /* Calendar Container */
+    .calendar-main {
+        min-height: 700px;
+    }
+
+    #fullcalendar {
+        background: var(--card-light);
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode #fullcalendar {
+        background: var(--card-dark);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+
+    /* FullCalendar theme overrides */
+    .fc {
+        --fc-button-bg-color: var(--primary);
+        --fc-button-border-color: var(--primary-dark);
+        --fc-button-hover-bg-color: var(--primary-dark);
+        --fc-button-hover-border-color: var(--primary-dark);
+        --fc-button-active-bg-color: var(--primary-dark);
+        --fc-button-active-border-color: var(--primary-dark);
+        --fc-today-bg-color: rgba(63, 81, 181, 0.08);
+        --fc-border-color: #e0e0e0;
+        --fc-event-border-color: transparent;
+        font-family: 'Roboto', sans-serif;
+    }
+
+    body.dark-mode .fc {
+        --fc-border-color: var(--border-dark);
+        --fc-page-bg-color: var(--card-dark);
+        --fc-neutral-bg-color: rgba(255,255,255,0.03);
+        --fc-today-bg-color: rgba(63, 81, 181, 0.15);
+        color: var(--text-dark);
+    }
+
+    body.dark-mode .fc .fc-col-header-cell {
+        color: var(--text-dark);
+    }
+
+    body.dark-mode .fc .fc-timegrid-axis {
+        color: var(--text-dark);
+    }
+
+    body.dark-mode .fc .fc-timegrid-slot-label {
+        color: #b0b0b0;
+    }
+
+    body.dark-mode .fc .fc-day-today .fc-col-header-cell-cushion {
+        color: white;
+    }
+
+    .fc .fc-toolbar-title {
+        font-size: 1.25rem !important;
+        font-weight: 500;
+    }
+
+    .fc .fc-button {
+        border-radius: 6px !important;
+        font-size: 0.875rem !important;
+        padding: 6px 12px !important;
+    }
+
+    .fc .fc-button-group .fc-button {
+        border-radius: 0 !important;
+    }
+
+    .fc .fc-button-group .fc-button:first-child {
+        border-radius: 6px 0 0 6px !important;
+    }
+
+    .fc .fc-button-group .fc-button:last-child {
+        border-radius: 0 6px 6px 0 !important;
+    }
+
+    /* Custom event rendering */
+    .fc-event {
+        border-radius: 4px !important;
+        border: none !important;
+        padding: 2px 4px;
+        font-size: 0.75rem;
+        cursor: pointer;
+    }
+
+    .fc-event-custom {
+        padding: 2px 4px;
+        line-height: 1.3;
+        overflow: hidden;
+    }
+
+    .fc-event-title-custom {
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .fc-event-employee {
+        font-size: 0.65rem;
+        opacity: 0.85;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .fc-event-time-custom {
+        display: none;
+    }
+
+    /* Preview event (slot selection) */
+    .fc-event.fc-preview-event {
+        border: 2px dashed var(--primary) !important;
+        background: rgba(63, 81, 181, 0.15) !important;
+        animation: previewPulse 1.5s ease-in-out infinite;
+    }
+
+    body.dark-mode .fc-event.fc-preview-event {
+        background: rgba(63, 81, 181, 0.25) !important;
+    }
+
+    @keyframes previewPulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+
+    .fc-preview-content {
+        padding: 4px 6px;
+        color: var(--primary);
+        font-weight: 500;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .fc-preview-content .material-icons {
+        font-size: 16px;
+    }
+
+    /* Event Popover */
+    .event-popover {
+        position: absolute;
+        z-index: 9999;
+        width: 300px;
+        background: var(--card-light);
+        border-radius: 10px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        overflow: hidden;
+        animation: popoverIn 0.2s ease;
+    }
+
+    body.dark-mode .event-popover {
+        background: var(--card-dark);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+
+    @keyframes popoverIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .popover-header {
+        padding: 14px 16px;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .popover-header strong {
+        font-size: 0.9rem;
+    }
+
+    .popover-close {
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 50%;
+        display: flex;
+        transition: background 0.2s;
+    }
+
+    .popover-close:hover {
+        background: rgba(255,255,255,0.2);
+    }
+
+    .popover-close .material-icons {
+        font-size: 18px;
+    }
+
+    .popover-body {
+        padding: 14px 16px;
+    }
+
+    .popover-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 0;
+        font-size: 0.85rem;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .popover-row {
+        color: var(--text-dark);
+    }
+
+    .popover-row .material-icons {
+        font-size: 18px;
+        color: #757575;
+        flex-shrink: 0;
+    }
+
+    body.dark-mode .popover-row .material-icons {
+        color: #b0b0b0;
+    }
+
+    .popover-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border-light);
+    }
+
+    body.dark-mode .popover-actions {
+        border-top-color: var(--border-dark);
+    }
+
+    /* ========== TIMELINE VIEW (existing) ========== */
+    .timeline-section {
+        display: none;
+    }
+
+    .timeline-section.active {
+        display: block;
     }
 
     .filters-card {
@@ -51,7 +492,6 @@
         align-items: end;
     }
 
-    /* Stats Cards */
     .stats-row {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -144,7 +584,6 @@
         font-size: 28px;
     }
 
-    /* Timeline View */
     .timeline-view {
         position: relative;
         padding-left: 30px;
@@ -298,6 +737,7 @@
         opacity: 0.5;
     }
 
+    /* ========== CREATE FORM ========== */
     .create-form {
         background: var(--card-light);
         border-radius: 12px;
@@ -336,7 +776,7 @@
         gap: 4px;
     }
 
-    /* Modal Améliorée */
+    /* ========== MODALS ========== */
     .modal-overlay {
         display: none;
         position: fixed;
@@ -425,7 +865,6 @@
         overflow-y: auto;
     }
 
-    /* Search & Filters Section in Modal */
     .search-filters-section {
         background: rgba(63, 81, 181, 0.05);
         border-radius: 8px;
@@ -493,7 +932,6 @@
         border-color: var(--primary);
     }
 
-    /* Results List in Modal */
     .bons-list {
         max-height: 500px;
         overflow-y: auto;
@@ -599,7 +1037,6 @@
         color: #b0b0b0;
     }
 
-    /* Loading State */
     .loading-spinner {
         display: flex;
         flex-direction: column;
@@ -621,8 +1058,43 @@
         to { transform: rotate(360deg); }
     }
 
-    /* Responsive */
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 1400px) {
+        .calendar-layout {
+            grid-template-columns: 200px 1fr;
+        }
+
+        .calendar-layout .create-form {
+            display: none;
+        }
+    }
+
     @media (max-width: 1200px) {
+        .calendar-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .employee-panel {
+            position: static;
+            max-height: none;
+        }
+
+        .employee-list {
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .employee-item {
+            padding: 6px 10px;
+            border: 1px solid var(--border-light);
+            border-radius: 20px;
+        }
+
+        body.dark-mode .employee-item {
+            border-color: var(--border-dark);
+        }
+
         .main-grid {
             grid-template-columns: 1fr;
         }
@@ -641,6 +1113,11 @@
     }
 
     @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
         .stats-row {
             grid-template-columns: 1fr;
         }
@@ -648,229 +1125,368 @@
         .filters-row {
             grid-template-columns: 1fr;
         }
+
+        .calendar-main {
+            min-height: 500px;
+        }
     }
 </style>
 
 <div class="planning-container">
-    
+
     <!-- Page Header -->
     <div class="page-header">
         <h1>
             <i class="material-icons">calendar_today</i>
             Planning des prestations
         </h1>
-    </div>
-
-    <!-- Filters -->
-    <div class="filters-card">
-        <form method="get" class="filters-grid">
-            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ selectedDate ? 'is-dirty' : '' }}">
-                <input class="mdl-textfield__input" type="date" id="date" name="date" value="{{ selectedDate }}">
-                <label class="mdl-textfield__label" for="date">Date</label>
-            </div>
-
-            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ selectedEmployeId ? 'is-dirty' : '' }}">
-                <select class="mdl-textfield__input" id="employe" name="employe">
-                    <option value="">Tous les employés</option>
-                    {% for emp in employes %}
-                        <option value="{{ emp.id }}" {{ selectedEmployeId == emp.id ? 'selected' : '' }}>
-                            {{ emp.nom }}
-                        </option>
-                    {% endfor %}
-                </select>
-                <label class="mdl-textfield__label" for="employe">Employé</label>
-            </div>
-
-            <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
-                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">search</i>
-                Filtrer
+        <div class="view-toggle">
+            <button class="view-btn active" data-view="calendar" onclick="switchView('calendar')">
+                <i class="material-icons">calendar_view_week</i> Calendrier
             </button>
-        </form>
+            <button class="view-btn" data-view="timeline" onclick="switchView('timeline')">
+                <i class="material-icons">view_list</i> Timeline
+            </button>
+        </div>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="stats-row" id="statsRow">
-        <!-- Chargé dynamiquement -->
-    </div>
-
-    <!-- Main Grid -->
-    <div class="main-grid">
-        
-        <!-- Prestations List -->
-        <div class="prestations-section">
-            <div class="section-title">
-                <i class="material-icons">event_note</i>
-                <span>Prestations du {{ selectedDate|date('d/m/Y') }} ({{ prestations|length }})</span>
+    <!-- ============================================= -->
+    <!-- CALENDAR VIEW -->
+    <!-- ============================================= -->
+    <div id="calendarViewSection" class="calendar-section active">
+        <div class="calendar-layout">
+            <!-- Employee Filter Panel -->
+            <div class="employee-panel">
+                <div class="panel-header">
+                    <i class="material-icons">people</i>
+                    <span>Employ&eacute;s</span>
+                </div>
+                <div class="employee-actions">
+                    <button onclick="toggleAllEmployees(true)">Tous</button>
+                    <button onclick="toggleAllEmployees(false)">Aucun</button>
+                </div>
+                <div id="employeeList" class="employee-list">
+                    <!-- Populated dynamically -->
+                </div>
             </div>
 
-            {% if prestations is not empty %}
-                <div class="timeline-view">
-                    <div class="timeline-line"></div>
-                    {% for prestation in prestations %}
-                        <div class="timeline-item">
-                            <div class="timeline-dot"></div>
-                            <div class="prestation-card">
-                                <div class="prestation-time">
-                                    {{ prestation.datePrestation|date('H:i') }}
-                                </div>
+            <!-- Calendar Container -->
+            <div class="calendar-main">
+                <div id="fullcalendar"></div>
+            </div>
 
-                                <div class="prestation-info">
-                                    <div class="prestation-client">
-                                        {{ prestation.bonDeCommande ? prestation.bonDeCommande.clientNom : '—' }}
-                                    </div>
-                                    <div class="prestation-details">
-                                        <span class="bon-info-item">
-                                            <i class="material-icons">person</i>
-                                            {{ prestation.employe ? prestation.employe.nom : 'Non assigné' }}
-                                        </span>
-                                        <span class="bon-info-item">
-                                            <i class="material-icons">location_on</i>
-                                        {{ prestation.bonDeCommande ? prestation.bonDeCommande.clientAdresse|slice(0, 40) ~ '...' : 'Adresse indisponible' }}
-                                        </span>
-                                        {% if prestation.bonDeCommande and prestation.bonDeCommande.clientAdresse matches '/\\b(\\d{5})\\b/' %}
-                                            {% set codePostal = prestation.bonDeCommande.clientAdresse|split(' ')|filter(v => v matches '/^\\d{5}$/')|first %}
-                                            {% if codePostal %}
-                                                <span class="geo-badge" style="background: #9C27B0;">
-                                                    <i class="material-icons" style="font-size: 12px;">place</i>
-                                                    {{ codePostal }}
-                                                </span>
-                                            {% endif %}
-                                        {% endif %}
-                                        <span class="prestation-badge badge-{{ prestation.statut.value|replace({' ': '-', 'é': 'e'}) }}">
-                                            {{ prestation.statut.value }}
-                                        </span>
-                                    </div>
-                                </div>
+            <!-- Create Form (visible on large screens) -->
+            <div>
+                <div class="create-form" id="calendarCreateForm">
+                    <div class="section-title" style="margin-bottom: 20px; padding-bottom: 12px;">
+                        <i class="material-icons">add_circle</i>
+                        <span>Cr&eacute;er une prestation</span>
+                    </div>
 
-                                <div class="prestation-actions">
-                                    <a href="{{ path('admin_prestation_show', {id: prestation.id}) }}" 
-                                       class="mdl-button mdl-js-button mdl-button--icon btn-icon" 
-                                       title="Voir" 
-                                       style="color: #00897b;">
-                                        <i class="material-icons">visibility</i>
-                                    </a>
-                                    <form method="post" 
-                                          action="{{ path('admin_planning_delete_prestation', {id: prestation.id}) }}" 
-                                          style="display: inline;"
-                                          onsubmit="return confirm('Supprimer cette prestation ?');">
-                                        <button type="submit" 
-                                                class="mdl-button mdl-js-button mdl-button--icon btn-icon" 
-                                                title="Supprimer"
-                                                style="color: #d32f2f;">
-                                            <i class="material-icons">delete</i>
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
+                    <div class="quick-actions">
+                        <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('09:00')">
+                            <i class="material-icons" style="font-size: 18px;">wb_sunny</i> 9h00
+                        </button>
+                        <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('14:00')">
+                            <i class="material-icons" style="font-size: 18px;">wb_twilight</i> 14h00
+                        </button>
+                        <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setToday()">
+                            <i class="material-icons" style="font-size: 18px;">today</i> Auj.
+                        </button>
+                    </div>
+
+                    <form method="post" action="{{ path('admin_planning_create_prestation') }}">
+                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty">
+                            <input class="mdl-textfield__input" type="date" id="create_date" name="date" value="{{ selectedDate }}" required>
+                            <label class="mdl-textfield__label" for="create_date">Date</label>
                         </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="empty-state">
-                    <i class="material-icons">event_busy</i>
-                    <h3>Aucune prestation</h3>
-                    <p>Pas de prestation prévue pour cette date{{ selectedEmployeId ? ' et cet employé' : '' }}</p>
-                </div>
-            {% endif %}
-        </div>
 
-        <!-- Create Prestation Form -->
-        <div>
-            <div class="create-form">
-                <div class="section-title" style="margin-bottom: 20px; padding-bottom: 12px;">
-                    <i class="material-icons">add_circle</i>
-                    <span>Créer une prestation</span>
-                </div>
-
-                <!-- Quick Actions -->
-                <div class="quick-actions">
-                    <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('09:00')">
-                        <i class="material-icons" style="font-size: 18px;">wb_sunny</i> 9h00
-                    </button>
-                    <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('14:00')">
-                        <i class="material-icons" style="font-size: 18px;">wb_twilight</i> 14h00
-                    </button>
-                    <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setToday()">
-                        <i class="material-icons" style="font-size: 18px;">today</i> Aujourd'hui
-                    </button>
-                </div>
-
-                <form method="post" action="{{ path('admin_planning_create_prestation') }}">
-                    
-                    <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty">
-                        <input class="mdl-textfield__input" type="date" id="create_date" name="date" value="{{ selectedDate }}" required>
-                        <label class="mdl-textfield__label" for="create_date">Date</label>
-                    </div>
-
-                    <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty">
-                        <input class="mdl-textfield__input" type="time" id="heure" name="heure" value="09:00" required>
-                        <label class="mdl-textfield__label" for="heure">Heure</label>
-                    </div>
-
-                    <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ selectedEmployeId ? 'is-dirty' : '' }}">
-                        <select class="mdl-textfield__input" id="create_employe" name="employe" required>
-                            <option value="">Sélectionner...</option>
-                            {% for emp in employes %}
-                                <option value="{{ emp.id }}" {{ selectedEmployeId == emp.id ? 'selected' : '' }}>
-                                    {{ emp.nom }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                        <label class="mdl-textfield__label" for="create_employe">Employé</label>
-                    </div>
-
-                    <input type="hidden" id="selected_bon" name="bon" required>
-
-                    <div style="margin: 20px 0;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <strong style="color: var(--text-light);">Bon de commande :</strong>
-                            <button type="button" 
-                                    class="mdl-button mdl-js-button mdl-button--raised" 
-                                    onclick="openBonModal()"
-                                    style="height: 32px; line-height: 32px;">
-                                <i class="material-icons" style="vertical-align: middle; margin-right: 4px; font-size: 18px;">search</i>
-                                Rechercher
-                            </button>
+                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty">
+                            <input class="mdl-textfield__input" type="time" id="heure" name="heure" value="09:00" required>
+                            <label class="mdl-textfield__label" for="heure">Heure</label>
                         </div>
-                        
-                        <div id="selectedBonDisplay" style="display: none; padding: 16px; background: rgba(63, 81, 181, 0.1); border-radius: 8px; border-left: 4px solid var(--primary);">
-                            <div style="display: flex; justify-content: space-between; align-items: start;">
-                                <div>
-                                    <div class="bon-client" id="selectedBonClient"></div>
-                                    <div class="bon-info" id="selectedBonInfo"></div>
-                                </div>
-                                <button type="button" 
-                                        class="mdl-button mdl-js-button mdl-button--icon" 
-                                        onclick="clearBonSelection()"
-                                        title="Effacer la sélection">
-                                    <i class="material-icons">close</i>
+
+                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ selectedEmployeId ? 'is-dirty' : '' }}">
+                            <select class="mdl-textfield__input" id="create_employe" name="employe" required>
+                                <option value="">S&eacute;lectionner...</option>
+                                {% for emp in employes %}
+                                    <option value="{{ emp.id }}" {{ selectedEmployeId == emp.id ? 'selected' : '' }}>
+                                        {{ emp.nom }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <label class="mdl-textfield__label" for="create_employe">Employ&eacute;</label>
+                        </div>
+
+                        <input type="hidden" id="selected_bon" name="bon" required>
+
+                        <div style="margin: 20px 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <strong style="color: var(--text-light);">Bon de commande :</strong>
+                                <button type="button"
+                                        class="mdl-button mdl-js-button mdl-button--raised"
+                                        onclick="openBonModal()"
+                                        style="height: 32px; line-height: 32px;">
+                                    <i class="material-icons" style="vertical-align: middle; margin-right: 4px; font-size: 18px;">search</i>
+                                    Rechercher
                                 </button>
                             </div>
-                        </div>
-                        
-                        <div id="noBonSelected" style="padding: 16px; background: rgba(0, 0, 0, 0.05); border-radius: 8px; text-align: center; color: #757575;">
-                            <i class="material-icons" style="vertical-align: middle; font-size: 18px;">info</i>
-                            Aucun bon sélectionné - Utilisez la recherche
-                        </div>
-                    </div>
 
-                    <button type="submit" 
-                            class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent" 
-                            style="width: 100%; height: 48px;"
-                            id="submit-btn"
-                            disabled>
-                        <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">add</i>
-                        Créer la prestation
-                    </button>
-                </form>
+                            <div id="selectedBonDisplay" style="display: none; padding: 16px; background: rgba(63, 81, 181, 0.1); border-radius: 8px; border-left: 4px solid var(--primary);">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <div>
+                                        <div class="bon-client" id="selectedBonClient"></div>
+                                        <div class="bon-info" id="selectedBonInfo"></div>
+                                    </div>
+                                    <button type="button"
+                                            class="mdl-button mdl-js-button mdl-button--icon"
+                                            onclick="clearBonSelection()"
+                                            title="Effacer la s&eacute;lection">
+                                        <i class="material-icons">close</i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="noBonSelected" style="padding: 16px; background: rgba(0, 0, 0, 0.05); border-radius: 8px; text-align: center; color: #757575;">
+                                <i class="material-icons" style="vertical-align: middle; font-size: 18px;">info</i>
+                                Aucun bon s&eacute;lectionn&eacute; - Utilisez la recherche
+                            </div>
+                        </div>
+
+                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
+                            <textarea class="mdl-textfield__input" id="create_description" name="description" rows="3"></textarea>
+                            <label class="mdl-textfield__label" for="create_description">Note pour l'employ&eacute; (optionnel)</label>
+                        </div>
+
+                        <button type="submit"
+                                class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent"
+                                style="width: 100%; height: 48px;"
+                                id="submit-btn"
+                                disabled>
+                            <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">add</i>
+                            Cr&eacute;er la prestation
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
+    </div>
 
+    <!-- ============================================= -->
+    <!-- TIMELINE VIEW (existing) -->
+    <!-- ============================================= -->
+    <div id="timelineViewSection" class="timeline-section">
+        <!-- Filters -->
+        <div class="filters-card">
+            <form method="get" class="filters-grid">
+                <input type="hidden" name="view" value="timeline">
+                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ selectedDate ? 'is-dirty' : '' }}">
+                    <input class="mdl-textfield__input" type="date" id="tl_date" name="date" value="{{ selectedDate }}">
+                    <label class="mdl-textfield__label" for="tl_date">Date</label>
+                </div>
+
+                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ selectedEmployeId ? 'is-dirty' : '' }}">
+                    <select class="mdl-textfield__input" id="tl_employe" name="employe">
+                        <option value="">Tous les employ&eacute;s</option>
+                        {% for emp in employes %}
+                            <option value="{{ emp.id }}" {{ selectedEmployeId == emp.id ? 'selected' : '' }}>
+                                {{ emp.nom }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <label class="mdl-textfield__label" for="tl_employe">Employ&eacute;</label>
+                </div>
+
+                <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                    <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">search</i>
+                    Filtrer
+                </button>
+            </form>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-row" id="statsRow"></div>
+
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- Prestations List -->
+            <div class="prestations-section">
+                <div class="section-title">
+                    <i class="material-icons">event_note</i>
+                    <span>Prestations du {{ selectedDate|date('d/m/Y') }} ({{ prestations|length }})</span>
+                </div>
+
+                {% if prestations is not empty %}
+                    <div class="timeline-view">
+                        <div class="timeline-line"></div>
+                        {% for prestation in prestations %}
+                            <div class="timeline-item">
+                                <div class="timeline-dot"></div>
+                                <div class="prestation-card">
+                                    <div class="prestation-time">
+                                        {{ prestation.datePrestation|date('H:i') }}
+                                    </div>
+
+                                    <div class="prestation-info">
+                                        <div class="prestation-client">
+                                            {{ prestation.bonDeCommande ? prestation.bonDeCommande.clientNom : '—' }}
+                                        </div>
+                                        <div class="prestation-details">
+                                            <span class="bon-info-item">
+                                                <i class="material-icons">person</i>
+                                                {{ prestation.employe ? prestation.employe.nom : 'Non assign&eacute;' }}
+                                            </span>
+                                            <span class="bon-info-item">
+                                                <i class="material-icons">location_on</i>
+                                                {{ prestation.bonDeCommande ? prestation.bonDeCommande.clientAdresse|slice(0, 40) ~ '...' : 'Adresse indisponible' }}
+                                            </span>
+                                            {% if prestation.bonDeCommande and prestation.bonDeCommande.clientAdresse matches '/\\b(\\d{5})\\b/' %}
+                                                {% set codePostal = prestation.bonDeCommande.clientAdresse|split(' ')|filter(v => v matches '/^\\d{5}$/')|first %}
+                                                {% if codePostal %}
+                                                    <span class="geo-badge" style="background: #9C27B0;">
+                                                        <i class="material-icons" style="font-size: 12px;">place</i>
+                                                        {{ codePostal }}
+                                                    </span>
+                                                {% endif %}
+                                            {% endif %}
+                                            <span class="prestation-badge badge-{{ prestation.statut.cssClass }}">
+                                                {{ prestation.statut.label }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div class="prestation-actions">
+                                        <a href="{{ path('admin_prestation_show', {id: prestation.id}) }}"
+                                           class="mdl-button mdl-js-button mdl-button--icon btn-icon"
+                                           title="Voir"
+                                           style="color: #00897b;">
+                                            <i class="material-icons">visibility</i>
+                                        </a>
+                                        <form method="post"
+                                              action="{{ path('admin_planning_delete_prestation', {id: prestation.id}) }}"
+                                              style="display: inline;"
+                                              onsubmit="return confirm('Supprimer cette prestation ?');">
+                                            <button type="submit"
+                                                    class="mdl-button mdl-js-button mdl-button--icon btn-icon"
+                                                    title="Supprimer"
+                                                    style="color: #d32f2f;">
+                                                <i class="material-icons">delete</i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="material-icons">event_busy</i>
+                        <h3>Aucune prestation</h3>
+                        <p>Pas de prestation pr&eacute;vue pour cette date{{ selectedEmployeId ? ' et cet employ&eacute;' : '' }}</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Create Prestation Form (timeline) -->
+            <div>
+                <div class="create-form" id="timelineCreateForm">
+                    <div class="section-title" style="margin-bottom: 20px; padding-bottom: 12px;">
+                        <i class="material-icons">add_circle</i>
+                        <span>Cr&eacute;er une prestation</span>
+                    </div>
+
+                    <div class="quick-actions">
+                        <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('09:00')">
+                            <i class="material-icons" style="font-size: 18px;">wb_sunny</i> 9h00
+                        </button>
+                        <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('14:00')">
+                            <i class="material-icons" style="font-size: 18px;">wb_twilight</i> 14h00
+                        </button>
+                        <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setToday()">
+                            <i class="material-icons" style="font-size: 18px;">today</i> Auj.
+                        </button>
+                    </div>
+
+                    <form method="post" action="{{ path('admin_planning_create_prestation') }}">
+                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty">
+                            <input class="mdl-textfield__input" type="date" id="tl_create_date" name="date" value="{{ selectedDate }}" required>
+                            <label class="mdl-textfield__label" for="tl_create_date">Date</label>
+                        </div>
+
+                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty">
+                            <input class="mdl-textfield__input" type="time" id="tl_heure" name="heure" value="09:00" required>
+                            <label class="mdl-textfield__label" for="tl_heure">Heure</label>
+                        </div>
+
+                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ selectedEmployeId ? 'is-dirty' : '' }}">
+                            <select class="mdl-textfield__input" id="tl_create_employe" name="employe" required>
+                                <option value="">S&eacute;lectionner...</option>
+                                {% for emp in employes %}
+                                    <option value="{{ emp.id }}" {{ selectedEmployeId == emp.id ? 'selected' : '' }}>
+                                        {{ emp.nom }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <label class="mdl-textfield__label" for="tl_create_employe">Employ&eacute;</label>
+                        </div>
+
+                        <input type="hidden" id="tl_selected_bon" name="bon" required>
+
+                        <div style="margin: 20px 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <strong style="color: var(--text-light);">Bon de commande :</strong>
+                                <button type="button"
+                                        class="mdl-button mdl-js-button mdl-button--raised"
+                                        onclick="openBonModal()"
+                                        style="height: 32px; line-height: 32px;">
+                                    <i class="material-icons" style="vertical-align: middle; margin-right: 4px; font-size: 18px;">search</i>
+                                    Rechercher
+                                </button>
+                            </div>
+
+                            <div id="tl_selectedBonDisplay" style="display: none; padding: 16px; background: rgba(63, 81, 181, 0.1); border-radius: 8px; border-left: 4px solid var(--primary);">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <div>
+                                        <div class="bon-client" id="tl_selectedBonClient"></div>
+                                        <div class="bon-info" id="tl_selectedBonInfo"></div>
+                                    </div>
+                                    <button type="button"
+                                            class="mdl-button mdl-js-button mdl-button--icon"
+                                            onclick="clearBonSelection()"
+                                            title="Effacer">
+                                        <i class="material-icons">close</i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="tl_noBonSelected" style="padding: 16px; background: rgba(0, 0, 0, 0.05); border-radius: 8px; text-align: center; color: #757575;">
+                                <i class="material-icons" style="vertical-align: middle; font-size: 18px;">info</i>
+                                Aucun bon s&eacute;lectionn&eacute;
+                            </div>
+                        </div>
+
+                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
+                            <textarea class="mdl-textfield__input" id="tl_create_description" name="description" rows="3"></textarea>
+                            <label class="mdl-textfield__label" for="tl_create_description">Note pour l'employ&eacute; (optionnel)</label>
+                        </div>
+
+                        <button type="submit"
+                                class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent"
+                                style="width: 100%; height: 48px;"
+                                id="tl_submit-btn"
+                                disabled>
+                            <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">add</i>
+                            Cr&eacute;er la prestation
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
 </div>
 
-<!-- Modal de recherche de bon de commande améliorée -->
+<!-- Modal de recherche de bon de commande -->
 <div class="modal-overlay" id="bonCommandeModalOverlay" onclick="closeBonModal()"></div>
 <div class="modal-container" id="bonCommandeModal">
     <div class="modal-header">
@@ -883,33 +1499,32 @@
         </button>
     </div>
     <div class="modal-body">
-        <!-- Search & Filters Section -->
         <div class="search-filters-section">
             <div class="search-box">
-                <input type="text" 
-                       id="bonSearchInput" 
-                       placeholder="Rechercher par client, numéro, adresse..." 
+                <input type="text"
+                       id="bonSearchInput"
+                       placeholder="Rechercher par client, num&eacute;ro, adresse..."
                        onkeyup="searchBons()">
             </div>
-            
+
             <div class="filters-row">
                 <select class="filter-select" id="filterStatut" onchange="searchBons()">
                     <option value="">Tous les statuts</option>
                     <option value="disponible">Disponible</option>
-                    <option value="à programmer">À programmer</option>
-                    <option value="programmé">Programmé</option>
-                    <option value="terminé">Terminé</option>
+                    <option value="&agrave; programmer">&Agrave; programmer</option>
+                    <option value="programm&eacute;">Programm&eacute;</option>
+                    <option value="termin&eacute;">Termin&eacute;</option>
                 </select>
-                
+
                 <select class="filter-select" id="filterGroupe" onchange="searchBons()">
-                    <option value="">Tous les groupes géographiques</option>
+                    <option value="">Tous les groupes g&eacute;ographiques</option>
                     {% for groupe in groupesGeo %}
                         <option value="{{ groupe.id }}" data-color="{{ groupe.couleur }}">{{ groupe.nom }}</option>
                     {% endfor %}
                 </select>
-                
+
                 <select class="filter-select" id="filterSort" onchange="searchBons()">
-                    <option value="date_desc">Plus récent</option>
+                    <option value="date_desc">Plus r&eacute;cent</option>
                     <option value="date_asc">Plus ancien</option>
                     <option value="client_asc">Client A-Z</option>
                     <option value="client_desc">Client Z-A</option>
@@ -917,100 +1532,487 @@
                 </select>
             </div>
         </div>
-        
-        <div id="bonSearchResults" class="bons-list">
-            <!-- Les résultats apparaîtront ici -->
-        </div>
+
+        <div id="bonSearchResults" class="bons-list"></div>
     </div>
 </div>
 
-<!-- Modal de détails du bon de commande (modal imbriquée) -->
+<!-- Modal de details du bon -->
 <div class="modal-overlay" id="bonDetailsModalOverlay" onclick="closeBonDetailsModal()" style="z-index: 10000;"></div>
 <div class="modal-container" id="bonDetailsModal" style="z-index: 10001;">
     <div class="modal-header">
         <h3>
             <i class="material-icons">receipt_long</i>
-            Détails du bon de commande
+            D&eacute;tails du bon de commande
         </h3>
         <button class="modal-close" onclick="closeBonDetailsModal()">
             <i class="material-icons">close</i>
         </button>
     </div>
-    <div class="modal-body" id="bonDetailsContent">
-        <!-- Le contenu sera chargé dynamiquement -->
-    </div>
+    <div class="modal-body" id="bonDetailsContent"></div>
 </div>
 
 <script>
-// Auto-upgrade MDL
-document.addEventListener('DOMContentLoaded', function() {
+// ==================== GLOBALS ====================
+let calendar;
+let employeeData = [];
+let selectedEmployees = new Set();
+let currentView = 'calendar';
+let previewEvent = null;
+
+// ==================== INITIALIZATION ====================
+document.addEventListener('DOMContentLoaded', async function() {
+    // Auto-upgrade MDL
     document.querySelectorAll('.mdl-textfield').forEach(field => {
         const input = field.querySelector('input, select');
         if (input && input.value) {
             field.classList.add('is-dirty');
         }
     });
-    
-    // Load stats on page load
+
+    // Load employees for calendar
+    try {
+        const empResponse = await fetch('/admin/planning/employes');
+        employeeData = await empResponse.json();
+        employeeData.forEach(e => selectedEmployees.add(e.id));
+        renderEmployeePanel();
+    } catch (error) {
+        console.error('Erreur chargement employes:', error);
+    }
+
+    // Initialize FullCalendar
+    initCalendar();
+
+    // Restore saved view (force calendar if bonId is in URL)
+    const urlBonId = new URLSearchParams(window.location.search).get('bonId');
+    const savedView = urlBonId ? 'calendar' : (localStorage.getItem('planningView') || 'calendar');
+    switchView(savedView);
+
+    // Auto-load bon if bonId is in URL
+    if (urlBonId) {
+        await autoLoadBon(urlBonId);
+    }
+
+    // Update preview when employee selection changes
+    const createEmployeSelect = document.getElementById('create_employe');
+    if (createEmployeSelect) {
+        createEmployeSelect.addEventListener('change', updatePreviewEmploye);
+    }
+
+    // Remove preview on form submit
+    const calendarForm = document.querySelector('#calendarCreateForm form');
+    if (calendarForm) {
+        calendarForm.addEventListener('submit', removePreviewEvent);
+    }
+
+    // Load timeline stats
     loadStats();
 });
 
+// ==================== FULLCALENDAR ====================
+function initCalendar() {
+    const calendarEl = document.getElementById('fullcalendar');
+    if (!calendarEl) return;
+
+    calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        locale: 'fr',
+        firstDay: 1,
+        headerToolbar: {
+            left: 'prev,today,next',
+            center: 'title',
+            right: 'timeGridDay,timeGridWeek,dayGridMonth'
+        },
+        buttonText: {
+            today: "Aujourd'hui",
+            day: 'Jour',
+            week: 'Semaine',
+            month: 'Mois'
+        },
+        slotMinTime: '07:00:00',
+        slotMaxTime: '20:00:00',
+        allDaySlot: false,
+        height: 'auto',
+        expandRows: true,
+        nowIndicator: true,
+        navLinks: true,
+        selectable: true,
+        selectMirror: true,
+        editable: false,
+        slotDuration: '00:30:00',
+        slotLabelInterval: '01:00:00',
+        slotLabelFormat: {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        },
+
+        events: function(info, successCallback, failureCallback) {
+            const params = new URLSearchParams({
+                start: info.startStr,
+                end: info.endStr
+            });
+            selectedEmployees.forEach(id => params.append('employes[]', id));
+
+            fetch('/admin/planning/events?' + params.toString())
+                .then(response => response.json())
+                .then(data => successCallback(data))
+                .catch(error => {
+                    console.error('Erreur chargement events:', error);
+                    failureCallback(error);
+                });
+        },
+
+        eventContent: function(arg) {
+            if (arg.event.id === 'preview') {
+                return {
+                    html: '<div class="fc-preview-content">' +
+                        '<i class="material-icons">add_circle_outline</i> ' +
+                        '<span>' + arg.event.title + '</span>' +
+                    '</div>'
+                };
+            }
+            const props = arg.event.extendedProps;
+            return {
+                html: '<div class="fc-event-custom">' +
+                    '<div class="fc-event-title-custom">' + arg.event.title + '</div>' +
+                    '<div class="fc-event-employee">' + props.employeNom + '</div>' +
+                '</div>'
+            };
+        },
+
+        eventClassNames: function(arg) {
+            if (arg.event.id === 'preview') return ['fc-preview-event'];
+            return [];
+        },
+
+        eventClick: function(info) {
+            if (info.event.id === 'preview') return;
+            info.jsEvent.preventDefault();
+            showEventPopover(info.event, info.el);
+        },
+
+        select: function(info) {
+            prefillCreateForm(info.startStr);
+            addPreviewEvent(info.start, info.end);
+            calendar.unselect();
+        },
+
+        // Navigate to initial date if specified in URL
+        initialDate: new URLSearchParams(window.location.search).get('date') || undefined
+    });
+
+    calendar.render();
+}
+
+// ==================== VIEW TOGGLE ====================
+function switchView(view) {
+    currentView = view;
+    const calendarSection = document.getElementById('calendarViewSection');
+    const timelineSection = document.getElementById('timelineViewSection');
+
+    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.view-btn[data-view="' + view + '"]').classList.add('active');
+
+    if (view === 'calendar') {
+        calendarSection.classList.add('active');
+        timelineSection.classList.remove('active');
+        if (calendar) {
+            setTimeout(() => calendar.updateSize(), 50);
+        }
+    } else {
+        calendarSection.classList.remove('active');
+        timelineSection.classList.add('active');
+    }
+
+    localStorage.setItem('planningView', view);
+}
+
+// ==================== EMPLOYEE PANEL ====================
+function renderEmployeePanel() {
+    const container = document.getElementById('employeeList');
+    if (!container) return;
+
+    container.innerHTML = employeeData.map(emp => {
+        const checked = selectedEmployees.has(emp.id);
+        return '<div class="employee-item ' + (checked ? '' : 'unchecked') + '" ' +
+            'onclick="toggleEmployee(' + emp.id + ')" data-emp-id="' + emp.id + '">' +
+            '<div class="employee-color-dot" style="background: ' + emp.couleur + ';"></div>' +
+            '<input type="checkbox" ' + (checked ? 'checked' : '') + ' />' +
+            '<span>' + emp.nom + '</span>' +
+        '</div>';
+    }).join('');
+}
+
+function toggleEmployee(empId) {
+    if (selectedEmployees.has(empId)) {
+        selectedEmployees.delete(empId);
+    } else {
+        selectedEmployees.add(empId);
+    }
+    renderEmployeePanel();
+    if (calendar) calendar.refetchEvents();
+}
+
+function toggleAllEmployees(selectAll) {
+    if (selectAll) {
+        employeeData.forEach(e => selectedEmployees.add(e.id));
+    } else {
+        selectedEmployees.clear();
+    }
+    renderEmployeePanel();
+    if (calendar) calendar.refetchEvents();
+}
+
+// ==================== EVENT POPOVER ====================
+function showEventPopover(event, targetEl) {
+    // Remove existing popovers
+    document.querySelectorAll('.event-popover').forEach(el => el.remove());
+
+    const props = event.extendedProps;
+    const popover = document.createElement('div');
+    popover.className = 'event-popover';
+
+    let bodyHtml = '<div class="popover-row">' +
+        '<i class="material-icons">person</i>' +
+        '<span>' + props.employeNom + '</span>' +
+    '</div>' +
+    '<div class="popover-row">' +
+        '<i class="material-icons">schedule</i>' +
+        '<span>' + new Date(event.start).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) + '</span>' +
+    '</div>';
+
+    if (props.clientAdresse) {
+        bodyHtml += '<div class="popover-row">' +
+            '<i class="material-icons">location_on</i>' +
+            '<span>' + props.clientAdresse + '</span>' +
+        '</div>';
+    }
+
+    if (props.typePrestation) {
+        bodyHtml += '<div class="popover-row">' +
+            '<i class="material-icons">category</i>' +
+            '<span>' + props.typePrestation + '</span>' +
+        '</div>';
+    }
+
+    if (props.statutLabel) {
+        bodyHtml += '<div class="popover-row">' +
+            '<i class="material-icons">' + (props.statutIcon || 'info') + '</i>' +
+            '<span>' + props.statutLabel + '</span>' +
+        '</div>';
+    }
+
+    if (props.numeroCommande) {
+        bodyHtml += '<div class="popover-row">' +
+            '<i class="material-icons">receipt</i>' +
+            '<span>BC ' + props.numeroCommande + '</span>' +
+        '</div>';
+    }
+
+    popover.innerHTML = '<div class="popover-header" style="background: ' + event.backgroundColor + ';">' +
+        '<strong>' + event.title + '</strong>' +
+        '<button onclick="this.closest(\'.event-popover\').remove()" class="popover-close">' +
+            '<i class="material-icons">close</i>' +
+        '</button>' +
+    '</div>' +
+    '<div class="popover-body">' +
+        bodyHtml +
+        '<div class="popover-actions">' +
+            '<a href="/adm/prestation/' + props.prestationId + '" ' +
+               'class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" ' +
+               'style="font-size: 0.75rem; height: 32px;">' +
+                '<i class="material-icons" style="font-size: 16px; vertical-align: middle; margin-right: 4px;">visibility</i> Voir' +
+            '</a>' +
+        '</div>' +
+    '</div>';
+
+    document.body.appendChild(popover);
+
+    // Position near the clicked element
+    const rect = targetEl.getBoundingClientRect();
+    const popoverWidth = 300;
+    let left = rect.left + window.scrollX;
+    let top = rect.bottom + window.scrollY + 8;
+
+    // Keep within viewport
+    if (left + popoverWidth > window.innerWidth) {
+        left = window.innerWidth - popoverWidth - 16;
+    }
+    if (top + 300 > window.innerHeight + window.scrollY) {
+        top = rect.top + window.scrollY - 300 - 8;
+    }
+
+    popover.style.top = top + 'px';
+    popover.style.left = left + 'px';
+
+    // Close on click outside
+    setTimeout(() => {
+        document.addEventListener('click', function closePopover(e) {
+            if (!popover.contains(e.target) && !targetEl.contains(e.target)) {
+                popover.remove();
+                document.removeEventListener('click', closePopover);
+            }
+        });
+    }, 100);
+}
+
+// ==================== PREVIEW EVENT ====================
+function addPreviewEvent(start, end) {
+    removePreviewEvent();
+
+    // Default to 1 hour if no end or same as start
+    if (!end || end.getTime() === start.getTime()) {
+        end = new Date(start.getTime() + 60 * 60 * 1000);
+    }
+
+    // Get selected employee name
+    const employeSelect = document.getElementById('create_employe');
+    const employeName = employeSelect && employeSelect.value
+        ? employeSelect.options[employeSelect.selectedIndex].text.trim()
+        : '';
+
+    const title = employeName ? 'Nouveau - ' + employeName : 'Nouveau cr\u00e9neau';
+
+    previewEvent = calendar.addEvent({
+        id: 'preview',
+        title: title,
+        start: start,
+        end: end,
+        display: 'auto',
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+        textColor: 'var(--primary)',
+        editable: false,
+    });
+}
+
+function removePreviewEvent() {
+    if (previewEvent) {
+        previewEvent.remove();
+        previewEvent = null;
+    }
+    // Also try by ID in case reference is stale
+    if (calendar) {
+        const existing = calendar.getEventById('preview');
+        if (existing) existing.remove();
+    }
+}
+
+function updatePreviewEmploye() {
+    if (!previewEvent || !calendar) return;
+    const existing = calendar.getEventById('preview');
+    if (!existing) return;
+
+    const employeSelect = document.getElementById('create_employe');
+    const employeName = employeSelect && employeSelect.value
+        ? employeSelect.options[employeSelect.selectedIndex].text.trim()
+        : '';
+
+    existing.setProp('title', employeName ? 'Nouveau - ' + employeName : 'Nouveau cr\u00e9neau');
+}
+
+// ==================== PREFILL CREATE FORM ====================
+function prefillCreateForm(dateTimeStr) {
+    const dt = new Date(dateTimeStr);
+    const dateStr = dt.toISOString().split('T')[0];
+    const timeStr = dt.toTimeString().slice(0, 5);
+
+    const dateInput = document.getElementById('create_date');
+    const timeInput = document.getElementById('heure');
+
+    if (dateInput) {
+        dateInput.value = dateStr;
+        dateInput.parentElement.classList.add('is-dirty');
+    }
+    if (timeInput) {
+        timeInput.value = timeStr;
+        timeInput.parentElement.classList.add('is-dirty');
+    }
+
+    // Scroll to create form
+    const form = document.getElementById('calendarCreateForm');
+    if (form) {
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        form.style.boxShadow = '0 0 0 3px var(--primary), 0 2px 8px rgba(0,0,0,0.1)';
+        setTimeout(() => {
+            form.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+        }, 2000);
+    }
+}
+
 // ==================== QUICK ACTIONS ====================
 function setTime(time) {
-    document.getElementById('heure').value = time;
-    document.getElementById('heure').parentElement.classList.add('is-dirty');
+    const heureEl = document.getElementById('heure');
+    const tlHeureEl = document.getElementById('tl_heure');
+    if (heureEl) {
+        heureEl.value = time;
+        heureEl.parentElement.classList.add('is-dirty');
+    }
+    if (tlHeureEl) {
+        tlHeureEl.value = time;
+        tlHeureEl.parentElement.classList.add('is-dirty');
+    }
 }
 
 function setToday() {
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('create_date').value = today;
-    document.getElementById('create_date').parentElement.classList.add('is-dirty');
+    const dateEl = document.getElementById('create_date');
+    const tlDateEl = document.getElementById('tl_create_date');
+    if (dateEl) {
+        dateEl.value = today;
+        dateEl.parentElement.classList.add('is-dirty');
+    }
+    if (tlDateEl) {
+        tlDateEl.value = today;
+        tlDateEl.parentElement.classList.add('is-dirty');
+    }
 }
 
 // ==================== STATS LOADING ====================
 async function loadStats() {
     const statsRow = document.getElementById('statsRow');
-    const selectedDate = document.getElementById('date').value;
-    
+    if (!statsRow) return;
+
+    const dateEl = document.getElementById('tl_date');
+    const selectedDate = dateEl ? dateEl.value : new Date().toISOString().split('T')[0];
+
     try {
-        const response = await fetch(`/admin/planning/stats?date=${selectedDate}`);
+        const response = await fetch('/admin/planning/stats?date=' + selectedDate);
         const data = await response.json();
-        
-        statsRow.innerHTML = `
-            <div class="stat-card primary">
-                <div class="stat-label">Total prestations</div>
-                <div class="stat-value">${data.stats.total || 0}</div>
-            </div>
-            <div class="stat-card info">
-                <div class="stat-label">Programmées</div>
-                <div class="stat-value">${data.stats.programme || 0}</div>
-            </div>
-            <div class="stat-card warning">
-                <div class="stat-label">En cours</div>
-                <div class="stat-value">${data.stats.en_cours || 0}</div>
-            </div>
-            <div class="stat-card success">
-                <div class="stat-label">Terminées</div>
-                <div class="stat-value">${data.stats.termine || 0}</div>
-            </div>
-        `;
+
+        statsRow.innerHTML =
+            '<div class="stat-card primary">' +
+                '<div class="stat-label">Total prestations</div>' +
+                '<div class="stat-value">' + (data.stats.total || 0) + '</div>' +
+            '</div>' +
+            '<div class="stat-card info">' +
+                '<div class="stat-label">Programm&eacute;es</div>' +
+                '<div class="stat-value">' + (data.stats.programme || 0) + '</div>' +
+            '</div>' +
+            '<div class="stat-card warning">' +
+                '<div class="stat-label">En cours</div>' +
+                '<div class="stat-value">' + (data.stats.en_cours || 0) + '</div>' +
+            '</div>' +
+            '<div class="stat-card success">' +
+                '<div class="stat-label">Termin&eacute;es</div>' +
+                '<div class="stat-value">' + (data.stats.termine || 0) + '</div>' +
+            '</div>';
     } catch (error) {
-        console.error('Erreur lors du chargement des stats:', error);
+        console.error('Erreur chargement stats:', error);
     }
 }
 
-// ==================== MODAL MANAGEMENT ====================
+// ==================== BON MODAL ====================
 function openBonModal() {
     document.getElementById('bonCommandeModalOverlay').classList.add('open');
     document.getElementById('bonCommandeModal').classList.add('open');
     document.getElementById('bonSearchInput').focus();
-    
-    // Reset filters
+
     document.getElementById('filterStatut').value = 'disponible';
     document.getElementById('filterGroupe').value = '';
     document.getElementById('filterSort').value = 'date_desc';
-    
-    // Load default bons with filters
+
     searchBons();
 }
 
@@ -1020,12 +2022,11 @@ function closeBonModal() {
     document.getElementById('bonSearchInput').value = '';
 }
 
-// Fermer avec Escape
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         if (document.getElementById('bonDetailsModal').classList.contains('open')) {
             closeBonDetailsModal();
-        } else {
+        } else if (document.getElementById('bonCommandeModal').classList.contains('open')) {
             closeBonModal();
         }
     }
@@ -1036,52 +2037,36 @@ async function viewBonDetails(bonId) {
     const modal = document.getElementById('bonDetailsModal');
     const overlay = document.getElementById('bonDetailsModalOverlay');
     const content = document.getElementById('bonDetailsContent');
-    
+
     overlay.classList.add('open');
     modal.classList.add('open');
-    
-    content.innerHTML = `
-        <div class="loading-spinner">
-            <div class="spinner"></div>
-            <p style="margin-top: 16px;">Chargement des détails...</p>
-        </div>
-    `;
-    
+
+    content.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p style="margin-top: 16px;">Chargement...</p></div>';
+
     try {
-        const response = await fetch(`/admin/bon-commande/${bonId}`);
+        const response = await fetch('/admin/bon-commande/' + bonId);
         const html = await response.text();
-        
+
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
         const mainContent = doc.querySelector('.page-content') || doc.querySelector('main') || doc.body;
-        
+
         content.innerHTML = mainContent.innerHTML;
-        componentHandler.upgradeAllRegistered();
-        
+        if (typeof componentHandler !== 'undefined') componentHandler.upgradeAllRegistered();
+
         const selectBtn = document.createElement('div');
         selectBtn.style.cssText = 'position: sticky; bottom: 0; background: var(--card-light); padding: 16px; border-top: 2px solid var(--border-light); margin: 0 -24px -24px; display: flex; gap: 12px; justify-content: flex-end;';
-        selectBtn.innerHTML = `
-            <button onclick="closeBonDetailsModal()" 
-                    class="mdl-button mdl-js-button mdl-button--raised">
-                Fermer
-            </button>
-            <button onclick="selectBonFromDetails(${bonId})" 
-                    class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
-                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">check</i>
-                Sélectionner ce bon
-            </button>
-        `;
+        selectBtn.innerHTML =
+            '<button onclick="closeBonDetailsModal()" class="mdl-button mdl-js-button mdl-button--raised">Fermer</button>' +
+            '<button onclick="selectBonFromDetails(' + bonId + ')" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">' +
+                '<i class="material-icons" style="vertical-align: middle; margin-right: 4px;">check</i> S&eacute;lectionner ce bon' +
+            '</button>';
         content.appendChild(selectBtn);
-        componentHandler.upgradeAllRegistered();
-        
+        if (typeof componentHandler !== 'undefined') componentHandler.upgradeAllRegistered();
+
     } catch (error) {
-        console.error('Erreur lors du chargement des détails:', error);
-        content.innerHTML = `
-            <div class="empty-state" style="padding: 60px; color: #d32f2f;">
-                <i class="material-icons" style="font-size: 64px;">error</i>
-                <p>Erreur lors du chargement des détails</p>
-            </div>
-        `;
+        console.error('Erreur:', error);
+        content.innerHTML = '<div class="empty-state" style="padding: 60px; color: #d32f2f;"><i class="material-icons" style="font-size: 64px;">error</i><p>Erreur lors du chargement</p></div>';
     }
 }
 
@@ -1095,169 +2080,169 @@ function selectBonFromDetails(bonId) {
     selectBonFromModal(bonId);
 }
 
-// ==================== SEARCH FUNCTIONALITY ====================
+// ==================== BON SEARCH ====================
 let searchTimeout;
 
 async function searchBons() {
     clearTimeout(searchTimeout);
-    
+
     const query = document.getElementById('bonSearchInput').value.trim();
     const statut = document.getElementById('filterStatut').value;
     const groupeGeo = document.getElementById('filterGroupe').value;
     const sort = document.getElementById('filterSort').value;
     const resultsContainer = document.getElementById('bonSearchResults');
-    
-    resultsContainer.innerHTML = `
-        <div class="loading-spinner">
-            <div class="spinner"></div>
-            <p style="margin-top: 16px;">Recherche en cours...</p>
-        </div>
-    `;
-    
+
+    resultsContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p style="margin-top: 16px;">Recherche...</p></div>';
+
     searchTimeout = setTimeout(async () => {
         try {
-            const params = new URLSearchParams({
-                q: query,
-                statut: statut,
-                groupe_geo: groupeGeo,
-                sort: sort
-            });
-            
-            const response = await fetch(`/admin/planning/search-bons?${params}`);
+            const params = new URLSearchParams({ q: query, statut: statut, groupe_geo: groupeGeo, sort: sort });
+            const response = await fetch('/admin/planning/search-bons?' + params);
             const bons = await response.json();
-            
             displaySearchResults(bons);
         } catch (error) {
-            console.error('Erreur de recherche:', error);
-            resultsContainer.innerHTML = `
-                <div class="empty-state" style="padding: 40px; color: #d32f2f;">
-                    <i class="material-icons" style="font-size: 64px;">error</i>
-                    <p>Erreur lors de la recherche</p>
-                </div>
-            `;
+            console.error('Erreur recherche:', error);
+            resultsContainer.innerHTML = '<div class="empty-state" style="padding: 40px; color: #d32f2f;"><i class="material-icons" style="font-size: 64px;">error</i><p>Erreur</p></div>';
         }
     }, 300);
 }
 
 function displaySearchResults(bons) {
     const resultsContainer = document.getElementById('bonSearchResults');
-    
+
     if (bons.length === 0) {
-        resultsContainer.innerHTML = `
-            <div class="empty-state" style="padding: 40px;">
-                <i class="material-icons" style="font-size: 64px;">inbox</i>
-                <p>Aucun bon de commande trouvé</p>
-            </div>
-        `;
+        resultsContainer.innerHTML = '<div class="empty-state" style="padding: 40px;"><i class="material-icons" style="font-size: 64px;">inbox</i><p>Aucun bon de commande trouv&eacute;</p></div>';
         return;
     }
-    
+
     resultsContainer.innerHTML = bons.map(bon => {
-        const progress = bon.nombrePrestationsNecessaires > 0 
+        const progress = bon.nombrePrestationsNecessaires > 0
             ? (bon.nombrePrestations / bon.nombrePrestationsNecessaires * 100).toFixed(0)
             : 0;
-            
-        const geoHtml = bon.groupeGeo 
-            ? `<span class="geo-badge" style="background: ${bon.groupeGeo.couleur};">
-                   <i class="material-icons" style="font-size: 12px;">place</i>
-                   ${bon.groupeGeo.nom}
-               </span>`
-            : bon.codePostal 
-                ? `<span class="geo-badge" style="background: #757575;">
-                       <i class="material-icons" style="font-size: 12px;">place</i>
-                       ${bon.codePostal}
-                   </span>`
+
+        const geoHtml = bon.groupeGeo
+            ? '<span class="geo-badge" style="background: ' + bon.groupeGeo.couleur + ';"><i class="material-icons" style="font-size: 12px;">place</i> ' + bon.groupeGeo.nom + '</span>'
+            : bon.codePostal
+                ? '<span class="geo-badge" style="background: #757575;"><i class="material-icons" style="font-size: 12px;">place</i> ' + bon.codePostal + '</span>'
                 : '';
-        
-        return `
-            <div class="bon-item">
-                <div class="bon-item-header">
-                    <div onclick="selectBonFromModal(${bon.id})" style="flex: 1; cursor: pointer;">
-                        <div class="bon-client">${bon.clientNom}</div>
-                        <div class="bon-info">
-                            <span class="bon-info-item">
-                                <i class="material-icons">receipt</i>
-                                BC ${bon.numeroCommande || '#' + bon.id}
-                            </span>
-                            <span class="bon-info-item">
-                                <i class="material-icons">event</i>
-                                ${bon.dateCommande || 'N/A'}
-                            </span>
-                            <span class="bon-info-item">
-                                <i class="material-icons">location_on</i>
-                                ${bon.clientAdresse ? bon.clientAdresse.substring(0, 30) + '...' : 'N/A'}
-                            </span>
-                            ${geoHtml}
-                        </div>
-                        <div class="bon-progress">
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: ${progress}%;"></div>
-                            </div>
-                            <div class="progress-text">${bon.nombrePrestations}/${bon.nombrePrestationsNecessaires}</div>
-                        </div>
-                    </div>
-                    <button onclick="viewBonDetails(${bon.id}); event.stopPropagation();" 
-                            class="mdl-button mdl-js-button mdl-button--icon" 
-                            title="Voir les détails"
-                            style="color: var(--primary);">
-                        <i class="material-icons">visibility</i>
-                    </button>
-                </div>
-            </div>
-        `;
+
+        return '<div class="bon-item">' +
+            '<div class="bon-item-header">' +
+                '<div onclick="selectBonFromModal(' + bon.id + ')" style="flex: 1; cursor: pointer;">' +
+                    '<div class="bon-client">' + bon.clientNom + '</div>' +
+                    '<div class="bon-info">' +
+                        '<span class="bon-info-item"><i class="material-icons">receipt</i> BC ' + (bon.numeroCommande || '#' + bon.id) + '</span>' +
+                        '<span class="bon-info-item"><i class="material-icons">event</i> ' + (bon.dateCommande || 'N/A') + '</span>' +
+                        '<span class="bon-info-item"><i class="material-icons">location_on</i> ' + (bon.clientAdresse ? bon.clientAdresse.substring(0, 30) + '...' : 'N/A') + '</span>' +
+                        geoHtml +
+                    '</div>' +
+                    '<div class="bon-progress">' +
+                        '<div class="progress-bar"><div class="progress-fill" style="width: ' + progress + '%;"></div></div>' +
+                        '<div class="progress-text">' + bon.nombrePrestations + '/' + bon.nombrePrestationsNecessaires + '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<button onclick="viewBonDetails(' + bon.id + '); event.stopPropagation();" class="mdl-button mdl-js-button mdl-button--icon" title="Voir" style="color: var(--primary);"><i class="material-icons">visibility</i></button>' +
+            '</div>' +
+        '</div>';
     }).join('');
-    
-    componentHandler.upgradeAllRegistered();
+
+    if (typeof componentHandler !== 'undefined') componentHandler.upgradeAllRegistered();
 }
 
-// ==================== SELECTION MANAGEMENT ====================
+// ==================== BON SELECTION ====================
 async function selectBonFromModal(bonId) {
     try {
-        const response = await fetch(`/admin/planning/bon/${bonId}`);
+        const response = await fetch('/admin/planning/bon/' + bonId);
         const bon = await response.json();
-        
-        document.getElementById('selected_bon').value = bonId;
-        document.getElementById('submit-btn').disabled = false;
-        
-        document.getElementById('selectedBonClient').textContent = bon.clientNom;
-        document.getElementById('selectedBonInfo').innerHTML = `
-            <span class="bon-info-item">
-                <i class="material-icons">receipt</i>
-                BC ${bon.numeroCommande || '#' + bon.id}
-            </span>
-            <span class="bon-info-item">
-                <i class="material-icons">check_circle</i>
-                ${bon.nombrePrestations}/${bon.nombrePrestationsNecessaires} prestations
-            </span>
-            <span class="bon-info-item">
-                <i class="material-icons">location_on</i>
-                ${bon.clientAdresse || 'N/A'}
-            </span>
-        `;
-        
-        document.getElementById('selectedBonDisplay').style.display = 'block';
-        document.getElementById('noBonSelected').style.display = 'none';
-        
+
+        // Update both calendar and timeline forms
+        updateBonSelection(bon, bonId, 'selected_bon', 'selectedBonClient', 'selectedBonInfo', 'selectedBonDisplay', 'noBonSelected', 'submit-btn');
+        updateBonSelection(bon, bonId, 'tl_selected_bon', 'tl_selectedBonClient', 'tl_selectedBonInfo', 'tl_selectedBonDisplay', 'tl_noBonSelected', 'tl_submit-btn');
+
         closeBonModal();
-        
     } catch (error) {
-        console.error('Erreur lors de la sélection:', error);
-        alert('Erreur lors de la sélection du bon de commande');
+        console.error('Erreur selection:', error);
+        alert('Erreur lors de la selection');
+    }
+}
+
+function updateBonSelection(bon, bonId, hiddenId, clientId, infoId, displayId, noSelId, btnId) {
+    const hidden = document.getElementById(hiddenId);
+    const client = document.getElementById(clientId);
+    const info = document.getElementById(infoId);
+    const display = document.getElementById(displayId);
+    const noSel = document.getElementById(noSelId);
+    const btn = document.getElementById(btnId);
+
+    if (!hidden) return;
+
+    hidden.value = bonId;
+    if (btn) btn.disabled = false;
+
+    if (client) client.textContent = bon.clientNom;
+    if (info) {
+        info.innerHTML =
+            '<span class="bon-info-item"><i class="material-icons">receipt</i> BC ' + (bon.numeroCommande || '#' + bon.id) + '</span>' +
+            '<span class="bon-info-item"><i class="material-icons">check_circle</i> ' + bon.nombrePrestations + '/' + bon.nombrePrestationsNecessaires + ' prestations</span>' +
+            '<span class="bon-info-item"><i class="material-icons">location_on</i> ' + (bon.clientAdresse || 'N/A') + '</span>';
+    }
+
+    if (display) display.style.display = 'block';
+    if (noSel) noSel.style.display = 'none';
+}
+
+async function autoLoadBon(bonId) {
+    try {
+        const response = await fetch('/admin/planning/bon/' + bonId);
+        const bon = await response.json();
+
+        // Update both forms
+        updateBonSelection(bon, bonId, 'selected_bon', 'selectedBonClient', 'selectedBonInfo', 'selectedBonDisplay', 'noBonSelected', 'submit-btn');
+        updateBonSelection(bon, bonId, 'tl_selected_bon', 'tl_selectedBonClient', 'tl_selectedBonInfo', 'tl_selectedBonDisplay', 'tl_noBonSelected', 'tl_submit-btn');
+
+        // Scroll to and highlight the create form
+        const form = document.getElementById('calendarCreateForm');
+        if (form) {
+            setTimeout(() => {
+                form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                form.style.boxShadow = '0 0 0 3px var(--primary), 0 2px 8px rgba(0,0,0,0.1)';
+                setTimeout(() => {
+                    form.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                }, 2500);
+            }, 500);
+        }
+    } catch (error) {
+        console.error('Erreur auto-load bon:', error);
     }
 }
 
 function clearBonSelection() {
-    document.getElementById('selected_bon').value = '';
-    document.getElementById('submit-btn').disabled = true;
-    document.getElementById('selectedBonDisplay').style.display = 'none';
-    document.getElementById('noBonSelected').style.display = 'block';
+    ['selected_bon', 'tl_selected_bon'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    ['submit-btn', 'tl_submit-btn'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = true;
+    });
+    ['selectedBonDisplay', 'tl_selectedBonDisplay'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    ['noBonSelected', 'tl_noBonSelected'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'block';
+    });
 }
 
-// Auto-submit filters on change
-['date', 'employe'].forEach(id => {
-    document.getElementById(id)?.addEventListener('change', function() {
-        this.form.submit();
-    });
+// Auto-submit timeline filters on change
+['tl_date', 'tl_employe'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener('change', function() {
+            this.form.submit();
+        });
+    }
 });
 </script>
 

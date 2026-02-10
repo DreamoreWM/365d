@@ -206,8 +206,8 @@ class BonDeCommandeController extends AbstractController
             throw $this->createNotFoundException('Bon de commande introuvable');
         }
         
-        // Rediriger vers le formulaire de création de prestation avec le bon pré-sélectionné
-        return $this->redirectToRoute('admin_prestation_new', ['bonId' => $bonId]);
+        // Rediriger vers le planning avec le bon pré-sélectionné
+        return $this->redirectToRoute('admin_planning_index', ['bonId' => $bonId]);
     }
 
     // =====================================================

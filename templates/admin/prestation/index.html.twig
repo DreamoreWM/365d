@@ -273,10 +273,16 @@
             <i class="material-icons">event_note</i>
             Prestations
         </h1>
-        <a href="{{ path('admin_prestation_new') }}" class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent">
-            <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">add</i>
-            Nouvelle prestation
-        </a>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <a href="{{ path('admin_planning_index') }}" class="mdl-button mdl-js-button mdl-button--raised" style="display: flex; align-items: center; gap: 6px;">
+                <i class="material-icons" style="font-size: 20px;">calendar_view_week</i>
+                Voir le planning
+            </a>
+            <a href="{{ path('admin_prestation_new') }}" class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">add</i>
+                Nouvelle prestation
+            </a>
+        </div>
     </div>
 
     <!-- Statistics -->

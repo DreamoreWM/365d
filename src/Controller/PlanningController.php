@@ -108,8 +108,8 @@ class PlanningController extends AbstractController
         $prestation->setBonDeCommande($bon);
         $prestation->setEmploye($employe);
         $prestation->setTypePrestation($bon->getTypePrestation());
-        $prestation->setDescription('');
-        
+        $prestation->setDescription($request->request->get('description', ''));
+
         // Date + heure
         try {
             $dateTime = \DateTimeImmutable::createFromFormat('Y-m-d H:i', $date . ' ' . $heure);
@@ -339,6 +339,113 @@ class PlanningController extends AbstractController
             'statut' => $bon->getStatut()->value,
             'codePostal' => $codePostal,
         ]);
+    }
+
+    // =====================================================
+    // ÉVÉNEMENTS CALENDRIER (FULLCALENDAR)
+    // =====================================================
+    #[Route('/events', name: 'admin_planning_events', methods: ['GET'])]
+    public function events(Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $start = $request->query->get('start');
+        $end = $request->query->get('end');
+        $employeIds = $request->query->all('employes');
+
+        if (!$start || !$end) {
+            return $this->json([]);
+        }
+
+        $startDate = new \DateTimeImmutable($start);
+        $endDate = new \DateTimeImmutable($end);
+
+        $qb = $this->prestationRepo->createQueryBuilder('p')
+            ->leftJoin('p.employe', 'e')
+            ->leftJoin('p.bonDeCommande', 'b')
+            ->leftJoin('p.typePrestation', 't')
+            ->where('p.datePrestation >= :start')
+            ->andWhere('p.datePrestation <= :end')
+            ->setParameter('start', $startDate)
+            ->setParameter('end', $endDate)
+            ->orderBy('p.datePrestation', 'ASC');
+
+        if (!empty($employeIds)) {
+            $qb->andWhere('p.employe IN (:employes)')
+               ->setParameter('employes', $employeIds);
+        }
+
+        $prestations = $qb->getQuery()->getResult();
+
+        $defaultColors = [
+            '#e91e63','#9c27b0','#673ab7','#3f51b5','#2196f3',
+            '#009688','#4caf50','#ff9800','#ff5722','#795548',
+            '#607d8b','#00bcd4',
+        ];
+
+        $events = [];
+        foreach ($prestations as $p) {
+            $employe = $p->getEmploye();
+            $bon = $p->getBonDeCommande();
+            $type = $p->getTypePrestation();
+
+            $color = $defaultColors[($employe?->getId() ?? 0) % count($defaultColors)];
+
+            $startDt = $p->getDatePrestation();
+            $endDt = $startDt->modify('+1 hour');
+
+            $events[] = [
+                'id' => $p->getId(),
+                'title' => $bon ? $bon->getClientNom() : 'Prestation #' . $p->getId(),
+                'start' => $startDt->format('c'),
+                'end' => $endDt->format('c'),
+                'color' => $color,
+                'textColor' => '#ffffff',
+                'extendedProps' => [
+                    'employeId' => $employe?->getId(),
+                    'employeNom' => $employe?->getNom() ?? 'Non assigné',
+                    'statut' => $p->getStatut()?->value,
+                    'statutLabel' => $p->getStatut()?->label(),
+                    'statutCssClass' => $p->getStatut()?->cssClass(),
+                    'statutIcon' => $p->getStatut()?->icon(),
+                    'clientAdresse' => $bon?->getClientAdresse(),
+                    'typePrestation' => $type ? (string) $type : null,
+                    'bonId' => $bon?->getId(),
+                    'numeroCommande' => $bon?->getNumeroCommande(),
+                    'prestationId' => $p->getId(),
+                ],
+            ];
+        }
+
+        return $this->json($events);
+    }
+
+    // =====================================================
+    // LISTE DES EMPLOYÉS (POUR LE PANNEAU CALENDRIER)
+    // =====================================================
+    #[Route('/employes', name: 'admin_planning_employes', methods: ['GET'])]
+    public function employes(): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $employes = $this->userRepo->findAll();
+
+        $defaultColors = [
+            '#e91e63','#9c27b0','#673ab7','#3f51b5','#2196f3',
+            '#009688','#4caf50','#ff9800','#ff5722','#795548',
+            '#607d8b','#00bcd4',
+        ];
+
+        $result = [];
+        foreach ($employes as $emp) {
+            $result[] = [
+                'id' => $emp->getId(),
+                'nom' => $emp->getNom(),
+                'couleur' => $defaultColors[$emp->getId() % count($defaultColors)],
+            ];
+        }
+
+        return $this->json($result);
     }
 
     // =====================================================
