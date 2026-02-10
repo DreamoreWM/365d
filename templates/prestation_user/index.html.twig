@@ -13,17 +13,17 @@
         background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
         color: white;
         padding: 32px 24px;
-        border-radius: 8px;
+        border-radius: 12px;
         margin-bottom: 24px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
 
     body.dark-mode .page-header {
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.4);
     }
 
     .page-header h1 {
-        margin: 0;
+        margin: 0 0 4px 0;
         font-size: 1.75rem;
         font-weight: 400;
         display: flex;
@@ -35,49 +35,175 @@
         font-size: 32px;
     }
 
-    .filter-card {
-        background: var(--card-light);
-        border-radius: 8px;
-        padding: 24px;
-        margin-bottom: 24px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    .page-header-sub {
+        margin-left: 44px;
+        opacity: 0.85;
+        font-size: 1rem;
     }
 
-    body.dark-mode .filter-card {
+    /* ========== DAY NAVIGATION ========== */
+    .day-nav {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: var(--card-light);
+        border-radius: 12px;
+        padding: 16px 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .day-nav {
+        background: var(--card-dark);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+
+    .day-nav-btn {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 10px 16px;
+        border: 2px solid var(--border-light);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text-light);
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+
+    body.dark-mode .day-nav-btn {
+        border-color: var(--border-dark);
+        color: var(--text-dark);
+    }
+
+    .day-nav-btn:hover {
+        background: rgba(63, 81, 181, 0.1);
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+
+    .day-nav-btn.today {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
+    .day-nav-btn.today:hover {
+        background: var(--primary-dark);
+    }
+
+    .day-nav-btn .material-icons {
+        font-size: 20px;
+    }
+
+    .day-nav-date {
+        font-size: 1.25rem;
+        font-weight: 500;
+        color: var(--text-light);
+        min-width: 220px;
+        text-align: center;
+    }
+
+    body.dark-mode .day-nav-date {
+        color: var(--text-dark);
+    }
+
+    .day-nav-input {
+        border: none;
+        background: transparent;
+        font-size: 1.25rem;
+        font-weight: 500;
+        color: var(--text-light);
+        text-align: center;
+        cursor: pointer;
+        min-width: 220px;
+    }
+
+    body.dark-mode .day-nav-input {
+        color: var(--text-dark);
+        color-scheme: dark;
+    }
+
+    .day-nav-input:focus {
+        outline: none;
+    }
+
+    /* ========== STATS ROW ========== */
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+
+    .stat-card {
+        background: var(--card-light);
+        border-radius: 10px;
+        padding: 16px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    body.dark-mode .stat-card {
         background: var(--card-dark);
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
 
-    .filter-form {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        flex-wrap: wrap;
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
     }
 
-    .filter-form .mdl-textfield {
-        margin: 0;
-        flex: 1;
-        min-width: 200px;
+    .stat-card.total::before { background: var(--primary); }
+    .stat-card.programme::before { background: #1565c0; }
+    .stat-card.en-cours::before { background: #ff9800; }
+    .stat-card.termine::before { background: #4caf50; }
+
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: var(--text-light);
     }
 
-    .filter-form button {
-        height: 48px;
-        min-width: 120px;
+    body.dark-mode .stat-value {
+        color: var(--text-dark);
     }
 
+    .stat-label {
+        font-size: 0.75rem;
+        color: #757575;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 4px;
+    }
+
+    body.dark-mode .stat-label {
+        color: #b0b0b0;
+    }
+
+    /* ========== PRESTATIONS GRID ========== */
     .prestations-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 24px;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 20px;
         margin-bottom: 40px;
     }
 
     .prestation-card {
         background: var(--card-light);
-        border-radius: 8px;
+        border-radius: 12px;
         overflow: hidden;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         display: flex;
         flex-direction: column;
@@ -86,11 +212,11 @@
 
     body.dark-mode .prestation-card {
         background: var(--card-dark);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
     }
 
     .prestation-card:hover {
-        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
         transform: translateY(-4px);
     }
 
@@ -98,43 +224,67 @@
         box-shadow: 0 8px 24px rgba(0,0,0,0.4);
     }
 
+    /* Card header - coloré par statut */
     .prestation-card-header {
-        background: var(--primary);
-        color: white;
-        padding: 20px;
+        padding: 16px 20px;
         display: flex;
+        justify-content: space-between;
         align-items: center;
         gap: 12px;
+        color: white;
     }
 
-    .prestation-card-header .material-icons {
-        font-size: 28px;
-        opacity: 0.9;
-    }
+    .prestation-card-header.status-programme { background: #1565c0; }
+    .prestation-card-header.status-en-cours { background: #e65100; }
+    .prestation-card-header.status-termine { background: #2e7d32; }
+    .prestation-card-header.status-non-effectue { background: #757575; }
+    .prestation-card-header.status-a-programmer { background: #ff8f00; }
 
-    .prestation-card-header h5 {
-        margin: 0;
-        font-size: 1.25rem;
-        font-weight: 500;
+    .card-header-left {
         flex: 1;
+        min-width: 0;
+    }
+
+    .card-header-left h5 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 500;
+        white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        white-space: nowrap;
     }
 
+    .card-header-time {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 1.5rem;
+        font-weight: 600;
+        opacity: 0.95;
+        flex-shrink: 0;
+    }
+
+    .card-header-time .material-icons {
+        font-size: 20px;
+        opacity: 0.8;
+    }
+
+    /* Card body */
     .prestation-card-body {
-        padding: 20px;
+        padding: 16px 20px;
         flex: 1;
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 10px;
     }
 
     .info-item {
         display: flex;
         align-items: flex-start;
-        gap: 12px;
+        gap: 10px;
         color: var(--text-light);
+        font-size: 0.9rem;
+        line-height: 1.4;
     }
 
     body.dark-mode .info-item {
@@ -143,71 +293,106 @@
 
     .info-item .material-icons {
         color: var(--primary);
-        font-size: 20px;
+        font-size: 18px;
         margin-top: 2px;
+        flex-shrink: 0;
     }
 
-    .info-item-content {
+    .info-item-text {
         flex: 1;
+        min-width: 0;
     }
 
     .info-item-label {
-        font-size: 0.875rem;
+        font-size: 0.75rem;
         color: #757575;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
     }
 
     body.dark-mode .info-item-label {
         color: #b0b0b0;
     }
 
-    .info-item-value {
-        font-size: 1rem;
-        line-height: 1.5;
+    .note-preview {
+        font-size: 0.85rem;
+        color: #555;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        font-style: italic;
     }
 
-    .prestation-card-actions {
-        padding: 16px 20px 20px;
+    body.dark-mode .note-preview {
+        color: #aaa;
     }
 
-    .prestation-card-actions button,
-    .prestation-card-actions a {
-        width: 100%;
-        height: 48px;
+    /* Card footer */
+    .prestation-card-footer {
+        padding: 12px 20px 16px;
         display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 8px;
-        text-decoration: none;
+        justify-content: space-between;
+        gap: 12px;
+        border-top: 1px solid var(--border-light);
     }
 
-    .time-badge {
-        background: rgba(63, 81, 181, 0.1);
-        color: var(--primary);
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 0.875rem;
-        font-weight: 500;
+    body.dark-mode .prestation-card-footer {
+        border-top-color: var(--border-dark);
+    }
+
+    .status-badge {
         display: inline-flex;
         align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .status-badge .material-icons {
+        font-size: 14px;
+    }
+
+    .badge-programme { background: #e3f2fd; color: #1565c0; }
+    .badge-en-cours { background: #fff3e0; color: #e65100; }
+    .badge-termine { background: #e8f5e9; color: #2e7d32; }
+    .badge-non-effectue { background: #f5f5f5; color: #757575; }
+    .badge-a-programmer { background: #fff8e1; color: #ff8f00; }
+
+    body.dark-mode .badge-programme { background: rgba(21, 101, 192, 0.2); color: #64b5f6; }
+    body.dark-mode .badge-en-cours { background: rgba(230, 81, 0, 0.2); color: #ffb74d; }
+    body.dark-mode .badge-termine { background: rgba(46, 125, 50, 0.2); color: #81c784; }
+    body.dark-mode .badge-non-effectue { background: rgba(117, 117, 117, 0.2); color: #bdbdbd; }
+    body.dark-mode .badge-a-programmer { background: rgba(255, 143, 0, 0.2); color: #ffcc80; }
+
+    .open-btn {
+        display: flex;
+        align-items: center;
         gap: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
     }
 
-    body.dark-mode .time-badge {
-        background: rgba(63, 81, 181, 0.2);
+    .open-btn .material-icons {
+        font-size: 18px;
     }
 
+    /* ========== EMPTY STATE ========== */
     .empty-state {
         text-align: center;
         padding: 60px 20px;
         background: var(--card-light);
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
 
     body.dark-mode .empty-state {
         background: var(--card-dark);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
     }
 
     .empty-state .material-icons {
@@ -238,6 +423,7 @@
         color: #b0b0b0;
     }
 
+    /* ========== RESPONSIVE ========== */
     @media (max-width: 768px) {
         .page-header {
             padding: 24px 16px;
@@ -247,17 +433,23 @@
             font-size: 1.5rem;
         }
 
-        .filter-card {
-            padding: 16px;
+        .day-nav {
+            flex-wrap: wrap;
+            padding: 12px 16px;
+            gap: 8px;
         }
 
-        .filter-form {
-            flex-direction: column;
+        .day-nav-btn span.btn-text {
+            display: none;
         }
 
-        .filter-form .mdl-textfield,
-        .filter-form button {
-            width: 100%;
+        .day-nav-input {
+            min-width: 160px;
+            font-size: 1rem;
+        }
+
+        .stats-row {
+            grid-template-columns: repeat(2, 1fr);
         }
 
         .prestations-grid {
@@ -268,76 +460,144 @@
 </style>
 
 <div class="prestations-container">
-    
+
     <!-- Page Header -->
     <div class="page-header">
         <h1>
             <i class="material-icons">event_note</i>
-            Mes prestations du jour
+            Mes prestations
         </h1>
+        <div class="page-header-sub">
+            {{ selectedDate|date('l d F Y')|capitalize }}
+        </div>
     </div>
 
-    <!-- Filter Card -->
-    <div class="filter-card">
-        <form method="get" class="filter-form">
-            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                <input class="mdl-textfield__input" type="date" id="date" name="date" value="{{ selectedDate|date('Y-m-d') }}">
-                <label class="mdl-textfield__label" for="date">Sélectionner une date</label>
-            </div>
-            
-            <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
-                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">search</i>
-                Filtrer
-            </button>
+    <!-- Day Navigation -->
+    {% set prevDate = selectedDate|date_modify('-1 day') %}
+    {% set nextDate = selectedDate|date_modify('+1 day') %}
+    {% set todayStr = "now"|date('Y-m-d') %}
+    {% set isToday = selectedDate|date('Y-m-d') == todayStr %}
+
+    <div class="day-nav">
+        <a href="{{ path('app_user_prestations', {date: prevDate|date('Y-m-d')}) }}" class="day-nav-btn">
+            <i class="material-icons">chevron_left</i>
+            <span class="btn-text">Pr&eacute;c&eacute;dent</span>
+        </a>
+
+        <a href="{{ path('app_user_prestations', {date: todayStr}) }}" class="day-nav-btn today">
+            <i class="material-icons">today</i>
+            <span class="btn-text">Aujourd'hui</span>
+        </a>
+
+        <form method="get" style="margin: 0;">
+            <input type="date" name="date" id="date-nav" class="day-nav-input"
+                   value="{{ selectedDate|date('Y-m-d') }}">
         </form>
+
+        <a href="{{ path('app_user_prestations', {date: nextDate|date('Y-m-d')}) }}" class="day-nav-btn">
+            <span class="btn-text">Suivant</span>
+            <i class="material-icons">chevron_right</i>
+        </a>
     </div>
+
+    <!-- Stats Row -->
+    {% set totalCount = prestations|length %}
+    {% set programmeCount = prestations|filter(p => p.statut.value == 'programm\u00e9')|length %}
+    {% set enCoursCount = prestations|filter(p => p.statut.value == 'en cours')|length %}
+    {% set termineCount = prestations|filter(p => p.statut.value == 'termin\u00e9')|length %}
+
+    {% if totalCount > 0 %}
+    <div class="stats-row">
+        <div class="stat-card total">
+            <div class="stat-value">{{ totalCount }}</div>
+            <div class="stat-label">Total</div>
+        </div>
+        <div class="stat-card programme">
+            <div class="stat-value">{{ programmeCount }}</div>
+            <div class="stat-label">Programm&eacute;es</div>
+        </div>
+        <div class="stat-card en-cours">
+            <div class="stat-value">{{ enCoursCount }}</div>
+            <div class="stat-label">En cours</div>
+        </div>
+        <div class="stat-card termine">
+            <div class="stat-value">{{ termineCount }}</div>
+            <div class="stat-label">Termin&eacute;es</div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Prestations Grid -->
     {% if prestations is not empty %}
         <div class="prestations-grid">
             {% for p in prestations %}
                 <div class="prestation-card">
-                    
-                    <!-- Card Header -->
-                    <div class="prestation-card-header">
-                        <i class="material-icons">business</i>
-                        <h5>{{ p.bonDeCommande.clientNom }}</h5>
+
+                    <!-- Card Header (coloré par statut) -->
+                    <div class="prestation-card-header status-{{ p.statut.cssClass }}">
+                        <div class="card-header-left">
+                            <h5>{{ p.bonDeCommande ? p.bonDeCommande.clientNom : 'Prestation #' ~ p.id }}</h5>
+                        </div>
+                        <div class="card-header-time">
+                            <i class="material-icons">schedule</i>
+                            {{ p.datePrestation|date('H:i') }}
+                        </div>
                     </div>
 
                     <!-- Card Body -->
                     <div class="prestation-card-body">
-                        
-                        <!-- Address -->
+
+                        <!-- Adresse -->
+                        {% if p.bonDeCommande %}
                         <div class="info-item">
                             <i class="material-icons">location_on</i>
-                            <div class="info-item-content">
-                                <div class="info-item-label">Adresse</div>
-                                <div class="info-item-value">{{ p.bonDeCommande.clientAdresse }}</div>
+                            <div class="info-item-text">
+                                {{ p.bonDeCommande.clientAdresse }}
+                                {% if p.bonDeCommande.clientComplementAdresse %}
+                                    <br><small style="color: #757575;">{{ p.bonDeCommande.clientComplementAdresse }}</small>
+                                {% endif %}
                             </div>
                         </div>
+                        {% endif %}
 
-                        <!-- Time -->
+                        <!-- Type de prestation -->
+                        {% if p.typePrestation %}
                         <div class="info-item">
-                            <i class="material-icons">schedule</i>
-                            <div class="info-item-content">
-                                <div class="info-item-label">Heure de prestation</div>
-                                <div class="info-item-value">
-                                    <span class="time-badge">
-                                        <i class="material-icons" style="font-size: 16px;">access_time</i>
-                                        {{ p.datePrestation|date('H:i') }}
-                                    </span>
-                                </div>
+                            <i class="material-icons">category</i>
+                            <div class="info-item-text">{{ p.typePrestation }}</div>
+                        </div>
+                        {% endif %}
+
+                        <!-- N° de commande -->
+                        {% if p.bonDeCommande and p.bonDeCommande.numeroCommande %}
+                        <div class="info-item">
+                            <i class="material-icons">receipt</i>
+                            <div class="info-item-text">BC #{{ p.bonDeCommande.numeroCommande }}</div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Note / Description (tronquée) -->
+                        {% if p.description %}
+                        <div class="info-item">
+                            <i class="material-icons">notes</i>
+                            <div class="info-item-text">
+                                <div class="note-preview">{{ p.description|striptags }}</div>
                             </div>
                         </div>
+                        {% endif %}
 
                     </div>
 
-                    <!-- Card Actions -->
-                    <div class="prestation-card-actions">
-                        <a href="{{ path('app_user_prestation_view', {id: p.id}) }}" 
-                           class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent">
+                    <!-- Card Footer -->
+                    <div class="prestation-card-footer">
+                        <span class="status-badge badge-{{ p.statut.cssClass }}">
+                            <i class="material-icons">{{ p.statut.icon }}</i>
+                            {{ p.statut.label }}
+                        </span>
+                        <a href="{{ path('app_user_prestation_view', {id: p.id}) }}"
+                           class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored open-btn">
                             <i class="material-icons">visibility</i>
-                            Ouvrir la prestation
+                            Ouvrir
                         </a>
                     </div>
 
@@ -349,7 +609,7 @@
         <div class="empty-state">
             <i class="material-icons">event_busy</i>
             <h3>Aucune prestation</h3>
-            <p>Il n'y a aucune prestation prévue pour cette date.</p>
+            <p>Il n'y a aucune prestation pr&eacute;vue pour le {{ selectedDate|date('d/m/Y') }}.</p>
         </div>
     {% endif %}
 
@@ -357,16 +617,8 @@
 
 <script>
 // Auto-submit form on date change
-document.getElementById('date')?.addEventListener('change', function() {
+document.getElementById('date-nav')?.addEventListener('change', function() {
     this.form.submit();
-});
-
-// Fix for MDL date input label
-document.addEventListener('DOMContentLoaded', function() {
-    const dateInput = document.getElementById('date');
-    if (dateInput && dateInput.value) {
-        dateInput.parentElement.classList.add('is-dirty');
-    }
 });
 </script>
 

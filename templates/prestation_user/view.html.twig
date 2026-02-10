@@ -1,6 +1,8 @@
 {% extends 'dashboard/layout.html.twig' %}
 
-{% block title %}Détails prestation{% endblock %}
+{% set isTermine = prestation.statut.value == 'terminé' %}
+
+{% block title %}Prestation - {{ prestation.bonDeCommande.clientNom }}{% endblock %}
 
 {% block content %}
 <style>
@@ -9,32 +11,164 @@
         margin: 0 auto;
     }
 
+    /* ===== HEADER ===== */
     .detail-header {
         background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
         color: white;
-        padding: 32px 24px;
+        padding: 20px 24px 24px;
         border-radius: 8px 8px 0 0;
         margin-bottom: 0;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .detail-header.header-termine {
+        background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%);
+    }
+
+    .detail-header.header-en-cours {
+        background: linear-gradient(135deg, #fb8c00 0%, #ef6c00 100%);
+    }
+
+    .detail-header.header-non-effectue {
+        background: linear-gradient(135deg, #757575 0%, #616161 100%);
     }
 
     body.dark-mode .detail-header {
         box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     }
 
-    .detail-header h2 {
-        margin: 0;
-        font-size: 1.75rem;
-        font-weight: 400;
+    .header-top-row {
         display: flex;
         align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    }
+
+    .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: rgba(255,255,255,0.9);
+        text-decoration: none;
+        font-size: 0.875rem;
+        padding: 6px 12px;
+        border-radius: 20px;
+        background: rgba(255,255,255,0.15);
+        transition: background 0.2s;
+    }
+
+    .back-btn:hover {
+        background: rgba(255,255,255,0.25);
+        color: white;
+    }
+
+    .back-btn .material-icons {
+        font-size: 18px;
+    }
+
+    .header-status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 16px;
+        border-radius: 20px;
+        background: rgba(255,255,255,0.2);
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .header-status-badge .material-icons {
+        font-size: 18px;
+    }
+
+    .header-main {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .header-main .material-icons.header-icon {
+        font-size: 36px;
+        opacity: 0.9;
+        margin-top: 2px;
+    }
+
+    .header-info {
+        flex: 1;
+    }
+
+    .header-info h2 {
+        margin: 0 0 6px;
+        font-size: 1.6rem;
+        font-weight: 400;
+    }
+
+    .header-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+
+    .header-meta-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .header-meta-item .material-icons {
+        font-size: 16px;
+    }
+
+    /* ===== ADMIN NOTE CALLOUT ===== */
+    .admin-note-callout {
+        background: #fff3e0;
+        border: 1px solid #ffe0b2;
+        border-left: 4px solid #ff9800;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: flex-start;
         gap: 12px;
     }
 
-    .detail-header .material-icons {
-        font-size: 32px;
+    body.dark-mode .admin-note-callout {
+        background: rgba(255, 152, 0, 0.1);
+        border-color: rgba(255, 152, 0, 0.3);
     }
 
+    .admin-note-callout .material-icons {
+        color: #ff9800;
+        font-size: 24px;
+        margin-top: 2px;
+    }
+
+    .admin-note-callout .note-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #e65100;
+        margin-bottom: 4px;
+    }
+
+    body.dark-mode .admin-note-callout .note-label {
+        color: #ffb74d;
+    }
+
+    .admin-note-callout .note-content {
+        font-size: 0.95rem;
+        color: var(--text-light);
+        line-height: 1.5;
+    }
+
+    body.dark-mode .admin-note-callout .note-content {
+        color: var(--text-dark);
+    }
+
+    /* ===== INFO CARD ===== */
     .info-card {
         background: var(--card-light);
         border-radius: 0 0 8px 8px;
@@ -90,6 +224,7 @@
         color: var(--text-dark);
     }
 
+    /* ===== SECTION CARDS ===== */
     .section-card {
         background: var(--card-light);
         border-radius: 8px;
@@ -122,6 +257,34 @@
         font-size: 28px;
     }
 
+    /* ===== READ-ONLY DESCRIPTION ===== */
+    .description-readonly {
+        padding: 20px;
+        background: #fafafa;
+        border: 1px solid var(--border-light);
+        border-radius: 8px;
+        line-height: 1.6;
+        color: var(--text-light);
+        font-size: 0.95rem;
+        min-height: 100px;
+    }
+
+    body.dark-mode .description-readonly {
+        background: #2a2a2a;
+        border-color: var(--border-dark);
+        color: var(--text-dark);
+    }
+
+    .description-readonly p { margin: 0 0 12px; }
+    .description-readonly p:last-child { margin-bottom: 0; }
+    .description-readonly ul, .description-readonly ol { margin: 8px 0; padding-left: 24px; }
+
+    .description-empty {
+        color: #999;
+        font-style: italic;
+    }
+
+    /* ===== TINYMCE ===== */
     .tox-tinymce {
         border-radius: 4px !important;
         border: 2px solid var(--border-light) !important;
@@ -131,6 +294,7 @@
         border-color: var(--border-dark) !important;
     }
 
+    /* ===== SIGNATURE ===== */
     .signature-wrapper {
         margin-top: 16px;
     }
@@ -204,6 +368,7 @@
         border-color: var(--border-dark);
     }
 
+    /* ===== ALERTS ===== */
     .alert-success {
         background: #4caf50;
         color: white;
@@ -218,20 +383,15 @@
     }
 
     @keyframes slideIn {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
     .alert-success .material-icons {
         font-size: 24px;
     }
 
+    /* ===== ACTION BUTTONS ===== */
     .action-buttons {
         display: grid;
         grid-template-columns: 1fr;
@@ -272,13 +432,25 @@
         color: var(--primary);
     }
 
+    /* ===== RESPONSIVE ===== */
     @media (max-width: 768px) {
         .detail-header {
-            padding: 24px 16px;
+            padding: 16px;
         }
 
-        .detail-header h2 {
-            font-size: 1.5rem;
+        .header-info h2 {
+            font-size: 1.3rem;
+        }
+
+        .header-top-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .header-meta {
+            flex-direction: column;
+            gap: 6px;
         }
 
         .info-card,
@@ -305,46 +477,53 @@
 </style>
 
 <div class="prestation-detail-container">
-    
-    <!-- Header -->
-    <div class="detail-header">
-        <h2>
-            <i class="material-icons">assignment</i>
-            {{ prestation.bonDeCommande.clientNom }}
-        </h2>
-    </div>
 
-    <!-- Informations du Bon de Commande -->
-    <div class="info-card">
-        <div class="info-title">
-            <i class="material-icons">assignment</i> Bon de commande
+    {# ===== HEADER ===== #}
+    <div class="detail-header {% if isTermine %}header-termine{% elseif prestation.statut.value == 'en cours' %}header-en-cours{% elseif prestation.statut.value == 'non effectué' %}header-non-effectue{% endif %}">
+        <div class="header-top-row">
+            <a href="{{ path('app_user_prestations', {date: prestation.datePrestation|date('Y-m-d')}) }}" class="back-btn">
+                <i class="material-icons">arrow_back</i>
+                Retour au planning
+            </a>
+            <span class="header-status-badge">
+                <i class="material-icons">{{ prestation.statut.icon() }}</i>
+                {{ prestation.statut.label() }}
+            </span>
         </div>
 
+        <div class="header-main">
+            <i class="material-icons header-icon">assignment</i>
+            <div class="header-info">
+                <h2>{{ prestation.bonDeCommande.clientNom }}</h2>
+                <div class="header-meta">
+                    <span class="header-meta-item">
+                        <i class="material-icons">event</i>
+                        {{ prestation.datePrestation|date('d/m/Y') }}
+                    </span>
+                    <span class="header-meta-item">
+                        <i class="material-icons">access_time</i>
+                        {{ prestation.datePrestation|date('H:i') }}
+                    </span>
+                    {% if prestation.bonDeCommande.typePrestation %}
+                    <span class="header-meta-item">
+                        <i class="material-icons">work</i>
+                        {{ prestation.bonDeCommande.typePrestation.nom }}
+                    </span>
+                    {% endif %}
+                    {% if prestation.bonDeCommande.numeroCommande %}
+                    <span class="header-meta-item">
+                        <i class="material-icons">receipt</i>
+                        BC #{{ prestation.bonDeCommande.numeroCommande }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ===== INFO CARD ===== #}
+    <div class="info-card">
         <div class="info-grid">
-
-            <!-- Numéro de commande -->
-            <div class="info-block">
-                <i class="material-icons">receipt</i>
-                <div class="info-content">
-                    <div class="info-label">Numéro commande</div>
-                    <div class="info-value">
-                        {{ prestation.bonDeCommande ? prestation.bonDeCommande.numeroCommande : 'N/A' }}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Client -->
-            <div class="info-block">
-                <i class="material-icons">person</i>
-                <div class="info-content">
-                    <div class="info-label">Client</div>
-                    <div class="info-value">
-                        {{ prestation.bonDeCommande.clientNom }}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Adresse complète -->
             <div class="info-block">
                 <i class="material-icons">location_on</i>
                 <div class="info-content">
@@ -358,88 +537,48 @@
                 </div>
             </div>
 
-            <!-- Téléphone -->
             <div class="info-block">
                 <i class="material-icons">phone</i>
                 <div class="info-content">
                     <div class="info-label">Téléphone</div>
-                    <div class="info-value">
-                        {{ prestation.bonDeCommande.clientTelephone }}
-                    </div>
+                    <div class="info-value">{{ prestation.bonDeCommande.clientTelephone }}</div>
                 </div>
             </div>
 
-            <!-- Email -->
+            {% if prestation.bonDeCommande.clientEmail %}
             <div class="info-block">
                 <i class="material-icons">email</i>
                 <div class="info-content">
                     <div class="info-label">Email</div>
-                    <div class="info-value">
-                        {{ prestation.bonDeCommande.clientEmail }}
-                    </div>
+                    <div class="info-value">{{ prestation.bonDeCommande.clientEmail }}</div>
                 </div>
             </div>
+            {% endif %}
 
-            <!-- Date commande -->
-            <div class="info-block">
-                <i class="material-icons">event</i>
-                <div class="info-content">
-                    <div class="info-label">Date commande</div>
-                    <div class="info-value">
-                        {{ prestation.bonDeCommande.dateCommande|date('d/m/Y à H:i') }}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Type de prestation -->
-            <div class="info-block">
-                <i class="material-icons">work</i>
-                <div class="info-content">
-                    <div class="info-label">Type de prestation</div>
-                    <div class="info-value">
-                        {{ prestation.bonDeCommande.typePrestation ? prestation.bonDeCommande.typePrestation.nom : 'Non défini' }}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Statut -->
-            <div class="info-block">
-                <i class="material-icons">flag</i>
-                <div class="info-content">
-                    <div class="info-label">Statut</div>
-                    <div class="info-value">
-                        {{ prestation.bonDeCommande.statut.value }}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Nombre de prestations -->
             <div class="info-block">
                 <i class="material-icons">format_list_numbered</i>
                 <div class="info-content">
-                    <div class="info-label">Prestations créées</div>
+                    <div class="info-label">Passage</div>
                     <div class="info-value">
-                        {{ prestation.bonDeCommande.nombrePrestations }}
+                        {{ prestation.bonDeCommande.nombrePrestations }} / {{ prestation.bonDeCommande.nombrePrestationsNecessaires }}
                     </div>
                 </div>
             </div>
-
-            <!-- Nombre de prestations nécessaires -->
-            <div class="info-block">
-                <i class="material-icons">check_circle</i>
-                <div class="info-content">
-                    <div class="info-label">Prestations nécessaires</div>
-                    <div class="info-value">
-                        {{ prestation.bonDeCommande.nombrePrestationsNecessaires }}
-                    </div>
-                </div>
-            </div>
-
         </div>
     </div>
 
+    {# ===== ADMIN NOTE (only shown if description exists and not yet terminated) ===== #}
+    {% if prestation.description and prestation.description|striptags|trim is not empty and not isTermine %}
+    <div class="admin-note-callout">
+        <i class="material-icons">campaign</i>
+        <div>
+            <div class="note-label">Consignes de l'admin</div>
+            <div class="note-content">{{ prestation.description|striptags }}</div>
+        </div>
+    </div>
+    {% endif %}
 
-    <!-- Prestations précédentes pour ce bon de commande -->
+    {# ===== PREVIOUS INTERVENTIONS ===== #}
     {% set autresPrestations = prestation.bonDeCommande.prestations|filter(p => p.id != prestation.id and p.statut.value == 'terminé') %}
     {% if autresPrestations|length > 0 %}
     <div class="section-card">
@@ -490,7 +629,7 @@
     </div>
     {% endif %}
 
-    <!-- Success Messages -->
+    {# ===== SUCCESS MESSAGES ===== #}
     {% for message in app.flashes('success') %}
         <div class="alert-success">
             <i class="material-icons">check_circle</i>
@@ -498,115 +637,158 @@
         </div>
     {% endfor %}
 
-    <!-- Main Form -->
-    <form method="post" data-turbo="false">
-        
-        <!-- Description Section -->
+    {# ===== TERMINATED MODE: READ-ONLY ===== #}
+    {% if isTermine %}
+
+        {# Description read-only #}
         <div class="section-card">
             <div class="section-title">
                 <i class="material-icons">description</i>
                 <span>Rapport de prestation</span>
             </div>
 
-            <div class="helper-text">
-                <i class="material-icons">info</i>
-                <span>Décrivez en détail les travaux effectués, observations et remarques</span>
+            <div class="description-readonly">
+                {% if prestation.description and prestation.description|striptags|trim is not empty %}
+                    {{ prestation.description|raw }}
+                {% else %}
+                    <span class="description-empty">Aucun rapport renseigné.</span>
+                {% endif %}
             </div>
-
-            <textarea name="description" id="description-editor" rows="10">{{ prestation.description }}</textarea>
         </div>
 
-        <!-- Signature Section -->
+        {# Signature read-only #}
+        {% if prestation.signature %}
         <div class="section-card">
             <div class="section-title">
                 <i class="material-icons">draw</i>
                 <span>Signature du client</span>
             </div>
 
+            <div class="saved-signature" style="margin-top: 0;">
+                <h4>
+                    <i class="material-icons">check_circle</i>
+                    Signature enregistrée
+                </h4>
+                <img src="{{ prestation.signature }}" alt="Signature client">
+            </div>
+        </div>
+        {% endif %}
+
+        {# PDF section #}
+        <div class="section-card">
+            <div class="section-title">
+                <i class="material-icons">picture_as_pdf</i>
+                <span>Aperçu du PDF</span>
+            </div>
+
             <div class="helper-text">
-                <i class="material-icons">touch_app</i>
-                <span>Dessinez la signature avec votre souris ou votre doigt sur l'écran tactile</span>
+                <i class="material-icons">info</i>
+                <span>Votre prestation est terminée. Vous pouvez consulter le PDF ci-dessous.</span>
             </div>
 
-            <div class="signature-wrapper">
-                <div class="signature-canvas-container">
-                    <canvas id="signature-pad"></canvas>
-                    <input type="hidden" name="signature" id="signature-input">
-                </div>
-
-                <div class="signature-actions">
-                    <button type="button" id="clear" class="mdl-button mdl-js-button mdl-button--raised">
-                        <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">clear</i>
-                        Effacer
-                    </button>
-                    <button type="button" id="undo" class="mdl-button mdl-js-button mdl-button--raised">
-                        <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">undo</i>
-                        Annuler
-                    </button>
-                </div>
+            <div style="text-align: center; margin-bottom: 16px;">
+                <a href="{{ path('prestation_pdf', {id: prestation.id}) }}" target="_blank" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                    <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">download</i>
+                    Télécharger le PDF
+                </a>
             </div>
 
-            {% if prestation.signature %}
-                <div class="saved-signature">
-                    <h4>
-                        <i class="material-icons">check_circle</i>
-                        Signature enregistrée
-                    </h4>
-                    <img src="{{ prestation.signature }}" alt="Signature client">
+            <div style="border: 2px solid var(--border-light); border-radius: 8px; overflow: hidden;">
+                <iframe
+                    src="{{ path('prestation_pdf', {id: prestation.id}) }}"
+                    style="width: 100%; height: 800px; border: none;"
+                    title="Aperçu PDF">
+                </iframe>
+            </div>
+        </div>
+
+    {# ===== ACTIVE MODE: EDITABLE ===== #}
+    {% else %}
+
+        <form method="post" id="prestation-form" data-turbo="false">
+
+            {# Description with TinyMCE #}
+            <div class="section-card">
+                <div class="section-title">
+                    <i class="material-icons">description</i>
+                    <span>Rapport de prestation</span>
                 </div>
-            {% endif %}
-        </div>
 
-        <!-- Action Buttons -->
-        <div class="action-buttons">
-            <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
-                <i class="material-icons">save</i>
-                Enregistrer les modifications
-            </button>
-        </div>
-    </form>
+                <div class="helper-text">
+                    <i class="material-icons">info</i>
+                    <span>Décrivez en détail les travaux effectués, observations et remarques</span>
+                </div>
 
-    {% if prestation.statut.value == 'terminé' %}
-    <!-- Aperçu PDF -->
-    <div class="section-card">
-        <div class="section-title">
-            <i class="material-icons">picture_as_pdf</i>
-            <span>Aperçu du PDF</span>
-        </div>
+                <textarea name="description" id="description-editor" rows="10">{{ prestation.description }}</textarea>
+            </div>
 
-        <div class="helper-text">
-            <i class="material-icons">info</i>
-            <span>Votre prestation est terminée. Vous pouvez consulter le PDF ci-dessous.</span>
-        </div>
+            {# Signature pad #}
+            <div class="section-card">
+                <div class="section-title">
+                    <i class="material-icons">draw</i>
+                    <span>Signature du client</span>
+                </div>
 
-        <div style="text-align: center; margin-bottom: 16px;">
-            <a href="{{ path('prestation_pdf', {id: prestation.id}) }}" target="_blank" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
-                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">download</i>
-                Télécharger le PDF
-            </a>
-        </div>
+                <div class="helper-text">
+                    <i class="material-icons">touch_app</i>
+                    <span>Dessinez la signature avec votre souris ou votre doigt sur l'écran tactile</span>
+                </div>
 
-        <div style="border: 2px solid var(--border-light); border-radius: 8px; overflow: hidden;">
-            <iframe 
-                src="{{ path('prestation_pdf', {id: prestation.id}) }}" 
-                style="width: 100%; height: 800px; border: none;"
-                title="Aperçu PDF">
-            </iframe>
-        </div>
-    </div>
-{% endif %}
+                <div class="signature-wrapper">
+                    <div class="signature-canvas-container">
+                        <canvas id="signature-pad"></canvas>
+                        <input type="hidden" name="signature" id="signature-input">
+                    </div>
 
-    <!-- Finish Button -->
-    <form method="post" action="{{ path('app_user_prestation_terminer', {id: prestation.id}) }}" data-turbo="false">
-        <div class="action-buttons">
-            <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent">
-                <i class="material-icons">check_circle</i>
-                Terminer
-            </button>
-        </div>
-    </form>
+                    <div class="signature-actions">
+                        <button type="button" id="clear" class="mdl-button mdl-js-button mdl-button--raised">
+                            <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">clear</i>
+                            Effacer
+                        </button>
+                        <button type="button" id="undo" class="mdl-button mdl-js-button mdl-button--raised">
+                            <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">undo</i>
+                            Annuler
+                        </button>
+                    </div>
+                </div>
+
+                {% if prestation.signature %}
+                    <div class="saved-signature">
+                        <h4>
+                            <i class="material-icons">check_circle</i>
+                            Signature enregistrée
+                        </h4>
+                        <img src="{{ prestation.signature }}" alt="Signature client">
+                    </div>
+                {% endif %}
+            </div>
+
+            {# Save button #}
+            <div class="action-buttons">
+                <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                    <i class="material-icons">save</i>
+                    Enregistrer les modifications
+                </button>
+            </div>
+        </form>
+
+        {# Terminate button #}
+        <form method="post" action="{{ path('app_user_prestation_terminer', {id: prestation.id}) }}" data-turbo="false">
+            <div class="action-buttons">
+                <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent"
+                        onclick="return confirm('Êtes-vous sûr de vouloir terminer cette prestation ? Cette action est irréversible.');">
+                    <i class="material-icons">check_circle</i>
+                    Terminer la prestation
+                </button>
+            </div>
+        </form>
+
+    {% endif %}
 
 </div>
+
+{% if not isTermine %}
+{# ===== SCRIPTS (only loaded when editable) ===== #}
 
 <!-- TinyMCE -->
 <script src="https://cdn.tiny.cloud/1/3wq425x2zlikgs096qilrkfuznnqq9sk1ry67zm2m3fe89ud/tinymce/8/tinymce.min.js" referrerpolicy="origin" crossorigin="anonymous"></script>
@@ -675,10 +857,10 @@ function resizeCanvas() {
 
     canvas.width = newWidth * ratio;
     canvas.height = newHeight * ratio;
-    
+
     const ctx = canvas.getContext("2d");
     ctx.scale(ratio, ratio);
-    
+
     const isDark = document.body.classList.contains('dark-mode');
     ctx.fillStyle = isDark ? '#2a2a2a' : 'white';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -709,7 +891,7 @@ window.addEventListener("resize", resizeCanvas);
 document.getElementById('clear').addEventListener('click', () => {
     signaturePad.clear();
     signatureData = null;
-    
+
     const ctx = canvas.getContext("2d");
     const isDark = document.body.classList.contains('dark-mode');
     ctx.fillStyle = isDark ? '#2a2a2a' : 'white';
@@ -726,9 +908,9 @@ document.getElementById('undo').addEventListener('click', () => {
 });
 
 // Form submission
-document.querySelector('form').addEventListener('submit', () => {
+document.getElementById('prestation-form').addEventListener('submit', () => {
     const input = document.getElementById("signature-input");
-    
+
     if (!signaturePad.isEmpty()) {
         input.value = signaturePad.toDataURL();
     } else {
@@ -736,5 +918,6 @@ document.querySelector('form').addEventListener('submit', () => {
     }
 });
 </script>
+{% endif %}
 
 {% endblock %}
