@@ -224,6 +224,40 @@
         color: var(--text-dark);
     }
 
+    .gps-nav-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+        padding: 6px 14px;
+        border-radius: 20px;
+        background: #e8f5e9;
+        color: #2e7d32;
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: background 0.2s, transform 0.2s;
+    }
+
+    .gps-nav-btn:hover {
+        background: #c8e6c9;
+        transform: scale(1.03);
+        color: #1b5e20;
+    }
+
+    .gps-nav-btn .material-icons {
+        font-size: 18px;
+    }
+
+    body.dark-mode .gps-nav-btn {
+        background: rgba(46, 125, 50, 0.2);
+        color: #81c784;
+    }
+
+    body.dark-mode .gps-nav-btn:hover {
+        background: rgba(46, 125, 50, 0.35);
+    }
+
     /* ===== SECTION CARDS ===== */
     .section-card {
         background: var(--card-light);
@@ -284,14 +318,95 @@
         font-style: italic;
     }
 
-    /* ===== TINYMCE ===== */
-    .tox-tinymce {
-        border-radius: 4px !important;
-        border: 2px solid var(--border-light) !important;
+    /* ===== QUILL EDITOR ===== */
+    .quill-wrapper {
+        border: 2px solid var(--border-light);
+        border-radius: 8px;
+        overflow: hidden;
     }
 
-    body.dark-mode .tox-tinymce {
-        border-color: var(--border-dark) !important;
+    body.dark-mode .quill-wrapper {
+        border-color: var(--border-dark);
+    }
+
+    .ql-toolbar.ql-snow {
+        border: none !important;
+        border-bottom: 1px solid var(--border-light) !important;
+        background: #fafafa;
+        padding: 8px 12px !important;
+    }
+
+    body.dark-mode .ql-toolbar.ql-snow {
+        background: #333;
+        border-bottom-color: var(--border-dark) !important;
+    }
+
+    body.dark-mode .ql-toolbar .ql-stroke {
+        stroke: #ccc !important;
+    }
+
+    body.dark-mode .ql-toolbar .ql-fill {
+        fill: #ccc !important;
+    }
+
+    body.dark-mode .ql-toolbar .ql-picker-label {
+        color: #ccc !important;
+    }
+
+    body.dark-mode .ql-toolbar button:hover .ql-stroke,
+    body.dark-mode .ql-toolbar .ql-picker-label:hover .ql-stroke {
+        stroke: white !important;
+    }
+
+    body.dark-mode .ql-toolbar button:hover .ql-fill,
+    body.dark-mode .ql-toolbar .ql-picker-label:hover .ql-fill {
+        fill: white !important;
+    }
+
+    body.dark-mode .ql-toolbar button.ql-active .ql-stroke {
+        stroke: var(--primary) !important;
+    }
+
+    body.dark-mode .ql-toolbar button.ql-active .ql-fill {
+        fill: var(--primary) !important;
+    }
+
+    .ql-container.ql-snow {
+        border: none !important;
+        font-family: Roboto, Arial, sans-serif;
+        font-size: 14px;
+        min-height: 300px;
+    }
+
+    .ql-editor {
+        min-height: 300px;
+        line-height: 1.6;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .ql-editor {
+        color: var(--text-dark);
+    }
+
+    body.dark-mode .ql-container.ql-snow {
+        background: #2a2a2a;
+    }
+
+    .ql-editor.ql-blank::before {
+        color: #999;
+        font-style: italic;
+    }
+
+    body.dark-mode .ql-editor.ql-blank::before {
+        color: #666;
+    }
+
+    body.dark-mode .ql-snow .ql-picker-options {
+        background: #444 !important;
+    }
+
+    body.dark-mode .ql-snow .ql-picker-item {
+        color: #ccc !important;
     }
 
     /* ===== SIGNATURE ===== */
@@ -534,6 +649,12 @@
                             <br>{{ prestation.bonDeCommande.clientComplementAdresse }}
                         {% endif %}
                     </div>
+                    {% set fullAddress = prestation.bonDeCommande.clientAdresse ~ (prestation.bonDeCommande.clientComplementAdresse ? ' ' ~ prestation.bonDeCommande.clientComplementAdresse : '') %}
+                    <a href="https://www.google.com/maps/search/?api=1&query={{ fullAddress|url_encode }}"
+                       target="_blank" class="gps-nav-btn">
+                        <i class="material-icons">navigation</i>
+                        Naviguer
+                    </a>
                 </div>
             </div>
 
@@ -567,8 +688,8 @@
         </div>
     </div>
 
-    {# ===== ADMIN NOTE (only shown if description exists and not yet terminated) ===== #}
-    {% if prestation.description and prestation.description|striptags|trim is not empty and not isTermine %}
+    {# ===== ADMIN NOTE (shown if description exists) ===== #}
+    {% if prestation.description and prestation.description|striptags|trim is not empty %}
     <div class="admin-note-callout">
         <i class="material-icons">campaign</i>
         <div>
@@ -613,9 +734,9 @@
                 </div>
             </div>
 
-            {% if autre.description %}
+            {% if autre.compteRendu %}
             <div style="padding: 10px; background: rgba(63, 81, 181, 0.03); border-radius: 4px; border-left: 3px solid var(--primary); font-size: 0.9rem; color: var(--text-light); line-height: 1.5; max-height: 100px; overflow-y: auto;">
-                {{ autre.description|raw }}
+                {{ autre.compteRendu|raw }}
             </div>
             {% endif %}
 
@@ -640,18 +761,18 @@
     {# ===== TERMINATED MODE: READ-ONLY ===== #}
     {% if isTermine %}
 
-        {# Description read-only #}
+        {# Compte-rendu read-only #}
         <div class="section-card">
             <div class="section-title">
                 <i class="material-icons">description</i>
-                <span>Rapport de prestation</span>
+                <span>Compte-rendu d'intervention</span>
             </div>
 
             <div class="description-readonly">
-                {% if prestation.description and prestation.description|striptags|trim is not empty %}
-                    {{ prestation.description|raw }}
+                {% if prestation.compteRendu and prestation.compteRendu|striptags|trim is not empty %}
+                    {{ prestation.compteRendu|raw }}
                 {% else %}
-                    <span class="description-empty">Aucun rapport renseigné.</span>
+                    <span class="description-empty">Aucun compte-rendu renseigné.</span>
                 {% endif %}
             </div>
         </div>
@@ -707,11 +828,11 @@
 
         <form method="post" id="prestation-form" data-turbo="false">
 
-            {# Description with TinyMCE #}
+            {# Compte-rendu with Quill #}
             <div class="section-card">
                 <div class="section-title">
                     <i class="material-icons">description</i>
-                    <span>Rapport de prestation</span>
+                    <span>Compte-rendu d'intervention</span>
                 </div>
 
                 <div class="helper-text">
@@ -719,7 +840,10 @@
                     <span>Décrivez en détail les travaux effectués, observations et remarques</span>
                 </div>
 
-                <textarea name="description" id="description-editor" rows="10">{{ prestation.description }}</textarea>
+                <input type="hidden" name="compte_rendu" id="compte-rendu-input">
+                <div class="quill-wrapper">
+                    <div id="quill-editor">{{ prestation.compteRendu|raw }}</div>
+                </div>
             </div>
 
             {# Signature pad #}
@@ -790,55 +914,30 @@
 {% if not isTermine %}
 {# ===== SCRIPTS (only loaded when editable) ===== #}
 
-<!-- TinyMCE -->
-<script src="https://cdn.tiny.cloud/1/3wq425x2zlikgs096qilrkfuznnqq9sk1ry67zm2m3fe89ud/tinymce/8/tinymce.min.js" referrerpolicy="origin" crossorigin="anonymous"></script>
+<!-- Quill Editor -->
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
 
 <!-- Signature Pad -->
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
 
 <script>
-// ==================== TINYMCE INIT ====================
-tinymce.init({
-    selector: '#description-editor',
-    height: 400,
-    menubar: false,
-    plugins: [
-        'advlist', 'autolink', 'lists', 'link', 'charmap', 'preview',
-        'searchreplace', 'visualblocks', 'code', 'fullscreen',
-        'table', 'wordcount'
-    ],
-    toolbar: 'undo redo | formatselect | bold italic underline | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | code',
-    content_style: 'body { font-family: Roboto, Arial, sans-serif; font-size: 14px; }',
-    skin: document.body.classList.contains('dark-mode') ? 'oxide-dark' : 'oxide',
-    content_css: document.body.classList.contains('dark-mode') ? 'dark' : 'default'
-});
-
-// Update TinyMCE theme on theme toggle
-const themeObserver = new MutationObserver(() => {
-    const isDark = document.body.classList.contains('dark-mode');
-    if (tinymce.activeEditor) {
-        tinymce.activeEditor.destroy();
-        tinymce.init({
-            selector: '#description-editor',
-            height: 400,
-            menubar: false,
-            plugins: [
-                'advlist', 'autolink', 'lists', 'link', 'charmap', 'preview',
-                'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                'table', 'wordcount'
-            ],
-            toolbar: 'undo redo | formatselect | bold italic underline | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | code',
-            content_style: 'body { font-family: Roboto, Arial, sans-serif; font-size: 14px; }',
-            skin: isDark ? 'oxide-dark' : 'oxide',
-            content_css: isDark ? 'dark' : 'default'
-        });
+// ==================== QUILL INIT ====================
+const quill = new Quill('#quill-editor', {
+    theme: 'snow',
+    placeholder: 'Décrivez les travaux effectués...',
+    modules: {
+        toolbar: [
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ 'color': [] }, { 'background': [] }],
+            [{ 'align': [] }],
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+            [{ 'indent': '-1' }, { 'indent': '+1' }],
+            ['link'],
+            ['clean']
+        ]
     }
-    resizeCanvas();
-});
-
-themeObserver.observe(document.body, {
-    attributes: true,
-    attributeFilter: ['class']
 });
 
 // ==================== SIGNATURE PAD ====================
@@ -907,14 +1006,19 @@ document.getElementById('undo').addEventListener('click', () => {
     }
 });
 
-// Form submission
+// Form submission - sync Quill + Signature
 document.getElementById('prestation-form').addEventListener('submit', () => {
-    const input = document.getElementById("signature-input");
+    // Sync Quill HTML to hidden input
+    const crInput = document.getElementById('compte-rendu-input');
+    const html = quill.root.innerHTML;
+    crInput.value = (html === '<p><br></p>') ? '' : html;
 
+    // Sync signature
+    const sigInput = document.getElementById("signature-input");
     if (!signaturePad.isEmpty()) {
-        input.value = signaturePad.toDataURL();
+        sigInput.value = signaturePad.toDataURL();
     } else {
-        input.value = input.value || "{{ prestation.signature }}";
+        sigInput.value = sigInput.value || "{{ prestation.signature }}";
     }
 });
 </script>

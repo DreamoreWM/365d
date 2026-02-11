@@ -246,6 +246,9 @@ class BonDeCommandeController extends AbstractController
 
             unlink($tmpPath);
 
+            // ---- Corrections OCR courantes ----
+            $text = $this->fixOcrText($text);
+
             // ---- Extraction basique ----
             preg_match('/Commande\s*(?:n[\s°º]*)?[:\-\s]*([A-Z0-9]+)/i', $text, $mNumero);
             preg_match('/éditée[, ]+le\s*([0-9\/]+)/i', $text, $mDate);
@@ -300,6 +303,33 @@ class BonDeCommandeController extends AbstractController
 
         $this->addFlash('danger', 'Aucun fichier reçu');
         return $this->redirectToRoute('admin_bon_commande_index');
+    }
+
+    // =====================================================
+    // MÉTHODE PRIVÉE : CORRECTIONS OCR
+    // =====================================================
+    private function fixOcrText(string $text): string
+    {
+        // [ ou ] confondu avec 1 en début de ligne/mot (ex: "[ RUE" → "1 RUE")
+        $text = preg_replace('/\[\s+(?=[A-ZÉÈÊÀÂ])/u', '1 ', $text);
+        $text = preg_replace('/\]\s+(?=[A-ZÉÈÊÀÂ])/u', '1 ', $text);
+
+        // [ ou ] collé à un mot (ex: "[RUE" → "1 RUE")
+        $text = preg_replace('/\[(?=[A-ZÉÈÊÀÂ])/u', '1', $text);
+        $text = preg_replace('/\](?=[A-ZÉÈÊÀÂ])/u', '1', $text);
+
+        // | confondu avec 1 ou l devant un espace + lettre
+        $text = preg_replace('/\|\s+(?=RUE|AVENUE|BOULEVARD|BLVD|ALLEE|ALLÉE|IMPASSE|CHEMIN|PLACE|ROUTE|PASSAGE)/i', '1 ', $text);
+
+        // O confondu avec 0 dans les numéros de téléphone (séquences de chiffres)
+        $text = preg_replace_callback('/\b([\d]{2}[\s.]?){4}[\d]{2}\b/', function ($m) {
+            return str_replace(['O', 'o'], '0', $m[0]);
+        }, $text);
+
+        // l ou I isolé devant un numéro de rue → 1
+        $text = preg_replace('/\b[lI]\s+(?=RUE|AVENUE|BOULEVARD|BLVD|ALLEE|ALLÉE|IMPASSE|CHEMIN|PLACE|ROUTE|PASSAGE)/i', '1 ', $text);
+
+        return $text;
     }
 
     // =====================================================

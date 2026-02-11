@@ -4,14 +4,19 @@
 
 {% block body %}
 <style>
+    *, *::before, *::after {
+        box-sizing: border-box;
+    }
+
     body {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         min-height: 100vh;
+        min-height: 100dvh;
         display: flex;
         align-items: center;
         justify-content: center;
         margin: 0;
-        padding: 20px;
+        padding: 16px;
     }
 
     .login-container {
@@ -70,7 +75,7 @@
     }
 
     .logo-container img {
-        max-width: 320px;
+        max-width: min(320px, 100%);
         max-height: 120px;
         width: auto;
         height: auto;
@@ -263,25 +268,100 @@
 
     /* Mobile responsive */
     @media (max-width: 480px) {
-        .login-container {
-            padding: 0 10px;
+        body {
+            padding: 12px;
+            align-items: flex-start;
+            padding-top: 10vh;
+        }
+
+        .login-card {
+            border-radius: 16px;
         }
 
         .login-header {
-            padding: 30px 20px;
+            padding: 28px 20px;
         }
 
-        .login-body {
-            padding: 30px 20px;
+        .login-header::before {
+            width: 150px;
+            height: 150px;
         }
 
         .login-header h2 {
-            font-size: 24px;
+            font-size: 22px;
+        }
+
+        .login-subtitle {
+            font-size: 13px;
+        }
+
+        .logo-placeholder {
+            font-size: 32px;
+        }
+
+        .login-body {
+            padding: 24px 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+
+        .form-input {
+            padding: 11px 12px 11px 40px;
+            font-size: 16px;
+            border-radius: 8px;
+        }
+
+        .input-icon {
+            left: 12px;
+            top: 39px;
+            font-size: 18px;
+        }
+
+        .remember-forgot {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 20px;
         }
 
         .btn-login {
-            padding: 12px;
+            padding: 14px;
             font-size: 15px;
+            border-radius: 8px;
+        }
+
+        .login-footer {
+            padding: 16px;
+        }
+
+        .login-footer p {
+            font-size: 12px;
+        }
+    }
+
+    @media (max-width: 360px) {
+        body {
+            padding: 8px;
+            padding-top: 5vh;
+        }
+
+        .login-header {
+            padding: 24px 16px;
+        }
+
+        .login-body {
+            padding: 20px 16px;
+        }
+
+        .login-header h2 {
+            font-size: 20px;
         }
     }
 

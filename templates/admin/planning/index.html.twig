@@ -1058,7 +1058,162 @@
         to { transform: rotate(360deg); }
     }
 
+    /* ========== COLLAPSIBLE EMPLOYEE PANEL ========== */
+    .panel-toggle-icon {
+        display: none;
+    }
+
+    .employee-panel.collapsed .employee-actions,
+    .employee-panel.collapsed .employee-list {
+        display: none !important;
+    }
+
+    .employee-panel.collapsed .panel-toggle-icon {
+        transform: rotate(180deg);
+    }
+
     /* ========== RESPONSIVE ========== */
+    /* ========== FAB MOBILE ========== */
+    .fab-create {
+        display: none;
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 900;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: white;
+        border: none;
+        box-shadow: 0 4px 12px rgba(63, 81, 181, 0.4);
+        cursor: pointer;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .fab-create:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(63, 81, 181, 0.5);
+    }
+
+    .fab-create .material-icons {
+        font-size: 28px;
+    }
+
+    /* Bottom sheet overlay */
+    .mobile-form-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: rgba(0,0,0,0.5);
+        animation: fadeIn 0.2s ease;
+    }
+
+    .mobile-form-overlay.open {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .mobile-form-sheet {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--card-light);
+        border-radius: 16px 16px 0 0;
+        padding: 0 16px 32px;
+        max-height: 80vh;
+        overflow-y: auto;
+        animation: slideUp 0.3s ease;
+        box-shadow: 0 -4px 24px rgba(0,0,0,0.2);
+    }
+
+    body.dark-mode .mobile-form-sheet {
+        background: var(--card-dark);
+    }
+
+    @keyframes slideUp {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+    }
+
+    .mobile-form-sheet .sheet-header {
+        position: sticky;
+        top: 0;
+        background: var(--card-light);
+        z-index: 2;
+        padding: 12px 0 8px;
+        border-bottom: 1px solid var(--border-light);
+        margin-bottom: 12px;
+    }
+
+    body.dark-mode .mobile-form-sheet .sheet-header {
+        background: var(--card-dark);
+        border-bottom-color: var(--border-dark);
+    }
+
+    .mobile-form-sheet .sheet-handle {
+        width: 40px;
+        height: 4px;
+        background: #ccc;
+        border-radius: 2px;
+        margin: 0 auto 8px;
+        cursor: pointer;
+    }
+
+    body.dark-mode .mobile-form-sheet .sheet-handle {
+        background: #555;
+    }
+
+    .sheet-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .sheet-close-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(0,0,0,0.08);
+        color: var(--text-light);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
+
+    .sheet-close-btn:hover {
+        background: rgba(0,0,0,0.15);
+    }
+
+    body.dark-mode .sheet-close-btn {
+        background: rgba(255,255,255,0.1);
+        color: var(--text-dark);
+    }
+
+    body.dark-mode .sheet-close-btn:hover {
+        background: rgba(255,255,255,0.2);
+    }
+
+    .mobile-form-sheet .section-title {
+        margin-bottom: 0;
+        font-size: 1.1rem;
+    }
+
+    .mobile-form-sheet .quick-actions {
+        margin-bottom: 12px;
+    }
+
     @media (max-width: 1400px) {
         .calendar-layout {
             grid-template-columns: 200px 1fr;
@@ -1067,11 +1222,19 @@
         .calendar-layout .create-form {
             display: none;
         }
+
+        .fab-create {
+            display: flex;
+        }
     }
 
     @media (max-width: 1200px) {
         .calendar-layout {
             grid-template-columns: 1fr;
+        }
+
+        .panel-toggle-icon {
+            display: inline-block !important;
         }
 
         .employee-panel {
@@ -1113,21 +1276,209 @@
     }
 
     @media (max-width: 768px) {
+        .planning-container {
+            padding: 0 4px;
+        }
+
         .page-header {
             flex-direction: column;
             align-items: flex-start;
+            padding: 20px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .page-header h1 {
+            font-size: 1.4rem;
+        }
+
+        .page-header h1 .material-icons {
+            font-size: 24px;
+        }
+
+        .view-toggle {
+            width: 100%;
+        }
+
+        .view-btn {
+            flex: 1;
+            justify-content: center;
+            padding: 8px 12px;
+            font-size: 13px;
         }
 
         .stats-row {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
         }
 
         .filters-row {
             grid-template-columns: 1fr;
         }
 
+        /* Calendar card */
+        #fullcalendar {
+            padding: 8px;
+            border-radius: 8px;
+        }
+
         .calendar-main {
-            min-height: 500px;
+            min-height: 450px;
+        }
+
+        /* FullCalendar mobile overrides */
+        .fc .fc-toolbar {
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .fc .fc-toolbar-title {
+            font-size: 1rem !important;
+        }
+
+        .fc .fc-button {
+            padding: 4px 8px !important;
+            font-size: 0.8rem !important;
+        }
+
+        .fc .fc-col-header-cell-cushion {
+            font-size: 0.75rem;
+            padding: 4px 2px;
+        }
+
+        .fc .fc-timegrid-slot-label-cushion {
+            font-size: 0.7rem;
+        }
+
+        .fc-event-custom {
+            padding: 1px 2px;
+            line-height: 1.2;
+        }
+
+        .fc-event-title-custom {
+            font-size: 0.65rem;
+        }
+
+        .fc-event-employee {
+            display: none;
+        }
+
+        /* Employee panel compact */
+        .employee-panel {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .employee-item {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+        }
+
+        .employee-color-dot {
+            width: 10px;
+            height: 10px;
+        }
+
+        .employee-count {
+            font-size: 0.65rem;
+            padding: 1px 4px;
+        }
+
+        /* Event popover mobile */
+        .event-popover {
+            position: fixed !important;
+            left: 8px !important;
+            right: 8px !important;
+            top: auto !important;
+            bottom: 16px !important;
+            width: auto !important;
+            max-width: none !important;
+            border-radius: 12px;
+            box-shadow: 0 -4px 24px rgba(0,0,0,0.3);
+        }
+
+        /* Create form in modal */
+        .create-form {
+            padding: 16px;
+            border-radius: 8px;
+        }
+
+        /* Timeline view */
+        .timeline-table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .timeline-table {
+            min-width: 600px;
+        }
+
+        .timeline-table th,
+        .timeline-table td {
+            padding: 8px 10px;
+            font-size: 0.8rem;
+        }
+
+        /* Search modal */
+        .bon-modal-content {
+            width: 95%;
+            margin: 16px auto;
+            max-height: 85vh;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .page-header {
+            padding: 16px 12px;
+        }
+
+        .page-header h1 {
+            font-size: 1.2rem;
+        }
+
+        .view-btn {
+            font-size: 12px;
+            padding: 6px 8px;
+        }
+
+        .view-btn .material-icons {
+            font-size: 18px;
+        }
+
+        .stats-row {
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .stat-card {
+            padding: 10px 8px;
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+        }
+
+        .fc .fc-toolbar-title {
+            font-size: 0.9rem !important;
+        }
+
+        .fc .fc-button {
+            padding: 3px 6px !important;
+            font-size: 0.75rem !important;
+        }
+
+        .employee-panel {
+            padding: 10px;
+        }
+
+        .panel-header {
+            font-size: 0.875rem;
         }
     }
 </style>
@@ -1156,10 +1507,11 @@
     <div id="calendarViewSection" class="calendar-section active">
         <div class="calendar-layout">
             <!-- Employee Filter Panel -->
-            <div class="employee-panel">
-                <div class="panel-header">
+            <div class="employee-panel" id="employeePanel">
+                <div class="panel-header" onclick="toggleEmployeePanel()" style="cursor: pointer;">
                     <i class="material-icons">people</i>
                     <span>Employ&eacute;s</span>
+                    <i class="material-icons panel-toggle-icon" id="panelToggleIcon" style="margin-left: auto; font-size: 20px; transition: transform 0.2s;">expand_less</i>
                 </div>
                 <div class="employee-actions">
                     <button onclick="toggleAllEmployees(true)">Tous</button>
@@ -1486,6 +1838,112 @@
 
 </div>
 
+<!-- FAB Mobile: Créer une prestation -->
+<button class="fab-create" id="fabCreate" onclick="openMobileForm()" title="Créer une prestation">
+    <i class="material-icons">add</i>
+</button>
+
+<!-- Bottom Sheet Mobile: Formulaire de création -->
+<div class="mobile-form-overlay" id="mobileFormOverlay" onclick="closeMobileForm()">
+    <div class="mobile-form-sheet" onclick="event.stopPropagation()">
+        <div class="sheet-header">
+            <div class="sheet-handle" onclick="closeMobileForm()"></div>
+            <div class="sheet-header-row">
+                <div class="section-title">
+                    <i class="material-icons">add_circle</i>
+                    <span>Cr&eacute;er une prestation</span>
+                </div>
+                <button type="button" class="sheet-close-btn" onclick="closeMobileForm()" title="Fermer">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+        </div>
+
+        <div class="quick-actions">
+            <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('09:00')">
+                <i class="material-icons" style="font-size: 18px;">wb_sunny</i> 9h00
+            </button>
+            <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('14:00')">
+                <i class="material-icons" style="font-size: 18px;">wb_twilight</i> 14h00
+            </button>
+            <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setToday()">
+                <i class="material-icons" style="font-size: 18px;">today</i> Auj.
+            </button>
+        </div>
+
+        <form method="post" action="{{ path('admin_planning_create_prestation') }}" id="mobileCreateForm">
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty" style="width: 100%;">
+                <input class="mdl-textfield__input" type="date" id="mobile_create_date" name="date" value="{{ selectedDate }}" required>
+                <label class="mdl-textfield__label" for="mobile_create_date">Date</label>
+            </div>
+
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty" style="width: 100%;">
+                <input class="mdl-textfield__input" type="time" id="mobile_heure" name="heure" value="09:00" required>
+                <label class="mdl-textfield__label" for="mobile_heure">Heure</label>
+            </div>
+
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
+                <select class="mdl-textfield__input" id="mobile_create_employe" name="employe" required>
+                    <option value="">S&eacute;lectionner...</option>
+                    {% for emp in employes %}
+                        <option value="{{ emp.id }}">{{ emp.nom }}</option>
+                    {% endfor %}
+                </select>
+                <label class="mdl-textfield__label" for="mobile_create_employe">Employ&eacute;</label>
+            </div>
+
+            <input type="hidden" id="mobile_selected_bon" name="bon" required>
+
+            <div style="margin: 16px 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <strong style="color: var(--text-light);">Bon de commande :</strong>
+                    <button type="button"
+                            class="mdl-button mdl-js-button mdl-button--raised"
+                            onclick="openBonModal()"
+                            style="height: 32px; line-height: 32px;">
+                        <i class="material-icons" style="vertical-align: middle; margin-right: 4px; font-size: 18px;">search</i>
+                        Rechercher
+                    </button>
+                </div>
+
+                <div id="mobileSelectedBonDisplay" style="display: none; padding: 12px; background: rgba(63, 81, 181, 0.1); border-radius: 8px; border-left: 4px solid var(--primary);">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div>
+                            <div class="bon-client" id="mobileSelectedBonClient"></div>
+                            <div class="bon-info" id="mobileSelectedBonInfo"></div>
+                        </div>
+                        <button type="button"
+                                class="mdl-button mdl-js-button mdl-button--icon"
+                                onclick="clearMobileBonSelection()"
+                                title="Effacer">
+                            <i class="material-icons">close</i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="mobileNoBonSelected" style="padding: 12px; background: rgba(0,0,0,0.05); border-radius: 8px; text-align: center; color: #757575; font-size: 0.875rem;">
+                    <i class="material-icons" style="vertical-align: middle; font-size: 18px;">info</i>
+                    Aucun bon s&eacute;lectionn&eacute;
+                </div>
+            </div>
+
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
+                <textarea class="mdl-textfield__input" id="mobile_create_description" name="description" rows="2"></textarea>
+                <label class="mdl-textfield__label" for="mobile_create_description">Note pour l'employ&eacute; (optionnel)</label>
+            </div>
+
+            <button type="submit"
+                    class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent"
+                    style="width: 100%; height: 48px;"
+                    id="mobile-submit-btn"
+                    disabled>
+                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">add</i>
+                Cr&eacute;er la prestation
+            </button>
+        </form>
+    </div>
+</div>
+
 <!-- Modal de recherche de bon de commande -->
 <div class="modal-overlay" id="bonCommandeModalOverlay" onclick="closeBonModal()"></div>
 <div class="modal-container" id="bonCommandeModal">
@@ -1696,6 +2154,12 @@ function initCalendar() {
             prefillCreateForm(info.startStr);
             addPreviewEvent(info.start, info.end);
             calendar.unselect();
+        },
+
+        dateClick: function(info) {
+            // Simple tap (especially on mobile) - prefill and open form
+            prefillCreateForm(info.dateStr);
+            addPreviewEvent(info.date, new Date(info.date.getTime() + 30 * 60000));
         },
 
         // Navigate to initial date if specified in URL
@@ -1918,6 +2382,7 @@ function prefillCreateForm(dateTimeStr) {
     const dateStr = dt.toISOString().split('T')[0];
     const timeStr = dt.toTimeString().slice(0, 5);
 
+    // Fill desktop form
     const dateInput = document.getElementById('create_date');
     const timeInput = document.getElementById('heure');
 
@@ -1930,7 +2395,17 @@ function prefillCreateForm(dateTimeStr) {
         timeInput.parentElement.classList.add('is-dirty');
     }
 
-    // Scroll to create form
+    // On small screens: fill mobile form and open it
+    if (window.innerWidth <= 1400) {
+        const mobileDate = document.getElementById('mobile_create_date');
+        const mobileTime = document.getElementById('mobile_heure');
+        if (mobileDate) mobileDate.value = dateStr;
+        if (mobileTime) mobileTime.value = timeStr;
+        openMobileForm();
+        return;
+    }
+
+    // On large screens: scroll to create form
     const form = document.getElementById('calendarCreateForm');
     if (form) {
         form.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2155,9 +2630,10 @@ async function selectBonFromModal(bonId) {
         const response = await fetch('/admin/planning/bon/' + bonId);
         const bon = await response.json();
 
-        // Update both calendar and timeline forms
+        // Update calendar, timeline, and mobile forms
         updateBonSelection(bon, bonId, 'selected_bon', 'selectedBonClient', 'selectedBonInfo', 'selectedBonDisplay', 'noBonSelected', 'submit-btn');
         updateBonSelection(bon, bonId, 'tl_selected_bon', 'tl_selectedBonClient', 'tl_selectedBonInfo', 'tl_selectedBonDisplay', 'tl_noBonSelected', 'tl_submit-btn');
+        updateBonSelection(bon, bonId, 'mobile_selected_bon', 'mobileSelectedBonClient', 'mobileSelectedBonInfo', 'mobileSelectedBonDisplay', 'mobileNoBonSelected', 'mobile-submit-btn');
 
         closeBonModal();
     } catch (error) {
@@ -2196,20 +2672,26 @@ async function autoLoadBon(bonId) {
         const response = await fetch('/admin/planning/bon/' + bonId);
         const bon = await response.json();
 
-        // Update both forms
+        // Update all forms (calendar, timeline, mobile)
         updateBonSelection(bon, bonId, 'selected_bon', 'selectedBonClient', 'selectedBonInfo', 'selectedBonDisplay', 'noBonSelected', 'submit-btn');
         updateBonSelection(bon, bonId, 'tl_selected_bon', 'tl_selectedBonClient', 'tl_selectedBonInfo', 'tl_selectedBonDisplay', 'tl_noBonSelected', 'tl_submit-btn');
+        updateBonSelection(bon, bonId, 'mobile_selected_bon', 'mobileSelectedBonClient', 'mobileSelectedBonInfo', 'mobileSelectedBonDisplay', 'mobileNoBonSelected', 'mobile-submit-btn');
 
-        // Scroll to and highlight the create form
-        const form = document.getElementById('calendarCreateForm');
-        if (form) {
-            setTimeout(() => {
-                form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                form.style.boxShadow = '0 0 0 3px var(--primary), 0 2px 8px rgba(0,0,0,0.1)';
+        // On small screens, open mobile form; on large screens, highlight the create form
+        const isMobile = window.innerWidth <= 1400;
+        if (isMobile) {
+            setTimeout(() => openMobileForm(), 500);
+        } else {
+            const form = document.getElementById('calendarCreateForm');
+            if (form) {
                 setTimeout(() => {
-                    form.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-                }, 2500);
-            }, 500);
+                    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    form.style.boxShadow = '0 0 0 3px var(--primary), 0 2px 8px rgba(0,0,0,0.1)';
+                    setTimeout(() => {
+                        form.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                    }, 2500);
+                }, 500);
+            }
         }
     } catch (error) {
         console.error('Erreur auto-load bon:', error);
@@ -2217,22 +2699,66 @@ async function autoLoadBon(bonId) {
 }
 
 function clearBonSelection() {
-    ['selected_bon', 'tl_selected_bon'].forEach(id => {
+    ['selected_bon', 'tl_selected_bon', 'mobile_selected_bon'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
-    ['submit-btn', 'tl_submit-btn'].forEach(id => {
+    ['submit-btn', 'tl_submit-btn', 'mobile-submit-btn'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.disabled = true;
     });
-    ['selectedBonDisplay', 'tl_selectedBonDisplay'].forEach(id => {
+    ['selectedBonDisplay', 'tl_selectedBonDisplay', 'mobileSelectedBonDisplay'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
-    ['noBonSelected', 'tl_noBonSelected'].forEach(id => {
+    ['noBonSelected', 'tl_noBonSelected', 'mobileNoBonSelected'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'block';
     });
+}
+
+function clearMobileBonSelection() {
+    const el = document.getElementById('mobile_selected_bon');
+    if (el) el.value = '';
+    const btn = document.getElementById('mobile-submit-btn');
+    if (btn) btn.disabled = true;
+    const display = document.getElementById('mobileSelectedBonDisplay');
+    if (display) display.style.display = 'none';
+    const noSel = document.getElementById('mobileNoBonSelected');
+    if (noSel) noSel.style.display = 'block';
+}
+
+// ==================== EMPLOYEE PANEL TOGGLE ====================
+function toggleEmployeePanel() {
+    const panel = document.getElementById('employeePanel');
+    if (panel && window.innerWidth <= 1200) {
+        panel.classList.toggle('collapsed');
+    }
+}
+
+// Auto-collapse on small screens on load
+if (window.innerWidth <= 768) {
+    const panel = document.getElementById('employeePanel');
+    if (panel) panel.classList.add('collapsed');
+}
+
+// ==================== MOBILE FORM ====================
+function openMobileForm() {
+    document.getElementById('mobileFormOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    // Sync date from calendar if available (only if not already set by prefillCreateForm)
+    const mobileDate = document.getElementById('mobile_create_date');
+    if (calendar && mobileDate && !mobileDate.value) {
+        const calDate = calendar.getDate();
+        const dateStr = calDate.toISOString().split('T')[0];
+        mobileDate.value = dateStr;
+    }
+}
+
+function closeMobileForm() {
+    document.getElementById('mobileFormOverlay').classList.remove('open');
+    document.body.style.overflow = '';
 }
 
 // Auto-submit timeline filters on change

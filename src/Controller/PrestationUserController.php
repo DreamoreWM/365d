@@ -48,10 +48,10 @@ class PrestationUserController extends AbstractController
         }
 
         if ($request->isMethod('POST')) {
-            $description = $request->request->get('description');
+            $compteRendu = $request->request->get('compte_rendu');
             $signature = $request->request->get('signature');
 
-            $prestation->setDescription($description);
+            $prestation->setCompteRendu($compteRendu);
 
             // 🔥 SI PAS DE NOUVELLE SIGNATURE, ON GARDE L’ANCIENNE
             if ($signature) {

@@ -106,8 +106,23 @@ class Prestation
     private ?StatutPrestation $statut = null;
 
     #[ORM\Column(type: 'text', nullable: true)]
+    #[Groups(['prestation:read', 'prestation:write', 'bon:read'])]
+    private ?string $compteRendu = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
     #[Groups(['prestation:read', 'prestation:signature'])]
     private ?string $signature = null;
+
+    public function getCompteRendu(): ?string
+    {
+        return $this->compteRendu;
+    }
+
+    public function setCompteRendu(?string $compteRendu): static
+    {
+        $this->compteRendu = $compteRendu;
+        return $this;
+    }
 
     public function getSignature(): ?string
     {

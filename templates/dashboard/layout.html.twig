@@ -577,9 +577,11 @@
     menuButton?.addEventListener('click', openDrawer);
     drawerOverlay?.addEventListener('click', closeDrawer);
 
-    // Close drawer when clicking a link
+    // Close drawer when clicking a link (but NOT the admin submenu toggle)
     document.querySelectorAll('.drawer .menu-item').forEach(item => {
-        item.addEventListener('click', () => {
+        item.addEventListener('click', (e) => {
+            // Don't close drawer if this item has a submenu (Administration)
+            if (item.id === 'admin-menu-mobile') return;
             closeDrawer();
         });
     });

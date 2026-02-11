@@ -381,6 +381,38 @@
         font-size: 18px;
     }
 
+    .gps-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #e8f5e9;
+        color: #2e7d32;
+        text-decoration: none;
+        transition: background 0.2s, transform 0.2s;
+        flex-shrink: 0;
+    }
+
+    .gps-btn:hover {
+        background: #c8e6c9;
+        transform: scale(1.1);
+    }
+
+    .gps-btn .material-icons {
+        font-size: 20px;
+    }
+
+    body.dark-mode .gps-btn {
+        background: rgba(46, 125, 50, 0.2);
+        color: #81c784;
+    }
+
+    body.dark-mode .gps-btn:hover {
+        background: rgba(46, 125, 50, 0.35);
+    }
+
     /* ========== EMPTY STATE ========== */
     .empty-state {
         text-align: center;
@@ -547,7 +579,7 @@
                     <!-- Card Body -->
                     <div class="prestation-card-body">
 
-                        <!-- Adresse -->
+                        <!-- Adresse + GPS -->
                         {% if p.bonDeCommande %}
                         <div class="info-item">
                             <i class="material-icons">location_on</i>
@@ -557,6 +589,11 @@
                                     <br><small style="color: #757575;">{{ p.bonDeCommande.clientComplementAdresse }}</small>
                                 {% endif %}
                             </div>
+                            {% set fullAddress = p.bonDeCommande.clientAdresse ~ (p.bonDeCommande.clientComplementAdresse ? ' ' ~ p.bonDeCommande.clientComplementAdresse : '') %}
+                            <a href="https://www.google.com/maps/search/?api=1&query={{ fullAddress|url_encode }}"
+                               target="_blank" class="gps-btn" title="Ouvrir dans Maps">
+                                <i class="material-icons">navigation</i>
+                            </a>
                         </div>
                         {% endif %}
 
