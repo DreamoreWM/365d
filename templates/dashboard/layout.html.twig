@@ -57,7 +57,11 @@
             box-shadow: 2px 0 8px rgba(0,0,0,0.1);
             overflow-y: auto;
             z-index: 900;
-            transition: background 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.sidebar-collapsed .sidebar {
+            width: 64px;
         }
 
         body.dark-mode .sidebar {
@@ -69,11 +73,48 @@
             height: var(--topbar-height);
             display: flex;
             align-items: center;
+            justify-content: space-between;
             padding: 0 20px;
             background: var(--primary);
             color: white;
             font-size: 1.5rem;
             font-weight: 500;
+        }
+
+        .sidebar-title {
+            overflow: hidden;
+            white-space: nowrap;
+            transition: opacity 0.2s;
+        }
+
+        body.sidebar-collapsed .sidebar-title {
+            opacity: 0;
+        }
+
+        .sidebar-toggle-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .sidebar-toggle-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .sidebar-toggle-btn .material-icons {
+            font-size: 24px;
+            transition: transform 0.3s;
+        }
+
+        body.sidebar-collapsed .sidebar-toggle-btn .material-icons {
+            transform: rotate(180deg);
         }
 
         .sidebar-menu {
@@ -89,6 +130,22 @@
             transition: background 0.2s, color 0.2s;
             position: relative;
             cursor: pointer;
+            overflow: hidden;
+        }
+
+        body.sidebar-collapsed .menu-item {
+            justify-content: center;
+            padding: 14px 8px;
+        }
+
+        body.sidebar-collapsed .menu-item span {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+        }
+
+        body.sidebar-collapsed .menu-item .material-icons {
+            margin-right: 0;
         }
 
         body.dark-mode .menu-item {
@@ -291,6 +348,11 @@
             margin-left: var(--sidebar-width);
             padding: 24px;
             min-height: 100vh;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.sidebar-collapsed .content {
+            margin-left: 64px;
         }
 
         /* ==================== CARDS ==================== */
@@ -376,6 +438,9 @@
 <nav class="sidebar d-none d-lg-block">
     <div class="sidebar-header">
         <span class="sidebar-title">Services 4D</span>
+        <button class="sidebar-toggle-btn" id="sidebar-toggle-desktop" title="Réduire/Étendre le menu">
+            <i class="material-icons">chevron_left</i>
+        </button>
     </div>
     <div class="sidebar-menu">
         <a href="{{ path('app_dashboard') }}" class="menu-item {{ app.request.get('_route') == 'app_dashboard' ? 'active' : '' }}">
@@ -591,6 +656,22 @@
         e.preventDefault();
         toggleTheme();
     });
+
+    // ==================== SIDEBAR TOGGLE ====================
+    function toggleSidebar() {
+        document.body.classList.toggle('sidebar-collapsed');
+        const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
+    }
+
+    // Restore sidebar state
+    const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    if (sidebarCollapsed) {
+        document.body.classList.add('sidebar-collapsed');
+    }
+
+    // Sidebar toggle button
+    document.getElementById('sidebar-toggle-desktop')?.addEventListener('click', toggleSidebar);
 
     // ==================== MOBILE DRAWER ====================
     const drawer = document.getElementById('drawer');
