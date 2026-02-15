@@ -57,19 +57,25 @@ class PrestationManager
         // Date passée
         $currentStatut = $prestation->getStatut();
 
-        // Si elle était programmée et la date est passée => non effectué
-        if ($currentStatut === StatutPrestation::PROGRAMME) {
+        // Si déjà terminé, on garde ce statut
+        if ($currentStatut === StatutPrestation::TERMINE) {
+            return;
+        }
+
+        // Si déjà non effectué, on garde ce statut
+        if ($currentStatut === StatutPrestation::NON_EFFECTUE) {
+            return;
+        }
+
+        // Si elle était programmée ou en cours et la date est passée => non effectué
+        // (car elle n'a pas été complétée)
+        if ($currentStatut === StatutPrestation::PROGRAMME || $currentStatut === StatutPrestation::EN_COURS) {
             $prestation->setStatut(StatutPrestation::NON_EFFECTUE);
             return;
         }
 
-        // Si déjà non effectué ou terminé, on garde ce statut
-        if ($currentStatut === StatutPrestation::NON_EFFECTUE || $currentStatut === StatutPrestation::TERMINE) {
-            return;
-        }
-
-        // Sinon, on considère la prestation comme terminée
-        $prestation->setStatut(StatutPrestation::TERMINE);
+        // Pour les autres cas (A_PROGRAMMER avec date passée), on met à non effectué aussi
+        $prestation->setStatut(StatutPrestation::NON_EFFECTUE);
     }
 
     /**
