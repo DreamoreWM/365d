@@ -164,6 +164,81 @@ class PlanningController extends AbstractController
     }
 
     // =====================================================
+    // CRÉER PLUSIEURS PRESTATIONS EN LOT (AJAX)
+    // =====================================================
+    #[Route('/create-batch', name: 'admin_planning_create_batch', methods: ['POST'])]
+    public function createBatch(Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $data = json_decode($request->getContent(), true);
+
+        $bonIds = $data['bonIds'] ?? [];
+        $employeId = $data['employeId'] ?? null;
+        $date = $data['date'] ?? null;
+        $heure = $data['heure'] ?? '09:00';
+
+        // Validation
+        if (empty($bonIds) || !$employeId || !$date) {
+            return $this->json(['error' => 'Données manquantes'], 400);
+        }
+
+        $employe = $this->userRepo->find($employeId);
+        if (!$employe) {
+            return $this->json(['error' => 'Employé introuvable'], 404);
+        }
+
+        $created = [];
+        $errors = [];
+
+        foreach ($bonIds as $bonId) {
+            try {
+                $bon = $this->bonRepo->find($bonId);
+                if (!$bon) {
+                    $errors[] = "Bon #$bonId introuvable";
+                    continue;
+                }
+
+                // Créer la prestation
+                $prestation = new Prestation();
+                $prestation->setBonDeCommande($bon);
+                $prestation->setEmploye($employe);
+                $prestation->setTypePrestation($bon->getTypePrestation());
+                $prestation->setDescription('');
+
+                // Date + heure
+                $dateTime = \DateTimeImmutable::createFromFormat('Y-m-d H:i', $date . ' ' . $heure);
+                $prestation->setDatePrestation($dateTime);
+
+                // Mettre à jour le statut
+                $this->prestationManager->updatePrestationStatut($prestation);
+
+                $this->em->persist($prestation);
+                $this->em->flush();
+
+                // Mettre à jour le bon de commande
+                $this->prestationManager->updateBonDeCommande($bon);
+
+                $created[] = [
+                    'prestationId' => $prestation->getId(),
+                    'bonId' => $bon->getId(),
+                    'clientNom' => $bon->getClientNom(),
+                ];
+
+            } catch (\Exception $e) {
+                $errors[] = "Erreur pour bon #$bonId: " . $e->getMessage();
+            }
+        }
+
+        return $this->json([
+            'success' => true,
+            'created' => $created,
+            'errors' => $errors,
+            'count' => count($created),
+        ]);
+    }
+
+    // =====================================================
     // RÉCUPÉRER LES BONS DISPONIBLES
     // =====================================================
     #[Route('/bons-disponibles', name: 'admin_planning_bons_disponibles', methods: ['GET'])]

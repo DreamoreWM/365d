@@ -963,6 +963,20 @@
         background: rgba(63, 81, 181, 0.1);
     }
 
+    .bon-item-checkbox {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        accent-color: var(--primary);
+    }
+
+    .bon-item.has-checkbox {
+        padding-left: 44px;
+    }
+
     .bon-item-header {
         display: flex;
         justify-content: space-between;
@@ -1035,6 +1049,275 @@
 
     body.dark-mode .progress-text {
         color: #b0b0b0;
+    }
+
+    /* ========== MULTI-SELECT & BATCH CREATION ========== */
+    .selection-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .selection-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 0.9rem;
+    }
+
+    .selection-count {
+        background: rgba(255, 255, 255, 0.25);
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-weight: 500;
+    }
+
+    .selection-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .selection-actions button {
+        padding: 6px 12px;
+        border: none;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .selection-actions button:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    .selection-actions button .material-icons {
+        font-size: 18px;
+    }
+
+    .batch-create-panel {
+        background: var(--card-light);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+        border: 2px solid var(--primary);
+        animation: slideDown 0.3s ease;
+    }
+
+    body.dark-mode .batch-create-panel {
+        background: var(--card-dark);
+    }
+
+    .batch-panel-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        font-weight: 500;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .batch-panel-header {
+        color: var(--text-dark);
+    }
+
+    .batch-panel-header .material-icons {
+        color: var(--primary);
+        font-size: 22px;
+    }
+
+    .batch-form-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .batch-form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .batch-form-group label {
+        font-size: 0.75rem;
+        color: #757575;
+        font-weight: 500;
+    }
+
+    body.dark-mode .batch-form-group label {
+        color: #b0b0b0;
+    }
+
+    .batch-form-group input,
+    .batch-form-group select {
+        padding: 8px 12px;
+        border: 1px solid var(--border-light);
+        border-radius: 6px;
+        background: var(--card-light);
+        color: var(--text-light);
+        font-size: 0.875rem;
+    }
+
+    body.dark-mode .batch-form-group input,
+    body.dark-mode .batch-form-group select {
+        background: var(--card-dark);
+        color: var(--text-dark);
+        border-color: var(--border-dark);
+    }
+
+    .batch-create-btn {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 6px;
+        background: var(--primary);
+        color: white;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .batch-create-btn:hover {
+        background: var(--primary-dark);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(63, 81, 181, 0.3);
+    }
+
+    .batch-create-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .batch-create-btn .material-icons {
+        font-size: 20px;
+    }
+
+    /* Toast Notifications */
+    .toast-container {
+        position: fixed;
+        top: 80px;
+        right: 24px;
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .toast {
+        min-width: 300px;
+        padding: 16px 20px;
+        border-radius: 8px;
+        background: white;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: toastIn 0.3s ease;
+    }
+
+    body.dark-mode .toast {
+        background: #2a2a2a;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+
+    @keyframes toastIn {
+        from { opacity: 0; transform: translateX(100px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+
+    .toast.success {
+        border-left: 4px solid #4caf50;
+    }
+
+    .toast.error {
+        border-left: 4px solid #f44336;
+    }
+
+    .toast.info {
+        border-left: 4px solid #2196f3;
+    }
+
+    .toast .material-icons {
+        font-size: 24px;
+    }
+
+    .toast.success .material-icons {
+        color: #4caf50;
+    }
+
+    .toast.error .material-icons {
+        color: #f44336;
+    }
+
+    .toast.info .material-icons {
+        color: #2196f3;
+    }
+
+    .toast-message {
+        flex: 1;
+        color: var(--text-light);
+    }
+
+    body.dark-mode .toast-message {
+        color: var(--text-dark);
+    }
+
+    .toast-close {
+        background: none;
+        border: none;
+        color: #757575;
+        cursor: pointer;
+        padding: 0;
+        display: flex;
+    }
+
+    .toast-close .material-icons {
+        font-size: 20px;
+    }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 500;
+    }
+
+    .badge.disponible {
+        background: rgba(76, 175, 80, 0.15);
+        color: #4caf50;
+    }
+
+    .badge.complet {
+        background: rgba(158, 158, 158, 0.15);
+        color: #9e9e9e;
+    }
+
+    .badge.urgent {
+        background: rgba(244, 67, 54, 0.15);
+        color: #f44336;
     }
 
     .loading-spinner {
@@ -1965,6 +2248,25 @@
                        onkeyup="searchBons()">
             </div>
 
+            <!-- Selection Controls -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin: 12px 0; padding: 8px; background: rgba(63, 81, 181, 0.05); border-radius: 6px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.875rem; color: var(--text-light);">
+                        <input type="checkbox" id="multiSelectToggle" onchange="toggleMultiSelect()" style="cursor: pointer; accent-color: var(--primary);">
+                        <span>Mode s&eacute;lection multiple</span>
+                    </label>
+                    <span id="selectionCounter" style="display: none; font-size: 0.75rem; background: var(--primary); color: white; padding: 2px 8px; border-radius: 10px; font-weight: 500;"></span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="selectAllVisibleBons()" style="padding: 4px 12px; border: 1px solid var(--border-light); border-radius: 6px; background: transparent; color: var(--text-light); font-size: 0.75rem; cursor: pointer;">
+                        <i class="material-icons" style="font-size: 14px; vertical-align: middle;">done_all</i> Tout
+                    </button>
+                    <button onclick="clearSelection()" style="padding: 4px 12px; border: 1px solid var(--border-light); border-radius: 6px; background: transparent; color: var(--text-light); font-size: 0.75rem; cursor: pointer;">
+                        <i class="material-icons" style="font-size: 14px; vertical-align: middle;">clear</i> Aucun
+                    </button>
+                </div>
+            </div>
+
             <div class="filters-row">
                 <select class="filter-select" id="filterStatut" onchange="searchBons()">
                     <option value="">Tous les statuts</option>
@@ -1991,9 +2293,15 @@
             </div>
         </div>
 
+        <!-- Batch Creation Panel (shown when multiple bons selected) -->
+        <div id="batchCreatePanel" style="display: none;"></div>
+
         <div id="bonSearchResults" class="bons-list"></div>
     </div>
 </div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
 
 <!-- Modal de details du bon -->
 <div class="modal-overlay" id="bonDetailsModalOverlay" onclick="closeBonDetailsModal()" style="z-index: 10000;"></div>
@@ -2017,6 +2325,9 @@ let employeeData = [];
 let selectedEmployees = new Set();
 let currentView = 'calendar';
 let previewEvent = null;
+let multiSelectMode = false;
+let selectedBons = new Set();
+let currentSearchResults = [];
 
 // ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', async function() {
@@ -2584,6 +2895,7 @@ async function searchBons() {
 
 function displaySearchResults(bons) {
     const resultsContainer = document.getElementById('bonSearchResults');
+    currentSearchResults = bons;
 
     if (bons.length === 0) {
         resultsContainer.innerHTML = '<div class="empty-state" style="padding: 40px;"><i class="material-icons" style="font-size: 64px;">inbox</i><p>Aucun bon de commande trouv&eacute;</p></div>';
@@ -2595,16 +2907,34 @@ function displaySearchResults(bons) {
             ? (bon.nombrePrestations / bon.nombrePrestationsNecessaires * 100).toFixed(0)
             : 0;
 
+        const isComplete = bon.nombrePrestations >= bon.nombrePrestationsNecessaires && bon.nombrePrestationsNecessaires > 0;
+        const isDisponible = bon.nombrePrestations < bon.nombrePrestationsNecessaires;
+
+        const badgeHtml = isComplete
+            ? '<span class="badge complet"><i class="material-icons" style="font-size: 12px;">check_circle</i> Complet</span>'
+            : '<span class="badge disponible"><i class="material-icons" style="font-size: 12px;">schedule</i> ' + (bon.nombrePrestationsNecessaires - bon.nombrePrestations) + ' restantes</span>';
+
         const geoHtml = bon.groupeGeo
             ? '<span class="geo-badge" style="background: ' + bon.groupeGeo.couleur + ';"><i class="material-icons" style="font-size: 12px;">place</i> ' + bon.groupeGeo.nom + '</span>'
             : bon.codePostal
                 ? '<span class="geo-badge" style="background: #757575;"><i class="material-icons" style="font-size: 12px;">place</i> ' + bon.codePostal + '</span>'
                 : '';
 
-        return '<div class="bon-item">' +
+        const checkboxHtml = multiSelectMode
+            ? '<input type="checkbox" class="bon-item-checkbox" data-bon-id="' + bon.id + '" onchange="toggleBonSelection(' + bon.id + ')" ' + (selectedBons.has(bon.id) ? 'checked' : '') + '>'
+            : '';
+
+        const itemClass = 'bon-item' + (multiSelectMode ? ' has-checkbox' : '') + (selectedBons.has(bon.id) ? ' selected' : '');
+        const clickHandler = multiSelectMode ? 'toggleBonSelection(' + bon.id + ')' : 'selectBonFromModal(' + bon.id + ')';
+
+        return '<div class="' + itemClass + '">' +
+            checkboxHtml +
             '<div class="bon-item-header">' +
-                '<div onclick="selectBonFromModal(' + bon.id + ')" style="flex: 1; cursor: pointer;">' +
-                    '<div class="bon-client">' + bon.clientNom + '</div>' +
+                '<div onclick="' + clickHandler + '" style="flex: 1; cursor: pointer;">' +
+                    '<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">' +
+                        '<div class="bon-client" style="flex: 1;">' + bon.clientNom + '</div>' +
+                        badgeHtml +
+                    '</div>' +
                     '<div class="bon-info">' +
                         '<span class="bon-info-item"><i class="material-icons">receipt</i> BC ' + (bon.numeroCommande || '#' + bon.id) + '</span>' +
                         '<span class="bon-info-item"><i class="material-icons">event</i> ' + (bon.dateCommande || 'N/A') + '</span>' +
@@ -2622,6 +2952,7 @@ function displaySearchResults(bons) {
     }).join('');
 
     if (typeof componentHandler !== 'undefined') componentHandler.upgradeAllRegistered();
+    updateBatchPanel();
 }
 
 // ==================== BON SELECTION ====================
@@ -2726,6 +3057,220 @@ function clearMobileBonSelection() {
     if (display) display.style.display = 'none';
     const noSel = document.getElementById('mobileNoBonSelected');
     if (noSel) noSel.style.display = 'block';
+}
+
+// ==================== MULTI-SELECT MODE ====================
+function toggleMultiSelect() {
+    multiSelectMode = document.getElementById('multiSelectToggle').checked;
+
+    if (!multiSelectMode) {
+        selectedBons.clear();
+    }
+
+    // Re-render results with checkboxes
+    displaySearchResults(currentSearchResults);
+    updateSelectionCounter();
+}
+
+function toggleBonSelection(bonId) {
+    if (selectedBons.has(bonId)) {
+        selectedBons.delete(bonId);
+    } else {
+        selectedBons.add(bonId);
+    }
+
+    // Update checkbox state and item selection
+    const checkbox = document.querySelector(`.bon-item-checkbox[data-bon-id="${bonId}"]`);
+    if (checkbox) {
+        checkbox.checked = selectedBons.has(bonId);
+    }
+
+    const bonItem = checkbox?.closest('.bon-item');
+    if (bonItem) {
+        if (selectedBons.has(bonId)) {
+            bonItem.classList.add('selected');
+        } else {
+            bonItem.classList.remove('selected');
+        }
+    }
+
+    updateSelectionCounter();
+    updateBatchPanel();
+}
+
+function selectAllVisibleBons() {
+    if (!multiSelectMode) {
+        document.getElementById('multiSelectToggle').checked = true;
+        toggleMultiSelect();
+    }
+
+    currentSearchResults.forEach(bon => {
+        selectedBons.add(bon.id);
+    });
+
+    // Update all checkboxes
+    document.querySelectorAll('.bon-item-checkbox').forEach(cb => {
+        cb.checked = true;
+        cb.closest('.bon-item')?.classList.add('selected');
+    });
+
+    updateSelectionCounter();
+    updateBatchPanel();
+}
+
+function clearSelection() {
+    selectedBons.clear();
+
+    // Update all checkboxes
+    document.querySelectorAll('.bon-item-checkbox').forEach(cb => {
+        cb.checked = false;
+        cb.closest('.bon-item')?.classList.remove('selected');
+    });
+
+    updateSelectionCounter();
+    updateBatchPanel();
+}
+
+function updateSelectionCounter() {
+    const counter = document.getElementById('selectionCounter');
+    if (selectedBons.size > 0) {
+        counter.textContent = selectedBons.size + ' sélectionné' + (selectedBons.size > 1 ? 's' : '');
+        counter.style.display = 'inline-block';
+    } else {
+        counter.style.display = 'none';
+    }
+}
+
+// ==================== BATCH CREATION PANEL ====================
+function updateBatchPanel() {
+    const panel = document.getElementById('batchCreatePanel');
+
+    if (!multiSelectMode || selectedBons.size === 0) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const employes = employeeData.map(e =>
+        '<option value="' + e.id + '">' + e.nom + '</option>'
+    ).join('');
+
+    panel.style.display = 'block';
+    panel.innerHTML =
+        '<div class="batch-create-panel">' +
+            '<div class="batch-panel-header">' +
+                '<i class="material-icons">playlist_add_check</i>' +
+                '<span>Créer ' + selectedBons.size + ' prestation' + (selectedBons.size > 1 ? 's' : '') + ' en lot</span>' +
+            '</div>' +
+            '<div class="batch-form-row">' +
+                '<div class="batch-form-group">' +
+                    '<label>Date</label>' +
+                    '<input type="date" id="batch_date" value="' + today + '" required>' +
+                '</div>' +
+                '<div class="batch-form-group">' +
+                    '<label>Heure</label>' +
+                    '<input type="time" id="batch_heure" value="09:00" required>' +
+                '</div>' +
+                '<div class="batch-form-group">' +
+                    '<label>Employé</label>' +
+                    '<select id="batch_employe" required>' +
+                        '<option value="">Sélectionner...</option>' +
+                        employes +
+                    '</select>' +
+                '</div>' +
+            '</div>' +
+            '<button class="batch-create-btn" onclick="createBatchPrestations()" id="batchCreateBtn">' +
+                '<i class="material-icons">add_circle</i>' +
+                '<span>Créer les prestations</span>' +
+            '</button>' +
+        '</div>';
+}
+
+async function createBatchPrestations() {
+    const date = document.getElementById('batch_date').value;
+    const heure = document.getElementById('batch_heure').value;
+    const employeId = document.getElementById('batch_employe').value;
+    const btn = document.getElementById('batchCreateBtn');
+
+    if (!date || !heure || !employeId) {
+        showToast('error', 'Veuillez remplir tous les champs');
+        return;
+    }
+
+    if (selectedBons.size === 0) {
+        showToast('error', 'Aucun bon sélectionné');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></div><span>Création...</span>';
+
+    try {
+        const response = await fetch('/admin/planning/create-batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                bonIds: Array.from(selectedBons),
+                employeId: employeId,
+                date: date,
+                heure: heure
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('success', result.count + ' prestation' + (result.count > 1 ? 's' : '') + ' créée' + (result.count > 1 ? 's' : '') + ' avec succès');
+
+            if (result.errors && result.errors.length > 0) {
+                result.errors.forEach(error => showToast('error', error));
+            }
+
+            // Clear selection and refresh
+            selectedBons.clear();
+            updateSelectionCounter();
+            updateBatchPanel();
+            searchBons();
+
+            // Refresh calendar
+            if (calendar) calendar.refetchEvents();
+
+            // Close modal after a short delay
+            setTimeout(() => closeBonModal(), 1500);
+        } else {
+            showToast('error', 'Erreur lors de la création');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showToast('error', 'Erreur réseau');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="material-icons">add_circle</i><span>Créer les prestations</span>';
+    }
+}
+
+// ==================== TOAST NOTIFICATIONS ====================
+function showToast(type, message) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + type;
+
+    const icon = type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info';
+
+    toast.innerHTML =
+        '<i class="material-icons">' + icon + '</i>' +
+        '<div class="toast-message">' + message + '</div>' +
+        '<button class="toast-close" onclick="this.closest(\'.toast\').remove()">' +
+            '<i class="material-icons">close</i>' +
+        '</button>';
+
+    container.appendChild(toast);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
 }
 
 // ==================== EMPLOYEE PANEL TOGGLE ====================
