@@ -47,29 +47,62 @@ class PrestationUserController extends AbstractController
             throw $this->createAccessDeniedException();
         }
 
+        $editMode = $request->query->getBoolean('edit');
+
         if ($request->isMethod('POST')) {
             $compteRendu = $request->request->get('compte_rendu');
             $signature = $request->request->get('signature');
 
             $prestation->setCompteRendu($compteRendu);
 
-            // 🔥 SI PAS DE NOUVELLE SIGNATURE, ON GARDE L’ANCIENNE
+            // Champs personnalisés
+            $valeursJson = $request->request->get('valeurs_champs_personnalises');
+            if ($valeursJson) {
+                $valeurs = json_decode($valeursJson, true);
+                if (is_array($valeurs)) {
+                    $sanitized = [];
+                    foreach ($valeurs as $v) {
+                        $sanitized[] = [
+                            'label' => $v['label'] ?? '',
+                            'type' => $v['type'] ?? 'checkbox',
+                            'checked' => (bool) ($v['checked'] ?? false),
+                            'value' => isset($v['value']) && $v['value'] !== null ? (int) $v['value'] : null,
+                        ];
+                    }
+                    $prestation->setValeursChampsPersonnalises($sanitized);
+                }
+            }
+
+            // Infos intervention (présence, infestation, propreté, encombrement)
+            $prestation->setInfosIntervention([
+                'presenceConstatee' => $request->request->get('presence_constatee'),
+                'niveauInfestation' => $request->request->get('niveau_infestation'),
+                'logementPropre' => $request->request->get('logement_propre'),
+                'logementEncombre' => $request->request->get('logement_encombre'),
+            ]);
+
             if ($signature) {
                 $prestation->setSignature($signature);
             }
 
+            // Si c'est une validation (pas encore terminé), on termine aussi
+            if ($request->request->has('valider') && $prestation->getStatut() !== StatutPrestation::TERMINE) {
+                $prestation->setStatut(StatutPrestation::TERMINE);
+            }
+
             $em->flush();
 
-            $this->addFlash('success', 'Prestation mise à jour.');
+            $message = $request->request->has('valider') ? 'Prestation validée avec succès !' : 'Prestation mise à jour.';
+            $this->addFlash('success', $message);
 
             return $this->redirectToRoute('app_user_prestation_view', [
                 'id' => $prestation->getId()
             ]);
         }
 
-
         return $this->render('prestation_user/view.html.twig', [
             'prestation' => $prestation,
+            'editMode' => $editMode,
         ]);
     }
 

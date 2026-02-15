@@ -124,6 +124,17 @@ class BonDeCommandeController extends AbstractController
             $bon->setClientAdresse($request->query->get('clientAdresse', ''));
             $bon->setClientTelephone($request->query->get('clientTelephone', ''));
             $bon->setClientComplementAdresse($request->query->get('clientComplementAdresse', ''));
+            $dateLimite = $request->query->get('dateLimiteExecution', '');
+            if ($dateLimite) {
+                $bon->setDateLimiteExecution(new \DateTimeImmutable($dateLimite));
+            }
+            $typePrestationId = $request->query->get('typePrestation', '');
+            if ($typePrestationId) {
+                $typePrestation = $this->em->getRepository(TypePrestation::class)->find($typePrestationId);
+                if ($typePrestation) {
+                    $bon->setTypePrestation($typePrestation);
+                }
+            }
         }
 
         if ($request->isMethod('POST')) {
@@ -241,68 +252,233 @@ class BonDeCommandeController extends AbstractController
             $tmpPath = sys_get_temp_dir() . '/' . uniqid('ocr_') . '.' . $file->guessExtension();
             $file->move(sys_get_temp_dir(), basename($tmpPath));
 
-            $ocr = new TesseractOCR($tmpPath);
+            // Preprocessing pour améliorer la reconnaissance OCR
+            $processedPath = $this->preprocessImageForOcr($tmpPath);
+
+            $ocr = new TesseractOCR($processedPath);
             $text = $ocr->lang('fra', 'eng')->psm(3)->run();
 
             unlink($tmpPath);
+            if ($processedPath !== $tmpPath) {
+                unlink($processedPath);
+            }
+
+            $textBrut = $text; // Texte brut avant corrections
 
             // ---- Corrections OCR courantes ----
             $text = $this->fixOcrText($text);
 
-            // ---- Extraction basique ----
-            preg_match('/Commande\s*(?:n[\s°º]*)?[:\-\s]*([A-Z0-9]+)/i', $text, $mNumero);
-            preg_match('/éditée[, ]+le\s*([0-9\/]+)/i', $text, $mDate);
+            $allLines = array_values(array_filter(array_map('trim', explode("\n", $text))));
 
-            $start = stripos($text, 'Travaux à réaliser');
-            if ($start !== false) {
-                $text = substr($text, $start);
-            }
-
-            $lines = array_values(array_filter(array_map('trim', explode("\n", $text))));
-            $indexPrestation = null;
-            foreach ($lines as $i => $line) {
-                if (stripos($line, 'Prestation Parties Privatives') !== false) {
-                    $indexPrestation = $i;
-                    break;
-                }
-            }
-
+            $numeroCommande = '';
             $complement = '';
             $adresse = '';
             $nomClient = '';
             $telephone = '';
+            $codePostalVille = '';
+            $dateLimite = '';
 
-            if ($indexPrestation !== null) {
-                $complement = $lines[$indexPrestation + 1] ?? '';
-                $adresseLigne1 = $lines[$indexPrestation + 2] ?? '';
-                $adresseLigne2 = $lines[$indexPrestation + 3] ?? '';
-                $adresse = trim($adresseLigne1 . "\n" . $adresseLigne2);
-
-                foreach ($lines as $line) {
-                    if (stripos($line, 'Logement Occupé') !== false) {
-                        if (preg_match('/Logement\s+Occupé\s*:\s*(.*?)\s*-\s*Portable\s*:\s*([0-9]+)/i', $line, $m)) {
-                            $nomClient = trim($m[1]);
-                            $telephone = trim($m[2]);
-                        } elseif (preg_match('/Logement\s+Occupé\s*:\s*(.*)/i', $line, $m)) {
-                            $nomClient = trim($m[1]);
-                        }
-                        break;
-                    }
+            // 0. Date limite : "Travaux à réaliser pour le DD/MM/YYYY"
+            foreach ($allLines as $line) {
+                if (preg_match('/Travaux\s+.+\s+pour\s+le\s+(\d{2}\/\d{2}\/\d{4})/iu', $line, $m)) {
+                    $parts = explode('/', $m[1]);
+                    $dateLimite = $parts[2] . '-' . $parts[1] . '-' . $parts[0]; // YYYY-MM-DD
+                    break;
                 }
             }
 
-            // 🔁 Redirection vers formulaire "nouveau bon" avec données pré-remplies
+            // 1. N° Commande : chercher dans TOUT le texte "Commande n°XXXXX"
+            // Capture alphanumérique car le 1er caractère peut être une lettre (ex: I26280)
+            foreach ($allLines as $line) {
+                if (preg_match('/Commande\s*n.?\s*([A-Z0-9]{4,})/iu', $line, $m)) {
+                    $numeroCommande = trim($m[1]);
+                    // OCR confond souvent I→1, O→0 : le 1er caractère est toujours une lettre (Partenord)
+                    $firstChar = $numeroCommande[0] ?? '';
+                    if (ctype_digit($firstChar)) {
+                        $map = ['1' => 'I', '0' => 'O'];
+                        if (isset($map[$firstChar])) {
+                            $numeroCommande = $map[$firstChar] . substr($numeroCommande, 1);
+                        }
+                    }
+                    break;
+                }
+            }
+
+            // 2. Trouver la section "Prestation Parties Privatives" - les infos client sont APRÈS
+            $startIndex = 0;
+            foreach ($allLines as $i => $line) {
+                if (stripos($line, 'Prestation') !== false && stripos($line, 'Privatives') !== false) {
+                    $startIndex = $i + 1;
+                    break;
+                }
+            }
+
+            // 3. Extraire les données uniquement APRÈS le marqueur
+            $clientLines = array_slice($allLines, $startIndex);
+            foreach ($clientLines as $line) {
+                // Adresse : lettre ou numéro + type de voie
+                if (!$adresse && preg_match('/[A-Z0-9]+\s+(RUE|R|AVENUE|AV|BOULEVARD|BLVD|BD|ALL[EÉ]E|IMPASSE|IMP|CHEMIN|CH|PLACE|PL|ROUTE|RTE|PASSAGE|VOIE)\b/i', $line)) {
+                    $adresse = trim($line);
+                }
+
+                // Complément : ligne LOGEMENT n° avec étage/type
+                if (!$complement && preg_match('/LOGEMENT\s*n.?\s*\d+/iu', $line)) {
+                    $complement = trim($line);
+                }
+
+                // Code postal + ville (ex: "59120 LOOS")
+                if (!$codePostalVille && preg_match('/^\d{5}\s+[A-ZÉÈÊÀÂ\s-]+$/u', $line)) {
+                    $codePostalVille = trim($line);
+                }
+
+                // Nom : plusieurs formats possibles
+                if (!$nomClient) {
+                    $nameExtracted = null;
+                    // "M. MME NOM - ..." ou "M. NOM - ..."
+                    if (preg_match('/^M[.\s]+(MME\s+)?(.+?)\s*-\s*/i', $line, $m)) {
+                        $nameExtracted = trim($m[2]);
+                    // "MR NOM - ..." ou "MR ET MME NOM - ..."
+                    } elseif (preg_match('/^MR\s+(ET\s+MME\s+)?(.+?)\s*-\s*/i', $line, $m)) {
+                        $nameExtracted = trim($m[2]);
+                    // "Logement Occupé : MME NOM - ..." ou ": M. NOM - ..."
+                    } elseif (preg_match('/Logement\s+Occup.+?\s*:\s*(MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)?(.+?)\s*-\s*/iu', $line, $m)) {
+                        $nameExtracted = trim($m[2]);
+                    // Ligne commençant par ": M. NOM -" (Logement Occupé sur ligne précédente)
+                    } elseif (preg_match('/^:\s*(MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)(.+?)\s*-\s*/i', $line, $m)) {
+                        $nameExtracted = trim($m[2]);
+                    }
+                    if ($nameExtracted) {
+                        $nomClient = $nameExtracted;
+                    }
+                }
+
+                // Téléphone : priorité Portable > Téléphone
+                if (!$telephone && preg_match('/Portable\s*:\s*(\d+)/i', $line, $m)) {
+                    $telephone = trim($m[1]);
+                }
+                if (!$telephone && preg_match('/Téléphone\s*:\s*(\d+)/i', $line, $m)) {
+                    $telephone = trim($m[1]);
+                }
+            }
+
+            // Combiner adresse + code postal
+            if ($codePostalVille && $adresse) {
+                $adresse = $adresse . "\n" . $codePostalVille;
+            } elseif ($codePostalVille && !$adresse) {
+                $adresse = $codePostalVille;
+            }
+
+            // Détection automatique du type de prestation via code OCR
+            $detectedTypeId = '';
+            $typePrestations = $this->em->getRepository(TypePrestation::class)->findAll();
+            foreach ($typePrestations as $tp) {
+                $code = $tp->getCode();
+                if ($code && stripos($text, $code) !== false) {
+                    $detectedTypeId = $tp->getId();
+                    break;
+                }
+            }
+
+            // Log OCR pour debug
+            $logPath = $this->getParameter('kernel.project_dir') . '/var/ocr_debug.log';
+            $log = "=== OCR Import " . date('Y-m-d H:i:s') . " ===\n";
+            $log .= "Fichier: " . $file->getClientOriginalName() . "\n";
+            $log .= "\n--- TEXTE BRUT (avant corrections) ---\n";
+            $log .= $textBrut . "\n";
+            $log .= "\n--- TEXTE CORRIGÉ (après fixOcrText) ---\n";
+            $log .= $text . "\n";
+            $log .= "\n--- DONNÉES EXTRAITES ---\n";
+            $log .= "N° Commande: " . ($numeroCommande ?: 'NON TROUVÉ') . "\n";
+            $log .= "Nom client: " . ($nomClient ?: 'NON TROUVÉ') . "\n";
+            $log .= "Téléphone: " . ($telephone ?: 'NON TROUVÉ') . "\n";
+            $log .= "Adresse: " . ($adresse ?: 'NON TROUVÉ') . "\n";
+            $log .= "Complément: " . ($complement ?: 'NON TROUVÉ') . "\n";
+            $log .= "Code postal+ville: " . ($codePostalVille ?: 'NON TROUVÉ') . "\n";
+            $log .= "Date limite: " . ($dateLimite ?: 'NON TROUVÉ') . "\n";
+            $log .= "Type prestation détecté: " . ($detectedTypeId ?: 'NON TROUVÉ') . "\n";
+            $log .= "Section client (après index $startIndex) ---\n";
+            foreach ($clientLines as $i => $line) {
+                $log .= "  [$i] $line\n";
+            }
+            $log .= "\n--- TOUTES LES LIGNES ---\n";
+            foreach ($allLines as $i => $line) {
+                $log .= "[$i] $line\n";
+            }
+            $log .= "\n\n";
+            file_put_contents($logPath, $log, FILE_APPEND);
+
+            // Redirection vers formulaire "nouveau bon" avec données pré-remplies
             return $this->redirectToRoute('admin_bon_commande_new', [
-                'numeroCommande' => $mNumero[1] ?? '',
+                'numeroCommande' => $numeroCommande,
                 'clientNom' => $nomClient,
                 'clientAdresse' => $adresse,
                 'clientTelephone' => $telephone,
                 'clientComplementAdresse' => $complement,
+                'dateLimiteExecution' => $dateLimite,
+                'typePrestation' => $detectedTypeId,
             ]);
         }
 
         $this->addFlash('danger', 'Aucun fichier reçu');
         return $this->redirectToRoute('admin_bon_commande_index');
+    }
+
+    // =====================================================
+    // MÉTHODE PRIVÉE : PREPROCESSING IMAGE POUR OCR
+    // =====================================================
+    private function preprocessImageForOcr(string $imagePath): string
+    {
+        $ext = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
+
+        // Charger l'image
+        $image = match ($ext) {
+            'png' => @imagecreatefrompng($imagePath),
+            'jpg', 'jpeg' => @imagecreatefromjpeg($imagePath),
+            'webp' => @imagecreatefromwebp($imagePath),
+            'bmp' => @imagecreatefrombmp($imagePath),
+            default => false,
+        };
+
+        if (!$image) {
+            return $imagePath;
+        }
+
+        // 1. Corriger l'orientation EXIF (photos téléphone)
+        if (in_array($ext, ['jpg', 'jpeg'])) {
+            $exif = @exif_read_data($imagePath);
+            if ($exif && isset($exif['Orientation'])) {
+                $image = match ((int)$exif['Orientation']) {
+                    3 => imagerotate($image, 180, 0),
+                    6 => imagerotate($image, -90, 0),
+                    8 => imagerotate($image, 90, 0),
+                    default => $image,
+                };
+            }
+        }
+
+        $width = imagesx($image);
+        $height = imagesy($image);
+
+        // 2. Upscale si image trop petite (Tesseract optimal avec des images larges)
+        if ($width < 2000) {
+            $scale = 2000 / $width;
+            $newWidth = (int)($width * $scale);
+            $newHeight = (int)($height * $scale);
+            $resized = imagecreatetruecolor($newWidth, $newHeight);
+            imagecopyresampled($resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+            imagedestroy($image);
+            $image = $resized;
+        }
+
+        // 3. Niveaux de gris (aide Tesseract à se concentrer sur le texte)
+        imagefilter($image, IMG_FILTER_GRAYSCALE);
+
+        // Sauvegarder en PNG (sans perte)
+        $outputPath = sys_get_temp_dir() . '/' . uniqid('ocr_processed_') . '.png';
+        imagepng($image, $outputPath, 0);
+        imagedestroy($image);
+
+        return $outputPath;
     }
 
     // =====================================================
@@ -318,16 +494,13 @@ class BonDeCommandeController extends AbstractController
         $text = preg_replace('/\[(?=[A-ZÉÈÊÀÂ])/u', '1', $text);
         $text = preg_replace('/\](?=[A-ZÉÈÊÀÂ])/u', '1', $text);
 
-        // | confondu avec 1 ou l devant un espace + lettre
-        $text = preg_replace('/\|\s+(?=RUE|AVENUE|BOULEVARD|BLVD|ALLEE|ALLÉE|IMPASSE|CHEMIN|PLACE|ROUTE|PASSAGE)/i', '1 ', $text);
+        // | confondu avec I (lettre) devant un nom de rue
+        $text = preg_replace('/\|\s+(?=RUE|AVENUE|BOULEVARD|BLVD|ALLEE|ALLÉE|IMPASSE|CHEMIN|PLACE|ROUTE|PASSAGE)\b/i', 'I ', $text);
 
         // O confondu avec 0 dans les numéros de téléphone (séquences de chiffres)
         $text = preg_replace_callback('/\b([\d]{2}[\s.]?){4}[\d]{2}\b/', function ($m) {
             return str_replace(['O', 'o'], '0', $m[0]);
         }, $text);
-
-        // l ou I isolé devant un numéro de rue → 1
-        $text = preg_replace('/\b[lI]\s+(?=RUE|AVENUE|BOULEVARD|BLVD|ALLEE|ALLÉE|IMPASSE|CHEMIN|PLACE|ROUTE|PASSAGE)/i', '1 ', $text);
 
         return $text;
     }
@@ -339,7 +512,7 @@ class BonDeCommandeController extends AbstractController
     {
         $bon->setNumeroCommande($request->request->get('numeroCommande'));
         $bon->setClientNom($request->request->get('clientNom'));
-        $bon->setClientEmail($request->request->get('clientEmail'));
+        $bon->setClientEmail($request->request->get('clientEmail') ?: null);
         $bon->setClientTelephone($request->request->get('clientTelephone'));
         $bon->setClientAdresse($request->request->get('clientAdresse'));
         $bon->setClientComplementAdresse($request->request->get('clientComplementAdresse'));
@@ -364,7 +537,7 @@ class BonDeCommandeController extends AbstractController
         }
 
         // Validation basique
-        if (!$bon->getClientNom() || !$bon->getClientEmail() || !$bon->getClientTelephone()) {
+        if (!$bon->getClientNom() || !$bon->getClientTelephone()) {
             $this->addFlash('danger', 'Veuillez remplir tous les champs obligatoires');
             return $this->redirectToRoute($isNew ? 'admin_bon_commande_new' : 'admin_bon_commande_edit', 
                 $isNew ? [] : ['id' => $bon->getId()]

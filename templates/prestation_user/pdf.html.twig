@@ -119,6 +119,57 @@
     <table>
         <tr>
             <td style="height: 390px;">
+                {# Infos intervention #}
+                {% set infos = prestation.infosIntervention ?? {} %}
+                {% if infos is not empty %}
+                <table style="width: 100%; margin-bottom: 10px; border-collapse: collapse;">
+                    <tr>
+                        <td style="border: 1px solid #999; padding: 4px 6px; width: 25%;">
+                            <strong>Présence constatée</strong><br>{{ infos.presenceConstatee|default('-')|upper }}
+                        </td>
+                        <td style="border: 1px solid #999; padding: 4px 6px; width: 25%;">
+                            <strong>Niveau infestation</strong><br>{{ infos.niveauInfestation|default('-')|capitalize }}
+                        </td>
+                        <td style="border: 1px solid #999; padding: 4px 6px; width: 25%;">
+                            <strong>Logement propre</strong><br>{{ infos.logementPropre|default('-')|upper }}
+                        </td>
+                        <td style="border: 1px solid #999; padding: 4px 6px; width: 25%;">
+                            <strong>Logement encombré</strong><br>{{ infos.logementEncombre|default('-')|upper }}
+                        </td>
+                    </tr>
+                </table>
+                {% endif %}
+
+                {# Champs personnalisés #}
+                {% set typePrestation = prestation.bonDeCommande ? prestation.bonDeCommande.typePrestation : prestation.typePrestation %}
+                {% if typePrestation and typePrestation.champsPersonnalises is not empty %}
+                    {% set valeurs = prestation.valeursChampsPersonnalises ?? [] %}
+                    <table style="width: 100%; margin-bottom: 10px; border-collapse: collapse;">
+                        {% for champ in typePrestation.champsPersonnalises|sort((a, b) => a.position <=> b.position) %}
+                            {% set valeur = null %}
+                            {% for v in valeurs %}
+                                {% if v.label == champ.label %}
+                                    {% set valeur = v %}
+                                {% endif %}
+                            {% endfor %}
+                            <tr>
+                                <td style="width: 30px; text-align: center; border: 1px solid #999; padding: 3px;">
+                                    {{ valeur.checked|default(false) ? '[X]' : '[ ]' }}
+                                </td>
+                                <td style="border: 1px solid #999; padding: 3px 6px;">
+                                    {{ champ.label }}
+                                </td>
+                                <td style="width: 90px; text-align: center; border: 1px solid #999; padding: 3px;">
+                                    {% if champ.type == 'checkbox_number' and valeur.value is defined and valeur.value is not null %}
+                                        Nb : {{ valeur.value }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                {% endif %}
                 {{ prestation.compteRendu|raw }}
             </td>
         </tr>

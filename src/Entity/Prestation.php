@@ -113,6 +113,36 @@ class Prestation
     #[Groups(['prestation:read', 'prestation:signature'])]
     private ?string $signature = null;
 
+    #[ORM\Column(type: 'json', nullable: true)]
+    #[Groups(['prestation:read', 'prestation:write'])]
+    private ?array $valeursChampsPersonnalises = null;
+
+    #[ORM\Column(type: 'json', nullable: true)]
+    #[Groups(['prestation:read', 'prestation:write'])]
+    private ?array $infosIntervention = null;
+
+    public function getInfosIntervention(): ?array
+    {
+        return $this->infosIntervention;
+    }
+
+    public function setInfosIntervention(?array $infosIntervention): static
+    {
+        $this->infosIntervention = $infosIntervention;
+        return $this;
+    }
+
+    public function getValeursChampsPersonnalises(): ?array
+    {
+        return $this->valeursChampsPersonnalises;
+    }
+
+    public function setValeursChampsPersonnalises(?array $valeursChampsPersonnalises): static
+    {
+        $this->valeursChampsPersonnalises = $valeursChampsPersonnalises;
+        return $this;
+    }
+
     public function getCompteRendu(): ?string
     {
         return $this->compteRendu;

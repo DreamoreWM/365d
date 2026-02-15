@@ -119,7 +119,25 @@ class TypePrestationController extends AbstractController
     private function handleForm(Request $request, TypePrestation $type, bool $isNew): Response
     {
         $type->setNom($request->request->get('nom'));
+        $type->setCode($request->request->get('code') ?: null);
         $type->setNombrePrestationsNecessaires((int) $request->request->get('nombrePrestationsNecessaires', 1));
+
+        // Champs personnalises
+        $champsJson = $request->request->get('champs_personnalises', '[]');
+        $champs = json_decode($champsJson, true);
+        if (is_array($champs)) {
+            $sanitized = [];
+            foreach ($champs as $i => $champ) {
+                if (!empty(trim($champ['label'] ?? ''))) {
+                    $sanitized[] = [
+                        'label' => trim($champ['label']),
+                        'type' => in_array($champ['type'] ?? '', ['checkbox', 'checkbox_number']) ? $champ['type'] : 'checkbox',
+                        'position' => $i,
+                    ];
+                }
+            }
+            $type->setChampsPersonnalises(empty($sanitized) ? null : $sanitized);
+        }
 
         // Validation basique
         if (!$type->getNom()) {

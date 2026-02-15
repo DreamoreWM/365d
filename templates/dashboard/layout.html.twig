@@ -362,6 +362,11 @@
             font-size: 1.2rem;
         }
     }
+
+    @keyframes flashSlideIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
     </style>
 </head>
 
@@ -512,6 +517,36 @@
 
 <!-- CONTENT -->
 <main class="content">
+    {# Flash messages globaux - consommés sur chaque page #}
+    {% for type, messages in app.flashes %}
+        {% for message in messages %}
+            <div class="global-flash global-flash--{{ type }}" style="
+                max-width: 800px;
+                margin: 16px auto;
+                padding: 14px 20px;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                font-size: 0.95rem;
+                animation: flashSlideIn 0.3s ease;
+                {% if type == 'success' %}
+                    background: #4caf50; color: white;
+                {% elseif type == 'error' %}
+                    background: #ef5350; color: white;
+                {% elseif type == 'warning' %}
+                    background: #ff9800; color: white;
+                {% else %}
+                    background: #2196f3; color: white;
+                {% endif %}
+            ">
+                <i class="material-icons">
+                    {% if type == 'success' %}check_circle{% elseif type == 'error' %}error{% elseif type == 'warning' %}warning{% else %}info{% endif %}
+                </i>
+                <span>{{ message }}</span>
+            </div>
+        {% endfor %}
+    {% endfor %}
     {% block content %}
         <div class="mdl-grid">
             <div class="mdl-cell mdl-cell--12-col">

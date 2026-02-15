@@ -52,6 +52,14 @@ class TypePrestation
     #[Groups(['type:read', 'type:write', 'bon:read'])]
     private ?int $nombrePrestationsNecessaires = 1;
 
+    #[ORM\Column(length: 50, nullable: true)]
+    #[Groups(['type:read', 'type:write', 'bon:read'])]
+    private ?string $code = null;
+
+    #[ORM\Column(type: 'json', nullable: true)]
+    #[Groups(['type:read', 'type:write', 'bon:read'])]
+    private ?array $champsPersonnalises = null;
+
     #[ORM\OneToMany(mappedBy: 'typePrestation', targetEntity: Prestation::class)]
     private Collection $prestations;
 
@@ -61,6 +69,28 @@ class TypePrestation
     }
 
 
+
+    public function getCode(): ?string
+    {
+        return $this->code;
+    }
+
+    public function setCode(?string $code): static
+    {
+        $this->code = $code;
+        return $this;
+    }
+
+    public function getChampsPersonnalises(): ?array
+    {
+        return $this->champsPersonnalises;
+    }
+
+    public function setChampsPersonnalises(?array $champsPersonnalises): static
+    {
+        $this->champsPersonnalises = $champsPersonnalises;
+        return $this;
+    }
 
     public function getNombrePrestationsNecessaires(): ?int
     {

@@ -65,7 +65,7 @@ class BonDeCommande
     #[Groups(['bon:read', 'bon:write'])]
     private ?string $clientTelephone = null;
 
-    #[ORM\Column(length: 180)]
+    #[ORM\Column(length: 180, nullable: true)]
     #[Groups(['bon:read', 'bon:write'])]
     private ?string $clientEmail = null;
 
@@ -180,7 +180,7 @@ class BonDeCommande
         return $this->clientEmail;
     }
 
-    public function setClientEmail(string $clientEmail): static
+    public function setClientEmail(?string $clientEmail): static
     {
         $this->clientEmail = $clientEmail;
         return $this;

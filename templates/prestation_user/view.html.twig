@@ -1,6 +1,6 @@
 {% extends 'dashboard/layout.html.twig' %}
 
-{% set isTermine = prestation.statut.value == 'terminé' %}
+{% set isTermine = prestation.statut.value == 'terminé' and not editMode|default(false) %}
 
 {% block title %}Prestation - {{ prestation.bonDeCommande.clientNom }}{% endblock %}
 
@@ -600,10 +600,18 @@
                 <i class="material-icons">arrow_back</i>
                 Retour au planning
             </a>
-            <span class="header-status-badge">
-                <i class="material-icons">{{ prestation.statut.icon() }}</i>
-                {{ prestation.statut.label() }}
-            </span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                {% if isTermine %}
+                    <a href="{{ path('app_user_prestation_view', {id: prestation.id, edit: 1}) }}" class="back-btn" style="background: rgba(255,255,255,0.25);">
+                        <i class="material-icons">edit</i>
+                        Modifier
+                    </a>
+                {% endif %}
+                <span class="header-status-badge">
+                    <i class="material-icons">{{ prestation.statut.icon() }}</i>
+                    {{ prestation.statut.label() }}
+                </span>
+            </div>
         </div>
 
         <div class="header-main">
@@ -750,13 +758,7 @@
     </div>
     {% endif %}
 
-    {# ===== SUCCESS MESSAGES ===== #}
-    {% for message in app.flashes('success') %}
-        <div class="alert-success">
-            <i class="material-icons">check_circle</i>
-            <span>{{ message }}</span>
-        </div>
-    {% endfor %}
+    {# Flash messages gérés par le layout global #}
 
     {# ===== TERMINATED MODE: READ-ONLY ===== #}
     {% if isTermine %}
@@ -776,6 +778,94 @@
                 {% endif %}
             </div>
         </div>
+
+        {# Infos intervention read-only #}
+        {% set infos = prestation.infosIntervention ?? {} %}
+        {% if infos is not empty %}
+        <div class="section-card">
+            <div class="section-title">
+                <i class="material-icons">fact_check</i>
+                <span>Informations intervention</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 12px; padding: 14px; background: rgba(63, 81, 181, 0.05); border-radius: 8px;">
+                    <i class="material-icons" style="color: {{ infos.presenceConstatee|default('') == 'oui' ? '#4caf50' : '#ef5350' }};">
+                        {{ infos.presenceConstatee|default('') == 'oui' ? 'person' : 'person_off' }}
+                    </i>
+                    <div>
+                        <div style="font-size: 0.8rem; color: #757575;">Présence constatée</div>
+                        <div style="font-weight: 500;">{{ infos.presenceConstatee|default('-')|capitalize }}</div>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 12px; padding: 14px; background: rgba(63, 81, 181, 0.05); border-radius: 8px;">
+                    <i class="material-icons" style="color: {{ infos.niveauInfestation|default('') == 'eleve' ? '#ef5350' : (infos.niveauInfestation|default('') == 'moyen' ? '#ff9800' : '#4caf50') }};">
+                        bug_report
+                    </i>
+                    <div>
+                        <div style="font-size: 0.8rem; color: #757575;">Niveau d'infestation</div>
+                        <div style="font-weight: 500;">{{ infos.niveauInfestation|default('-')|capitalize }}</div>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 12px; padding: 14px; background: rgba(63, 81, 181, 0.05); border-radius: 8px;">
+                    <i class="material-icons" style="color: {{ infos.logementPropre|default('') == 'oui' ? '#4caf50' : '#ef5350' }};">
+                        {{ infos.logementPropre|default('') == 'oui' ? 'cleaning_services' : 'warning' }}
+                    </i>
+                    <div>
+                        <div style="font-size: 0.8rem; color: #757575;">Logement propre</div>
+                        <div style="font-weight: 500;">{{ infos.logementPropre|default('-')|capitalize }}</div>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 12px; padding: 14px; background: rgba(63, 81, 181, 0.05); border-radius: 8px;">
+                    <i class="material-icons" style="color: {{ infos.logementEncombre|default('') == 'oui' ? '#ef5350' : '#4caf50' }};">
+                        {{ infos.logementEncombre|default('') == 'oui' ? 'inventory_2' : 'check_circle' }}
+                    </i>
+                    <div>
+                        <div style="font-size: 0.8rem; color: #757575;">Logement encombré</div>
+                        <div style="font-weight: 500;">{{ infos.logementEncombre|default('-')|capitalize }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# Custom fields read-only #}
+        {% set typePrestation = prestation.bonDeCommande ? prestation.bonDeCommande.typePrestation : prestation.typePrestation %}
+        {% if typePrestation and typePrestation.champsPersonnalises is not empty %}
+        <div class="section-card">
+            <div class="section-title">
+                <i class="material-icons">checklist</i>
+                <span>Détails de l'intervention</span>
+            </div>
+
+            {% set valeurs = prestation.valeursChampsPersonnalises ?? [] %}
+            <div style="display: grid; gap: 10px;">
+                {% for champ in typePrestation.champsPersonnalises|sort((a, b) => a.position <=> b.position) %}
+                    {% set valeur = null %}
+                    {% for v in valeurs %}
+                        {% if v.label == champ.label %}
+                            {% set valeur = v %}
+                        {% endif %}
+                    {% endfor %}
+
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 14px; background: rgba(63, 81, 181, 0.05); border-radius: 8px;">
+                        <i class="material-icons" style="color: {{ valeur.checked|default(false) ? '#4caf50' : '#bdbdbd' }}; font-size: 24px;">
+                            {{ valeur.checked|default(false) ? 'check_box' : 'check_box_outline_blank' }}
+                        </i>
+                        <span style="flex: 1; font-weight: 500;">{{ champ.label }}</span>
+                        {% if champ.type == 'checkbox_number' and valeur.value is defined and valeur.value is not null %}
+                            <span style="background: var(--primary); color: white; padding: 4px 14px; border-radius: 16px; font-size: 0.9rem; font-weight: 500;">
+                                {{ valeur.value }}
+                            </span>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
 
         {# Signature read-only #}
         {% if prestation.signature %}
@@ -846,6 +936,110 @@
                 </div>
             </div>
 
+            {# Infos intervention #}
+            {% set infos = prestation.infosIntervention ?? {} %}
+            <div class="section-card">
+                <div class="section-title">
+                    <i class="material-icons">fact_check</i>
+                    <span>Informations intervention</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    {# Présence constatée #}
+                    <div style="padding: 14px 16px; background: rgba(63, 81, 181, 0.05); border-radius: 8px; border-left: 4px solid var(--primary);">
+                        <div style="font-weight: 500; margin-bottom: 8px;">Présence constatée</div>
+                        <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; margin-right: 16px;">
+                            <input type="radio" name="presence_constatee" value="oui" {{ infos.presenceConstatee|default('') == 'oui' ? 'checked' : '' }}> Oui
+                        </label>
+                        <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="radio" name="presence_constatee" value="non" {{ infos.presenceConstatee|default('') == 'non' ? 'checked' : '' }}> Non
+                        </label>
+                    </div>
+
+                    {# Niveau infestation #}
+                    <div style="padding: 14px 16px; background: rgba(63, 81, 181, 0.05); border-radius: 8px; border-left: 4px solid var(--primary);">
+                        <div style="font-weight: 500; margin-bottom: 8px;">Niveau d'infestation</div>
+                        <select name="niveau_infestation" style="width: 100%; padding: 8px; border: 1px solid var(--border-light); border-radius: 6px; font-size: 0.95rem; background: var(--card-light); color: var(--text-light);">
+                            <option value="">--</option>
+                            <option value="faible" {{ infos.niveauInfestation|default('') == 'faible' ? 'selected' : '' }}>Faible</option>
+                            <option value="moyen" {{ infos.niveauInfestation|default('') == 'moyen' ? 'selected' : '' }}>Moyen</option>
+                            <option value="eleve" {{ infos.niveauInfestation|default('') == 'eleve' ? 'selected' : '' }}>Élevé</option>
+                        </select>
+                    </div>
+
+                    {# Logement propre #}
+                    <div style="padding: 14px 16px; background: rgba(63, 81, 181, 0.05); border-radius: 8px; border-left: 4px solid var(--primary);">
+                        <div style="font-weight: 500; margin-bottom: 8px;">Logement propre</div>
+                        <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; margin-right: 16px;">
+                            <input type="radio" name="logement_propre" value="oui" {{ infos.logementPropre|default('') == 'oui' ? 'checked' : '' }}> Oui
+                        </label>
+                        <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="radio" name="logement_propre" value="non" {{ infos.logementPropre|default('') == 'non' ? 'checked' : '' }}> Non
+                        </label>
+                    </div>
+
+                    {# Logement encombré #}
+                    <div style="padding: 14px 16px; background: rgba(63, 81, 181, 0.05); border-radius: 8px; border-left: 4px solid var(--primary);">
+                        <div style="font-weight: 500; margin-bottom: 8px;">Logement encombré</div>
+                        <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; margin-right: 16px;">
+                            <input type="radio" name="logement_encombre" value="oui" {{ infos.logementEncombre|default('') == 'oui' ? 'checked' : '' }}> Oui
+                        </label>
+                        <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="radio" name="logement_encombre" value="non" {{ infos.logementEncombre|default('') == 'non' ? 'checked' : '' }}> Non
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            {# Custom fields editable #}
+            {% set typePrestation = prestation.bonDeCommande ? prestation.bonDeCommande.typePrestation : prestation.typePrestation %}
+            {% if typePrestation and typePrestation.champsPersonnalises is not empty %}
+            <div class="section-card">
+                <div class="section-title">
+                    <i class="material-icons">checklist</i>
+                    <span>Détails de l'intervention</span>
+                </div>
+
+                <div class="helper-text">
+                    <i class="material-icons">info</i>
+                    <span>Cochez les cases correspondantes et renseignez les valeurs numériques si nécessaire</span>
+                </div>
+
+                <input type="hidden" name="valeurs_champs_personnalises" id="valeurs-champs-input">
+
+                {% set valeurs = prestation.valeursChampsPersonnalises ?? [] %}
+                <div id="custom-fields-employee" style="display: grid; gap: 10px;">
+                    {% for champ in typePrestation.champsPersonnalises|sort((a, b) => a.position <=> b.position) %}
+                        {% set valeur = null %}
+                        {% for v in valeurs %}
+                            {% if v.label == champ.label %}
+                                {% set valeur = v %}
+                            {% endif %}
+                        {% endfor %}
+
+                        <div class="custom-field-input" data-label="{{ champ.label }}" data-type="{{ champ.type }}"
+                             style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: rgba(63, 81, 181, 0.05); border-radius: 8px; border-left: 4px solid var(--primary);">
+
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" class="champ-checkbox"
+                                       {{ valeur.checked|default(false) ? 'checked' : '' }}
+                                       style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+                            </label>
+
+                            <span style="flex: 1; font-weight: 500; font-size: 1rem;">{{ champ.label }}</span>
+
+                            {% if champ.type == 'checkbox_number' %}
+                                <input type="number" class="champ-number" min="0"
+                                       value="{{ valeur.value|default('') }}"
+                                       placeholder="Nb"
+                                       style="width: 70px; text-align: center; border: 1px solid var(--border-light); border-radius: 6px; padding: 8px; font-size: 0.95rem; background: var(--card-light); color: var(--text-light);">
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             {# Signature pad #}
             <div class="section-card">
                 <div class="section-title">
@@ -887,23 +1081,26 @@
                 {% endif %}
             </div>
 
-            {# Save button #}
+            {# Action buttons #}
             <div class="action-buttons">
-                <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
-                    <i class="material-icons">save</i>
-                    Enregistrer les modifications
-                </button>
-            </div>
-        </form>
-
-        {# Terminate button #}
-        <form method="post" action="{{ path('app_user_prestation_terminer', {id: prestation.id}) }}" data-turbo="false">
-            <div class="action-buttons">
-                <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent"
-                        onclick="return confirm('Êtes-vous sûr de vouloir terminer cette prestation ? Cette action est irréversible.');">
-                    <i class="material-icons">check_circle</i>
-                    Terminer la prestation
-                </button>
+                {% if prestation.statut.value == 'terminé' %}
+                    {# Mode édition d'une prestation déjà terminée #}
+                    <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                        <i class="material-icons">save</i>
+                        Enregistrer les corrections
+                    </button>
+                    <a href="{{ path('app_user_prestation_view', {id: prestation.id}) }}" class="mdl-button mdl-js-button mdl-button--raised">
+                        <i class="material-icons">close</i>
+                        Annuler
+                    </a>
+                {% else %}
+                    {# Prestation en cours : valider directement #}
+                    <button type="submit" name="valider" value="1" class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent"
+                            onclick="return confirm('Êtes-vous sûr de vouloir valider cette prestation ?');">
+                        <i class="material-icons">check_circle</i>
+                        Valider l'intervention
+                    </button>
+                {% endif %}
             </div>
         </form>
 
@@ -1006,12 +1203,30 @@ document.getElementById('undo').addEventListener('click', () => {
     }
 });
 
-// Form submission - sync Quill + Signature
+// Form submission - sync Quill + Signature + Custom fields
 document.getElementById('prestation-form').addEventListener('submit', () => {
     // Sync Quill HTML to hidden input
     const crInput = document.getElementById('compte-rendu-input');
     const html = quill.root.innerHTML;
     crInput.value = (html === '<p><br></p>') ? '' : html;
+
+    // Sync custom fields
+    const champsInput = document.getElementById('valeurs-champs-input');
+    if (champsInput) {
+        const rows = document.querySelectorAll('.custom-field-input');
+        const values = [];
+        rows.forEach(row => {
+            const checkbox = row.querySelector('.champ-checkbox');
+            const numberInput = row.querySelector('.champ-number');
+            values.push({
+                label: row.dataset.label,
+                type: row.dataset.type,
+                checked: checkbox ? checkbox.checked : false,
+                value: numberInput && numberInput.value ? parseInt(numberInput.value) : null
+            });
+        });
+        champsInput.value = JSON.stringify(values);
+    }
 
     // Sync signature
     const sigInput = document.getElementById("signature-input");

@@ -139,8 +139,13 @@
                 <label class="mdl-textfield__label" for="nom">Nom du type *</label>
             </div>
 
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ type.code ? 'is-dirty' : '' }}">
+                <input class="mdl-textfield__input" type="text" id="code" name="code" value="{{ type.code }}">
+                <label class="mdl-textfield__label" for="code">Code OCR (ex: CPA029)</label>
+            </div>
+
             <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ type.nombrePrestationsNecessaires ? 'is-dirty' : '' }}">
-                <input class="mdl-textfield__input" type="number" id="nombrePrestationsNecessaires" name="nombrePrestationsNecessaires" 
+                <input class="mdl-textfield__input" type="number" id="nombrePrestationsNecessaires" name="nombrePrestationsNecessaires"
                        value="{{ type.nombrePrestationsNecessaires ?? 1 }}" min="1" required>
                 <label class="mdl-textfield__label" for="nombrePrestationsNecessaires">Nombre de prestations nécessaires *</label>
                 <span class="mdl-textfield__error">Le nombre doit être au moins 1</span>
@@ -150,13 +155,35 @@
                 <div style="display: flex; align-items: flex-start; gap: 12px;">
                     <i class="material-icons" style="color: var(--primary); font-size: 24px;">lightbulb</i>
                     <div>
-                        <div style="font-weight: 500; margin-bottom: 8px; color: var(--text-light);">💡 Exemple d'utilisation</div>
+                        <div style="font-weight: 500; margin-bottom: 8px; color: var(--text-light);">Exemple d'utilisation</div>
                         <div style="font-size: 0.875rem; color: #757575; line-height: 1.6;">
-                            Si vous créez un type "Désinsectisation appartement" avec 3 prestations nécessaires, 
+                            Si vous créez un type "Désinsectisation appartement" avec 3 prestations nécessaires,
                             chaque bon de commande de ce type devra avoir exactement 3 prestations programmées pour être considéré comme terminé.
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Champs personnalisés -->
+            <div style="margin-bottom: 24px; padding-top: 24px; border-top: 1px solid var(--border-light);">
+                <h3 style="display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 1.1rem; font-weight: 500; color: var(--text-light);">
+                    <i class="material-icons" style="color: var(--primary);">tune</i>
+                    Champs personnalisés
+                </h3>
+
+                <div class="helper-text" style="margin-bottom: 16px;">
+                    <i class="material-icons">info</i>
+                    <span>Définissez les champs que les employés devront remplir lors de l'intervention (cases à cocher, compteurs...)</span>
+                </div>
+
+                <div id="custom-fields-container"></div>
+
+                <button type="button" id="add-custom-field-btn" class="mdl-button mdl-js-button mdl-button--raised" style="margin-top: 8px;">
+                    <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">add</i>
+                    Ajouter un champ
+                </button>
+
+                <input type="hidden" name="champs_personnalises" id="champs-personnalises-input">
             </div>
 
             <!-- Action Buttons -->
@@ -177,6 +204,103 @@
 
 </div>
 
+<style>
+    .custom-field-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        margin-bottom: 8px;
+        background: rgba(63, 81, 181, 0.05);
+        border-radius: 8px;
+        border-left: 4px solid var(--primary);
+    }
+
+    body.dark-mode .custom-field-row {
+        background: rgba(63, 81, 181, 0.1);
+    }
+
+    .custom-field-row .field-label {
+        flex: 1;
+        padding: 8px 12px;
+        border: 1px solid var(--border-light);
+        border-radius: 6px;
+        background: var(--card-light);
+        color: var(--text-light);
+        font-size: 0.9rem;
+    }
+
+    body.dark-mode .custom-field-row .field-label {
+        background: var(--card-dark);
+        color: var(--text-dark);
+        border-color: var(--border-dark);
+    }
+
+    .custom-field-row .field-type-select {
+        padding: 8px 10px;
+        border: 1px solid var(--border-light);
+        border-radius: 6px;
+        background: var(--card-light);
+        color: var(--text-light);
+        font-size: 0.85rem;
+        cursor: pointer;
+    }
+
+    body.dark-mode .custom-field-row .field-type-select {
+        background: var(--card-dark);
+        color: var(--text-dark);
+        border-color: var(--border-dark);
+    }
+
+    .custom-field-row .remove-field-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: none;
+        background: transparent;
+        color: #f44336;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
+
+    .custom-field-row .remove-field-btn:hover {
+        background: rgba(244, 67, 54, 0.1);
+    }
+
+    .custom-field-empty {
+        padding: 16px;
+        text-align: center;
+        color: #757575;
+        font-size: 0.875rem;
+        border: 2px dashed var(--border-light);
+        border-radius: 8px;
+    }
+
+    body.dark-mode .custom-field-empty {
+        border-color: var(--border-dark);
+        color: #999;
+    }
+
+    @media (max-width: 600px) {
+        .custom-field-row {
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .custom-field-row .field-label {
+            width: 100%;
+            flex: none;
+        }
+
+        .custom-field-row .field-type-select {
+            flex: 1;
+        }
+    }
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.mdl-textfield').forEach(field => {
@@ -185,6 +309,89 @@ document.addEventListener('DOMContentLoaded', function() {
             field.classList.add('is-dirty');
         }
     });
+
+    // ==================== CUSTOM FIELDS BUILDER ====================
+    const container = document.getElementById('custom-fields-container');
+    const addBtn = document.getElementById('add-custom-field-btn');
+    const hiddenInput = document.getElementById('champs-personnalises-input');
+
+    let fields = {{ type.champsPersonnalises|json_encode|default('[]')|raw }};
+    if (!Array.isArray(fields)) fields = [];
+
+    function renderFields() {
+        if (fields.length === 0) {
+            container.innerHTML = '<div class="custom-field-empty"><i class="material-icons" style="vertical-align: middle; margin-right: 4px;">info</i>Aucun champ personnalisé</div>';
+            syncHiddenInput();
+            return;
+        }
+
+        container.innerHTML = '';
+        fields.forEach((field, index) => {
+            const row = document.createElement('div');
+            row.className = 'custom-field-row';
+            row.dataset.index = index;
+            row.innerHTML = `
+                <i class="material-icons" style="color: #757575; font-size: 20px;">drag_indicator</i>
+                <input type="text" class="field-label" placeholder="Nom du champ" value="${escapeHtml(field.label || '')}">
+                <select class="field-type-select">
+                    <option value="checkbox" ${field.type === 'checkbox' ? 'selected' : ''}>Case à cocher</option>
+                    <option value="checkbox_number" ${field.type === 'checkbox_number' ? 'selected' : ''}>Case + Nombre</option>
+                </select>
+                <button type="button" class="remove-field-btn" title="Supprimer">
+                    <i class="material-icons">delete</i>
+                </button>
+            `;
+            container.appendChild(row);
+        });
+
+        syncHiddenInput();
+    }
+
+    function syncHiddenInput() {
+        const rows = container.querySelectorAll('.custom-field-row');
+        const result = [];
+        rows.forEach((row, i) => {
+            const label = row.querySelector('.field-label')?.value.trim();
+            const type = row.querySelector('.field-type-select')?.value;
+            if (label) {
+                result.push({ label, type: type || 'checkbox', position: i });
+            }
+        });
+        hiddenInput.value = JSON.stringify(result);
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    addBtn.addEventListener('click', () => {
+        fields.push({ label: '', type: 'checkbox', position: fields.length });
+        renderFields();
+        // Focus the new input
+        const inputs = container.querySelectorAll('.field-label');
+        if (inputs.length) inputs[inputs.length - 1].focus();
+    });
+
+    container.addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('.remove-field-btn');
+        if (removeBtn) {
+            const row = removeBtn.closest('.custom-field-row');
+            const index = parseInt(row.dataset.index);
+            fields.splice(index, 1);
+            renderFields();
+        }
+    });
+
+    // Sync on any input change
+    container.addEventListener('input', syncHiddenInput);
+    container.addEventListener('change', syncHiddenInput);
+
+    // Sync before form submit
+    document.querySelector('form').addEventListener('submit', syncHiddenInput);
+
+    renderFields();
 });
 </script>
 

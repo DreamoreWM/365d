@@ -210,13 +210,7 @@
         </h2>
     </div>
 
-    <!-- Success Messages -->
-    {% for message in app.flashes('success') %}
-        <div class="alert-success">
-            <i class="material-icons">check_circle</i>
-            <span>{{ message }}</span>
-        </div>
-    {% endfor %}
+    {# Flash messages gérés par le layout global #}
 
     <!-- Current Info Card -->
     <div class="mdl-card mdl-shadow--4dp">

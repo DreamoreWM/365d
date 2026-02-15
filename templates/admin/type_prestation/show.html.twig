@@ -311,6 +311,14 @@
         <div class="info-grid">
             <div class="info-box">
                 <div class="info-box-label">
+                    <i class="material-icons">qr_code</i>
+                    <span>Code OCR</span>
+                </div>
+                <div class="info-box-value" style="font-size: 1.5rem;">{{ type.code ?? '—' }}</div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-box-label">
                     <i class="material-icons">repeat</i>
                     <span>Prestations nécessaires</span>
                 </div>
@@ -326,6 +334,28 @@
             </div>
         </div>
     </div>
+
+    <!-- Champs personnalisés -->
+    {% if type.champsPersonnalises is not empty %}
+    <div class="info-card">
+        <div class="prestations-header">
+            <i class="material-icons">tune</i>
+            <h3>Champs personnalisés ({{ type.champsPersonnalises|length }})</h3>
+        </div>
+
+        {% for champ in type.champsPersonnalises|sort((a, b) => a.position <=> b.position) %}
+        <div style="display: flex; align-items: center; gap: 12px; padding: 12px; margin-bottom: 8px; background: rgba(63, 81, 181, 0.05); border-radius: 8px; border-left: 4px solid var(--primary);">
+            <i class="material-icons" style="color: var(--primary);">
+                {{ champ.type == 'checkbox_number' ? 'pin' : 'check_box' }}
+            </i>
+            <span style="flex: 1; font-weight: 500; color: var(--text-light);">{{ champ.label }}</span>
+            <span style="padding: 4px 12px; border-radius: 16px; font-size: 0.8rem; background: rgba(63, 81, 181, 0.1); color: var(--primary);">
+                {{ champ.type == 'checkbox_number' ? 'Case + Nombre' : 'Case à cocher' }}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 
     <!-- Prestations List -->
     <div class="prestations-card">
