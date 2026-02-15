@@ -357,57 +357,88 @@
         flex-direction: column;
     }
 
-    /* Onglets filtres */
-    .filter-tabs {
+    /* VRAIS ONGLETS (style tabs) */
+    .search-filters {
         display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin: 12px 0;
+        flex-direction: column;
+        gap: 20px;
+        margin: 16px 0;
     }
 
-    .filter-tab {
-        padding: 6px 12px;
+    .tab-group {
+        background: var(--card-light);
+        border-radius: 8px;
+        overflow: hidden;
         border: 1px solid var(--border-light);
-        border-radius: 16px;
+    }
+
+    body.dark-mode .tab-group {
+        background: rgba(0,0,0,0.2);
+        border-color: var(--border-dark);
+    }
+
+    .tab-header {
+        padding: 10px 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #757575;
+        background: rgba(63, 81, 181, 0.05);
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    body.dark-mode .tab-header {
+        color: #999;
+        background: rgba(63, 81, 181, 0.1);
+        border-bottom-color: var(--border-dark);
+    }
+
+    .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        padding: 4px;
+        gap: 4px;
+    }
+
+    .tab {
+        flex: 1;
+        min-width: fit-content;
+        padding: 8px 12px;
+        border: none;
         background: transparent;
         color: var(--text-light);
         font-size: 0.8rem;
+        font-weight: 500;
         cursor: pointer;
+        border-radius: 4px;
         transition: all 0.2s;
         white-space: nowrap;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
     }
 
-    body.dark-mode .filter-tab {
-        border-color: var(--border-dark);
+    body.dark-mode .tab {
         color: var(--text-dark);
     }
 
-    .filter-tab:hover {
-        background: rgba(63, 81, 181, 0.05);
-        border-color: var(--primary);
+    .tab:hover {
+        background: rgba(63, 81, 181, 0.08);
     }
 
-    .filter-tab.active {
+    .tab.active {
         background: var(--primary);
         color: white;
-        border-color: var(--primary);
+        box-shadow: 0 2px 4px rgba(63, 81, 181, 0.3);
     }
 
-    .filter-section {
-        margin-bottom: 16px;
-    }
-
-    .filter-section-label {
-        font-size: 0.75rem;
-        color: #757575;
-        margin-bottom: 6px;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    body.dark-mode .filter-section-label {
-        color: #999;
+    .tab-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
     }
 
     /* Calendar Container */
@@ -2031,29 +2062,32 @@
                             <span id="selectionCounter" style="display: none; font-size: 0.7rem; background: var(--primary); color: white; padding: 2px 8px; border-radius: 10px; font-weight: 500;"></span>
                         </div>
 
-                        <!-- Filter: Statut -->
-                        <div class="filter-section">
-                            <div class="filter-section-label">Statut</div>
-                            <div class="filter-tabs">
-                                <button class="filter-tab active" data-filter="statut" data-value="" onclick="setStatutFilter('')">Tous</button>
-                                <button class="filter-tab" data-filter="statut" data-value="disponible" onclick="setStatutFilter('disponible')">Disponible</button>
-                                <button class="filter-tab" data-filter="statut" data-value="à programmer" onclick="setStatutFilter('à programmer')">À prog.</button>
-                                <button class="filter-tab" data-filter="statut" data-value="programmé" onclick="setStatutFilter('programmé')">Programmé</button>
-                                <button class="filter-tab" data-filter="statut" data-value="terminé" onclick="setStatutFilter('terminé')">Terminé</button>
+                        <!-- Filtres avec vrais onglets -->
+                        <div class="search-filters">
+                            <!-- Onglets Statut -->
+                            <div class="tab-group">
+                                <div class="tab-header">Statut</div>
+                                <div class="tabs">
+                                    <button class="tab active" data-filter="statut" data-value="" onclick="setStatutFilter('')">Tous</button>
+                                    <button class="tab" data-filter="statut" data-value="disponible" onclick="setStatutFilter('disponible')">Disponible</button>
+                                    <button class="tab" data-filter="statut" data-value="à programmer" onclick="setStatutFilter('à programmer')">À programmer</button>
+                                    <button class="tab" data-filter="statut" data-value="programmé" onclick="setStatutFilter('programmé')">Programmé</button>
+                                    <button class="tab" data-filter="statut" data-value="terminé" onclick="setStatutFilter('terminé')">Terminé</button>
+                                </div>
                             </div>
-                        </div>
 
-                        <!-- Filter: Groupe géo -->
-                        <div class="filter-section">
-                            <div class="filter-section-label">Groupe géographique</div>
-                            <div class="filter-tabs">
-                                <button class="filter-tab active" data-filter="groupe" data-value="" onclick="setGroupeFilter('')">Tous</button>
-                                {% for groupe in groupesGeo %}
-                                <button class="filter-tab" data-filter="groupe" data-value="{{ groupe.id }}" onclick="setGroupeFilter('{{ groupe.id }}')">
-                                    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: {{ groupe.couleur }}; margin-right: 4px;"></span>
-                                    {{ groupe.nom }}
-                                </button>
-                                {% endfor %}
+                            <!-- Onglets Groupe Géo -->
+                            <div class="tab-group">
+                                <div class="tab-header">Groupe</div>
+                                <div class="tabs">
+                                    <button class="tab active" data-filter="groupe" data-value="" onclick="setGroupeFilter('')">Tous</button>
+                                    {% for groupe in groupesGeo %}
+                                    <button class="tab" data-filter="groupe" data-value="{{ groupe.id }}" onclick="setGroupeFilter('{{ groupe.id }}')">
+                                        <span class="tab-dot" style="background: {{ groupe.couleur }};"></span>
+                                        {{ groupe.nom }}
+                                    </button>
+                                    {% endfor %}
+                                </div>
                             </div>
                         </div>
 
@@ -2566,7 +2600,7 @@ function setStatutFilter(statut) {
     currentStatutFilter = statut;
 
     // Update active tab
-    document.querySelectorAll('.filter-tab[data-filter="statut"]').forEach(tab => {
+    document.querySelectorAll('.tab[data-filter="statut"]').forEach(tab => {
         if (tab.dataset.value === statut) {
             tab.classList.add('active');
         } else {
@@ -2581,7 +2615,7 @@ function setGroupeFilter(groupeId) {
     currentGroupeFilter = groupeId;
 
     // Update active tab
-    document.querySelectorAll('.filter-tab[data-filter="groupe"]').forEach(tab => {
+    document.querySelectorAll('.tab[data-filter="groupe"]').forEach(tab => {
         if (tab.dataset.value === groupeId) {
             tab.classList.add('active');
         } else {
