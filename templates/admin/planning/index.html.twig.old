@@ -87,21 +87,8 @@
 
     .calendar-layout {
         display: grid;
-        grid-template-columns: 220px 1fr 380px;
+        grid-template-columns: 220px 1fr 320px;
         gap: 24px;
-        transition: grid-template-columns 0.3s ease;
-    }
-
-    .calendar-layout.employee-collapsed {
-        grid-template-columns: 48px 1fr 380px;
-    }
-
-    .calendar-layout.right-collapsed {
-        grid-template-columns: 220px 1fr 48px;
-    }
-
-    .calendar-layout.both-collapsed {
-        grid-template-columns: 48px 1fr 48px;
     }
 
     /* Employee Panel */
@@ -240,174 +227,6 @@
 
     body.dark-mode .employee-count {
         background: rgba(63, 81, 181, 0.2);
-    }
-
-    /* Panneaux réductibles */
-    .employee-panel.collapsed .panel-content,
-    .right-panel.collapsed .panel-content {
-        display: none;
-    }
-
-    .employee-panel.collapsed,
-    .right-panel.collapsed {
-        padding: 8px;
-        width: 48px;
-    }
-
-    .panel-toggle-btn {
-        background: none;
-        border: none;
-        color: var(--primary);
-        cursor: pointer;
-        padding: 4px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-        margin-left: auto;
-    }
-
-    .panel-toggle-btn:hover {
-        background: rgba(63, 81, 181, 0.1);
-    }
-
-    .panel-toggle-btn .material-icons {
-        font-size: 20px;
-        transition: transform 0.3s;
-    }
-
-    .employee-panel.collapsed .panel-toggle-btn .material-icons {
-        transform: rotate(180deg);
-    }
-
-    /* Right Panel */
-    .right-panel {
-        background: var(--card-light);
-        border-radius: 12px;
-        padding: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        position: sticky;
-        top: 24px;
-        max-height: calc(100vh - 200px);
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-    }
-
-    body.dark-mode .right-panel {
-        background: var(--card-dark);
-        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-    }
-
-    .mode-toggle {
-        display: flex;
-        gap: 4px;
-        background: rgba(63, 81, 181, 0.08);
-        border-radius: 8px;
-        padding: 4px;
-        margin-right: auto;
-    }
-
-    .mode-btn {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 12px;
-        border: none;
-        border-radius: 6px;
-        background: transparent;
-        color: var(--text-light);
-        cursor: pointer;
-        font-size: 0.875rem;
-        font-weight: 500;
-        transition: all 0.2s;
-    }
-
-    body.dark-mode .mode-btn {
-        color: var(--text-dark);
-    }
-
-    .mode-btn:hover {
-        background: rgba(63, 81, 181, 0.1);
-    }
-
-    .mode-btn.active {
-        background: white;
-        color: var(--primary);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-
-    body.dark-mode .mode-btn.active {
-        background: rgba(255,255,255,0.1);
-    }
-
-    .mode-btn .material-icons {
-        font-size: 18px;
-    }
-
-    .panel-mode {
-        display: none;
-        flex: 1;
-        overflow-y: auto;
-    }
-
-    .panel-mode.active {
-        display: flex;
-        flex-direction: column;
-    }
-
-    /* Onglets filtres */
-    .filter-tabs {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin: 12px 0;
-    }
-
-    .filter-tab {
-        padding: 6px 12px;
-        border: 1px solid var(--border-light);
-        border-radius: 16px;
-        background: transparent;
-        color: var(--text-light);
-        font-size: 0.8rem;
-        cursor: pointer;
-        transition: all 0.2s;
-        white-space: nowrap;
-    }
-
-    body.dark-mode .filter-tab {
-        border-color: var(--border-dark);
-        color: var(--text-dark);
-    }
-
-    .filter-tab:hover {
-        background: rgba(63, 81, 181, 0.05);
-        border-color: var(--primary);
-    }
-
-    .filter-tab.active {
-        background: var(--primary);
-        color: white;
-        border-color: var(--primary);
-    }
-
-    .filter-section {
-        margin-bottom: 16px;
-    }
-
-    .filter-section-label {
-        font-size: 0.75rem;
-        color: #757575;
-        margin-bottom: 6px;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    body.dark-mode .filter-section-label {
-        color: #999;
     }
 
     /* Calendar Container */
@@ -1972,21 +1791,17 @@
         <div class="calendar-layout">
             <!-- Employee Filter Panel -->
             <div class="employee-panel" id="employeePanel">
-                <div class="panel-header">
+                <div class="panel-header" onclick="toggleEmployeePanel()" style="cursor: pointer;">
                     <i class="material-icons">people</i>
                     <span>Employ&eacute;s</span>
-                    <button class="panel-toggle-btn" onclick="togglePanel('employee')" title="R&eacute;duire/&eacute;tendre">
-                        <i class="material-icons">chevron_left</i>
-                    </button>
+                    <i class="material-icons panel-toggle-icon" id="panelToggleIcon" style="margin-left: auto; font-size: 20px; transition: transform 0.2s;">expand_less</i>
                 </div>
-                <div class="panel-content">
-                    <div class="employee-actions">
-                        <button onclick="toggleAllEmployees(true)">Tous</button>
-                        <button onclick="toggleAllEmployees(false)">Aucun</button>
-                    </div>
-                    <div id="employeeList" class="employee-list">
-                        <!-- Populated dynamically -->
-                    </div>
+                <div class="employee-actions">
+                    <button onclick="toggleAllEmployees(true)">Tous</button>
+                    <button onclick="toggleAllEmployees(false)">Aucun</button>
+                </div>
+                <div id="employeeList" class="employee-list">
+                    <!-- Populated dynamically -->
                 </div>
             </div>
 
@@ -1995,164 +1810,101 @@
                 <div id="fullcalendar"></div>
             </div>
 
-            <!-- Right Panel (Search & Create) -->
-            <div class="right-panel" id="rightPanel">
-                <div class="panel-header" style="justify-content: space-between;">
-                    <div class="mode-toggle">
-                        <button class="mode-btn active" data-mode="search" onclick="switchRightPanelMode('search')">
-                            <i class="material-icons">search</i> Recherche
+            <!-- Batch Creation Panel (shown when bons selected) -->
+            <div id="calendarBatchPanel" style="display: none;"></div>
+
+            <!-- Create Form (visible on large screens) -->
+            <div id="singleCreateFormWrapper">
+                <div class="create-form" id="calendarCreateForm">
+                    <div class="section-title" style="margin-bottom: 20px; padding-bottom: 12px;">
+                        <i class="material-icons">add_circle</i>
+                        <span>Cr&eacute;er une prestation</span>
+                    </div>
+
+                    <div class="quick-actions">
+                        <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('09:00')">
+                            <i class="material-icons" style="font-size: 18px;">wb_sunny</i> 9h00
                         </button>
-                        <button class="mode-btn" data-mode="create" onclick="switchRightPanelMode('create')">
-                            <i class="material-icons">add_circle</i> Créer
+                        <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('14:00')">
+                            <i class="material-icons" style="font-size: 18px;">wb_twilight</i> 14h00
+                        </button>
+                        <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setToday()">
+                            <i class="material-icons" style="font-size: 18px;">today</i> Auj.
                         </button>
                     </div>
-                    <button class="panel-toggle-btn" onclick="togglePanel('right')" title="Réduire/étendre">
-                        <i class="material-icons">chevron_right</i>
-                    </button>
-                </div>
 
-                <div class="panel-content">
-                    <!-- SEARCH MODE -->
-                    <div class="panel-mode active" id="searchMode">
-                        <div style="margin-bottom: 12px;">
-                            <input type="text"
-                                   id="bonSearchInput"
-                                   placeholder="Rechercher..."
-                                   onkeyup="searchBons()"
-                                   style="width: 100%; padding: 10px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 0.875rem;">
+                    <form method="post" action="{{ path('admin_planning_create_prestation') }}">
+                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty">
+                            <input class="mdl-textfield__input" type="date" id="create_date" name="date" value="{{ selectedDate }}" required>
+                            <label class="mdl-textfield__label" for="create_date">Date</label>
                         </div>
 
-                        <!-- Multi-select toggle -->
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 8px; background: rgba(63, 81, 181, 0.05); border-radius: 6px;">
-                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.8rem; flex: 1;">
-                                <input type="checkbox" id="multiSelectToggle" onchange="toggleMultiSelect()" style="cursor: pointer; accent-color: var(--primary);">
-                                <span>Sélection multiple</span>
-                            </label>
-                            <span id="selectionCounter" style="display: none; font-size: 0.7rem; background: var(--primary); color: white; padding: 2px 8px; border-radius: 10px; font-weight: 500;"></span>
+                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty">
+                            <input class="mdl-textfield__input" type="time" id="heure" name="heure" value="09:00" required>
+                            <label class="mdl-textfield__label" for="heure">Heure</label>
                         </div>
 
-                        <!-- Filter: Statut -->
-                        <div class="filter-section">
-                            <div class="filter-section-label">Statut</div>
-                            <div class="filter-tabs">
-                                <button class="filter-tab active" data-filter="statut" data-value="" onclick="setStatutFilter('')">Tous</button>
-                                <button class="filter-tab" data-filter="statut" data-value="disponible" onclick="setStatutFilter('disponible')">Disponible</button>
-                                <button class="filter-tab" data-filter="statut" data-value="à programmer" onclick="setStatutFilter('à programmer')">À prog.</button>
-                                <button class="filter-tab" data-filter="statut" data-value="programmé" onclick="setStatutFilter('programmé')">Programmé</button>
-                                <button class="filter-tab" data-filter="statut" data-value="terminé" onclick="setStatutFilter('terminé')">Terminé</button>
-                            </div>
-                        </div>
-
-                        <!-- Filter: Groupe géo -->
-                        <div class="filter-section">
-                            <div class="filter-section-label">Groupe géographique</div>
-                            <div class="filter-tabs">
-                                <button class="filter-tab active" data-filter="groupe" data-value="" onclick="setGroupeFilter('')">Tous</button>
-                                {% for groupe in groupesGeo %}
-                                <button class="filter-tab" data-filter="groupe" data-value="{{ groupe.id }}" onclick="setGroupeFilter('{{ groupe.id }}')">
-                                    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: {{ groupe.couleur }}; margin-right: 4px;"></span>
-                                    {{ groupe.nom }}
-                                </button>
+                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ selectedEmployeId ? 'is-dirty' : '' }}">
+                            <select class="mdl-textfield__input" id="create_employe" name="employe" required>
+                                <option value="">S&eacute;lectionner...</option>
+                                {% for emp in employes %}
+                                    <option value="{{ emp.id }}" {{ selectedEmployeId == emp.id ? 'selected' : '' }}>
+                                        {{ emp.nom }}
+                                    </option>
                                 {% endfor %}
-                            </div>
+                            </select>
+                            <label class="mdl-textfield__label" for="create_employe">Employ&eacute;</label>
                         </div>
 
-                        <!-- Results -->
-                        <div id="searchResults" style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;">
-                            <div style="text-align: center; padding: 40px 20px; color: #999; font-size: 0.875rem;">
-                                <i class="material-icons" style="font-size: 48px; opacity: 0.3; display: block; margin: 0 auto 12px;">search</i>
-                                Utilisez la recherche pour trouver des bons
-                            </div>
-                        </div>
-                    </div>
+                        <input type="hidden" id="selected_bon" name="bon" required>
 
-                    <!-- CREATE MODE -->
-                    <div class="panel-mode" id="createMode">
-                        <!-- Batch panel (shown when multi-select) -->
-                        <div id="batchCreatePanel" style="display: none;">
-                            <!-- Will be populated dynamically -->
-                        </div>
-
-                        <!-- Single creation form (default) -->
-                        <div id="singleCreateForm">
-                            <div class="quick-actions" style="display: flex; gap: 6px; margin-bottom: 12px;">
-                                <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('09:00')" style="flex: 1; min-width: 0;">
-                                    <i class="material-icons" style="font-size: 16px;">wb_sunny</i> 9h
-                                </button>
-                                <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('14:00')" style="flex: 1; min-width: 0;">
-                                    <i class="material-icons" style="font-size: 16px;">wb_twilight</i> 14h
-                                </button>
-                                <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setToday()" style="flex: 1; min-width: 0;">
-                                    <i class="material-icons" style="font-size: 16px;">today</i> Auj.
+                        <div style="margin: 20px 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <strong style="color: var(--text-light);">Bon de commande :</strong>
+                                <button type="button"
+                                        class="mdl-button mdl-js-button mdl-button--raised"
+                                        onclick="openBonModal()"
+                                        style="height: 32px; line-height: 32px;">
+                                    <i class="material-icons" style="vertical-align: middle; margin-right: 4px; font-size: 18px;">search</i>
+                                    Rechercher
                                 </button>
                             </div>
 
-                            <form method="post" action="{{ path('admin_planning_create_prestation') }}" onsubmit="return validateBeforeCreate(event)">
-                                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty" style="width: 100%;">
-                                    <input class="mdl-textfield__input" type="date" id="create_date" name="date" value="{{ selectedDate }}" required>
-                                    <label class="mdl-textfield__label" for="create_date">Date</label>
-                                </div>
-
-                                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty" style="width: 100%;">
-                                    <input class="mdl-textfield__input" type="time" id="heure" name="heure" value="09:00" required>
-                                    <label class="mdl-textfield__label" for="heure">Heure</label>
-                                </div>
-
-                                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ selectedEmployeId ? 'is-dirty' : '' }}" style="width: 100%;">
-                                    <select class="mdl-textfield__input" id="create_employe" name="employe" required>
-                                        <option value="">Sélectionner...</option>
-                                        {% for emp in employes %}
-                                            <option value="{{ emp.id }}" {{ selectedEmployeId == emp.id ? 'selected' : '' }}>
-                                                {{ emp.nom }}
-                                            </option>
-                                        {% endfor %}
-                                    </select>
-                                    <label class="mdl-textfield__label" for="create_employe">Employé</label>
-                                </div>
-
-                                <input type="hidden" id="selected_bon" name="bon" required>
-
-                                <div style="margin: 16px 0;">
-                                    <div style="font-size: 0.875rem; font-weight: 500; margin-bottom: 8px; color: var(--text-light);">Bon de commande :</div>
-
-                                    <div id="selectedBonDisplay" style="display: none; padding: 12px; background: rgba(63, 81, 181, 0.1); border-radius: 8px; border-left: 4px solid var(--primary);">
-                                        <div style="display: flex; justify-content: space-between; align-items: start; gap: 8px;">
-                                            <div style="flex: 1; min-width: 0;">
-                                                <div class="bon-client" id="selectedBonClient" style="font-weight: 500; font-size: 0.875rem; margin-bottom: 4px;"></div>
-                                                <div class="bon-info" id="selectedBonInfo" style="font-size: 0.75rem; color: #757575;"></div>
-                                            </div>
-                                            <button type="button"
-                                                    class="mdl-button mdl-js-button mdl-button--icon"
-                                                    onclick="clearBonSelection()"
-                                                    style="min-width: 0; width: 32px; height: 32px;"
-                                                    title="Effacer">
-                                                <i class="material-icons" style="font-size: 18px;">close</i>
-                                            </button>
-                                        </div>
+                            <div id="selectedBonDisplay" style="display: none; padding: 16px; background: rgba(63, 81, 181, 0.1); border-radius: 8px; border-left: 4px solid var(--primary);">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <div>
+                                        <div class="bon-client" id="selectedBonClient"></div>
+                                        <div class="bon-info" id="selectedBonInfo"></div>
                                     </div>
-
-                                    <div id="noBonSelected" style="padding: 12px; background: rgba(0, 0, 0, 0.05); border-radius: 8px; text-align: center; color: #999; font-size: 0.8rem;">
-                                        <i class="material-icons" style="vertical-align: middle; font-size: 16px;">info</i>
-                                        Passez en mode "Recherche" pour sélectionner un bon
-                                    </div>
+                                    <button type="button"
+                                            class="mdl-button mdl-js-button mdl-button--icon"
+                                            onclick="clearBonSelection()"
+                                            title="Effacer la s&eacute;lection">
+                                        <i class="material-icons">close</i>
+                                    </button>
                                 </div>
+                            </div>
 
-                                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
-                                    <textarea class="mdl-textfield__input" id="create_description" name="description" rows="2"></textarea>
-                                    <label class="mdl-textfield__label" for="create_description">Note (optionnel)</label>
-                                </div>
-
-                                <button type="submit"
-                                        class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent"
-                                        style="width: 100%; height: 44px; margin-top: 8px;"
-                                        id="submit-btn"
-                                        disabled>
-                                    <i class="material-icons" style="vertical-align: middle; margin-right: 4px; font-size: 18px;">add</i>
-                                    Créer la prestation
-                                </button>
-                            </form>
+                            <div id="noBonSelected" style="padding: 16px; background: rgba(0, 0, 0, 0.05); border-radius: 8px; text-align: center; color: #757575;">
+                                <i class="material-icons" style="vertical-align: middle; font-size: 18px;">info</i>
+                                Aucun bon s&eacute;lectionn&eacute; - Utilisez la recherche
+                            </div>
                         </div>
-                    </div>
+
+                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
+                            <textarea class="mdl-textfield__input" id="create_description" name="description" rows="3"></textarea>
+                            <label class="mdl-textfield__label" for="create_description">Note pour l'employ&eacute; (optionnel)</label>
+                        </div>
+
+                        <button type="submit"
+                                class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent"
+                                style="width: 100%; height: 48px;"
+                                id="submit-btn"
+                                disabled>
+                            <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">add</i>
+                            Cr&eacute;er la prestation
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -2478,6 +2230,79 @@
     </div>
 </div>
 
+<!-- Modal de recherche de bon de commande -->
+<div class="modal-overlay" id="bonCommandeModalOverlay" onclick="closeBonModal()"></div>
+<div class="modal-container" id="bonCommandeModal">
+    <div class="modal-header">
+        <h3>
+            <i class="material-icons">search</i>
+            Rechercher un bon de commande
+        </h3>
+        <button class="modal-close" onclick="closeBonModal()">
+            <i class="material-icons">close</i>
+        </button>
+    </div>
+    <div class="modal-body">
+        <div class="search-filters-section">
+            <div class="search-box">
+                <input type="text"
+                       id="bonSearchInput"
+                       placeholder="Rechercher par client, num&eacute;ro, adresse..."
+                       onkeyup="searchBons()">
+            </div>
+
+            <!-- Selection Controls -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin: 12px 0; padding: 8px; background: rgba(63, 81, 181, 0.05); border-radius: 6px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.875rem; color: var(--text-light);">
+                        <input type="checkbox" id="multiSelectToggle" onchange="toggleMultiSelect()" style="cursor: pointer; accent-color: var(--primary);">
+                        <span>Mode s&eacute;lection multiple</span>
+                    </label>
+                    <span id="selectionCounter" style="display: none; font-size: 0.75rem; background: var(--primary); color: white; padding: 2px 8px; border-radius: 10px; font-weight: 500;"></span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="selectAllVisibleBons()" style="padding: 4px 12px; border: 1px solid var(--border-light); border-radius: 6px; background: transparent; color: var(--text-light); font-size: 0.75rem; cursor: pointer;">
+                        <i class="material-icons" style="font-size: 14px; vertical-align: middle;">done_all</i> Tout
+                    </button>
+                    <button onclick="clearSelection()" style="padding: 4px 12px; border: 1px solid var(--border-light); border-radius: 6px; background: transparent; color: var(--text-light); font-size: 0.75rem; cursor: pointer;">
+                        <i class="material-icons" style="font-size: 14px; vertical-align: middle;">clear</i> Aucun
+                    </button>
+                </div>
+            </div>
+
+            <div class="filters-row">
+                <select class="filter-select" id="filterStatut" onchange="searchBons()">
+                    <option value="">Tous les statuts</option>
+                    <option value="disponible">Disponible</option>
+                    <option value="&agrave; programmer">&Agrave; programmer</option>
+                    <option value="programm&eacute;">Programm&eacute;</option>
+                    <option value="termin&eacute;">Termin&eacute;</option>
+                </select>
+
+                <select class="filter-select" id="filterGroupe" onchange="searchBons()">
+                    <option value="">Tous les groupes g&eacute;ographiques</option>
+                    {% for groupe in groupesGeo %}
+                        <option value="{{ groupe.id }}" data-color="{{ groupe.couleur }}">{{ groupe.nom }}</option>
+                    {% endfor %}
+                </select>
+
+                <select class="filter-select" id="filterSort" onchange="searchBons()">
+                    <option value="date_desc">Plus r&eacute;cent</option>
+                    <option value="date_asc">Plus ancien</option>
+                    <option value="client_asc">Client A-Z</option>
+                    <option value="client_desc">Client Z-A</option>
+                    <option value="prestations">Moins de prestations</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Batch Creation Panel (shown when multiple bons selected) -->
+        <div id="batchCreatePanel" style="display: none;"></div>
+
+        <div id="bonSearchResults" class="bons-list"></div>
+    </div>
+</div>
+
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -2506,129 +2331,6 @@ let previewEvent = null;
 let multiSelectMode = false;
 let selectedBons = new Set();
 let currentSearchResults = [];
-let currentStatutFilter = '';
-let currentGroupeFilter = '';
-let rightPanelMode = 'search';
-
-// ==================== PANELS MANAGEMENT ====================
-function togglePanel(panel) {
-    const panelEl = document.getElementById(panel === 'employee' ? 'employeePanel' : 'rightPanel');
-    const layoutEl = document.querySelector('.calendar-layout');
-
-    panelEl.classList.toggle('collapsed');
-
-    // Update grid layout classes
-    const employeeCollapsed = document.getElementById('employeePanel').classList.contains('collapsed');
-    const rightCollapsed = document.getElementById('rightPanel').classList.contains('collapsed');
-
-    layoutEl.classList.remove('employee-collapsed', 'right-collapsed', 'both-collapsed');
-
-    if (employeeCollapsed && rightCollapsed) {
-        layoutEl.classList.add('both-collapsed');
-    } else if (employeeCollapsed) {
-        layoutEl.classList.add('employee-collapsed');
-    } else if (rightCollapsed) {
-        layoutEl.classList.add('right-collapsed');
-    }
-
-    // Save state
-    localStorage.setItem(panel + 'PanelCollapsed', panelEl.classList.contains('collapsed'));
-
-    // Resize calendar
-    if (calendar) {
-        setTimeout(() => calendar.updateSize(), 300);
-    }
-}
-
-function switchRightPanelMode(mode) {
-    rightPanelMode = mode;
-
-    // Update active button
-    document.querySelectorAll('.mode-btn').forEach(btn => {
-        if (btn.dataset.mode === mode) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-    });
-
-    // Show/hide panels
-    document.querySelectorAll('.panel-mode').forEach(panel => {
-        if (panel.id === mode + 'Mode') {
-            panel.classList.add('active');
-        } else {
-            panel.classList.remove('active');
-        }
-    });
-}
-
-function setStatutFilter(statut) {
-    currentStatutFilter = statut;
-
-    // Update active tab
-    document.querySelectorAll('.filter-tab[data-filter="statut"]').forEach(tab => {
-        if (tab.dataset.value === statut) {
-            tab.classList.add('active');
-        } else {
-            tab.classList.remove('active');
-        }
-    });
-
-    searchBons();
-}
-
-function setGroupeFilter(groupeId) {
-    currentGroupeFilter = groupeId;
-
-    // Update active tab
-    document.querySelectorAll('.filter-tab[data-filter="groupe"]').forEach(tab => {
-        if (tab.dataset.value === groupeId) {
-            tab.classList.add('active');
-        } else {
-            tab.classList.remove('active');
-        }
-    });
-
-    searchBons();
-}
-
-// ==================== ANTI-DOUBLON VALIDATION ====================
-async function checkDuplicate(bonId, employeId, date) {
-    try {
-        const response = await fetch('/admin/planning/check-duplicate', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({bonId, employeId, date})
-        });
-        return await response.json();
-    } catch (error) {
-        console.error('Erreur vérification doublon:', error);
-        return {valid: true}; // En cas d'erreur réseau, on laisse passer
-    }
-}
-
-async function validateBeforeCreate(event) {
-    event.preventDefault();
-
-    const bonId = document.getElementById('selected_bon').value;
-    const employeId = document.getElementById('create_employe').value;
-    const date = document.getElementById('create_date').value;
-
-    if (!bonId || !employeId || !date) {
-        return false;
-    }
-
-    const check = await checkDuplicate(bonId, employeId, date);
-
-    if (!check.valid) {
-        showToast('error', check.message || 'Ce bon est déjà assigné');
-        return false;
-    }
-
-    // Si validation OK, soumettre le formulaire
-    event.target.submit();
-    return true;
-}
 
 // ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', async function() {
@@ -2639,17 +2341,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             field.classList.add('is-dirty');
         }
     });
-
-    // Restore collapsed panel states
-    const employeeCollapsed = localStorage.getItem('employeePanelCollapsed') === 'true';
-    const rightCollapsed = localStorage.getItem('rightPanelCollapsed') === 'true';
-
-    if (employeeCollapsed) {
-        togglePanel('employee');
-    }
-    if (rightCollapsed) {
-        togglePanel('right');
-    }
 
     // Load employees for calendar
     try {
@@ -3204,12 +2895,12 @@ async function searchBons() {
     clearTimeout(searchTimeout);
 
     const query = document.getElementById('bonSearchInput').value.trim();
-    const statut = currentStatutFilter;
-    const groupeGeo = currentGroupeFilter;
-    const sort = 'date_desc'; // Default sort
-    const resultsContainer = document.getElementById('searchResults');
+    const statut = document.getElementById('filterStatut').value;
+    const groupeGeo = document.getElementById('filterGroupe').value;
+    const sort = document.getElementById('filterSort').value;
+    const resultsContainer = document.getElementById('bonSearchResults');
 
-    resultsContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p style="margin-top: 12px; font-size: 0.875rem;">Recherche...</p></div>';
+    resultsContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p style="margin-top: 16px;">Recherche...</p></div>';
 
     searchTimeout = setTimeout(async () => {
         try {
@@ -3219,17 +2910,17 @@ async function searchBons() {
             displaySearchResults(bons);
         } catch (error) {
             console.error('Erreur recherche:', error);
-            resultsContainer.innerHTML = '<div class="empty-state" style="padding: 40px; color: #d32f2f; text-align: center;"><i class="material-icons" style="font-size: 48px;">error</i><p style="margin-top: 8px; font-size: 0.875rem;">Erreur</p></div>';
+            resultsContainer.innerHTML = '<div class="empty-state" style="padding: 40px; color: #d32f2f;"><i class="material-icons" style="font-size: 64px;">error</i><p>Erreur</p></div>';
         }
     }, 300);
 }
 
 function displaySearchResults(bons) {
-    const resultsContainer = document.getElementById('searchResults');
+    const resultsContainer = document.getElementById('bonSearchResults');
     currentSearchResults = bons;
 
     if (bons.length === 0) {
-        resultsContainer.innerHTML = '<div class="empty-state" style="padding: 40px; text-align: center;"><i class="material-icons" style="font-size: 48px; opacity: 0.3;">inbox</i><p style="margin-top: 8px; font-size: 0.875rem; color: #999;">Aucun bon trouvé</p></div>';
+        resultsContainer.innerHTML = '<div class="empty-state" style="padding: 40px;"><i class="material-icons" style="font-size: 64px;">inbox</i><p>Aucun bon de commande trouv&eacute;</p></div>';
         return;
     }
 
@@ -3256,7 +2947,7 @@ function displaySearchResults(bons) {
             : '';
 
         const itemClass = 'bon-item' + (multiSelectMode ? ' has-checkbox' : '') + (selectedBons.has(bon.id) ? ' selected' : '');
-        const clickHandler = multiSelectMode ? 'toggleBonSelection(' + bon.id + ')' : 'selectBonFromSearch(' + bon.id + ')';
+        const clickHandler = multiSelectMode ? 'toggleBonSelection(' + bon.id + ')' : 'selectBonFromModal(' + bon.id + ')';
 
         return '<div class="' + itemClass + '">' +
             checkboxHtml +
@@ -3287,7 +2978,7 @@ function displaySearchResults(bons) {
 }
 
 // ==================== BON SELECTION ====================
-async function selectBonFromSearch(bonId) {
+async function selectBonFromModal(bonId) {
     try {
         const response = await fetch('/admin/planning/bon/' + bonId);
         const bon = await response.json();
@@ -3297,18 +2988,11 @@ async function selectBonFromSearch(bonId) {
         updateBonSelection(bon, bonId, 'tl_selected_bon', 'tl_selectedBonClient', 'tl_selectedBonInfo', 'tl_selectedBonDisplay', 'tl_noBonSelected', 'tl_submit-btn');
         updateBonSelection(bon, bonId, 'mobile_selected_bon', 'mobileSelectedBonClient', 'mobileSelectedBonInfo', 'mobileSelectedBonDisplay', 'mobileNoBonSelected', 'mobile-submit-btn');
 
-        // Switch to create mode instead of closing modal
-        switchRightPanelMode('create');
-        showToast('success', 'Bon sélectionné : ' + bon.clientNom);
+        closeBonModal();
     } catch (error) {
         console.error('Erreur selection:', error);
-        showToast('error', 'Erreur lors de la sélection');
+        alert('Erreur lors de la selection');
     }
-}
-
-// Legacy function kept for mobile compatibility
-async function selectBonFromModal(bonId) {
-    return selectBonFromSearch(bonId);
 }
 
 function updateBonSelection(bon, bonId, hiddenId, clientId, infoId, displayId, noSelId, btnId) {
@@ -3638,40 +3322,14 @@ async function createBatchPrestations() {
     }
 
     btn.disabled = true;
-    btn.innerHTML = '<div class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></div><span>Vérification...</span>';
-
-    // Vérifier les doublons AVANT de créer
-    const bonIdsToCreate = [];
-    const duplicates = [];
+    btn.innerHTML = '<div class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></div><span>Création...</span>';
 
     try {
-        for (const bonId of selectedBons) {
-            const check = await checkDuplicate(bonId, employeId, date);
-            if (check.valid) {
-                bonIdsToCreate.push(bonId);
-            } else {
-                duplicates.push(check.message);
-            }
-        }
-
-        if (duplicates.length > 0) {
-            duplicates.forEach(msg => showToast('error', msg));
-        }
-
-        if (bonIdsToCreate.length === 0) {
-            showToast('error', 'Aucune prestation à créer (tous les bons sont déjà assignés)');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="material-icons">add_circle</i><span>Créer les prestations</span>';
-            return;
-        }
-
-        btn.innerHTML = '<div class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></div><span>Création...</span>';
-
         const response = await fetch('/admin/planning/create-batch', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                bonIds: bonIdsToCreate,
+                bonIds: Array.from(selectedBons),
                 employeId: employeId,
                 date: date,
                 heure: heure
@@ -3696,8 +3354,8 @@ async function createBatchPrestations() {
             // Refresh calendar
             if (calendar) calendar.refetchEvents();
 
-            // Switch back to search mode
-            switchRightPanelMode('search');
+            // Close modal after a short delay
+            setTimeout(() => closeBonModal(), 1500);
         } else {
             showToast('error', 'Erreur lors de la création');
         }

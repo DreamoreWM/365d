@@ -438,6 +438,90 @@ class PlanningController extends AbstractController
     }
 
     // =====================================================
+    // VÉRIFIER LES DOUBLONS AVANT ASSIGNATION
+    // =====================================================
+    #[Route('/check-duplicate', name: 'admin_planning_check_duplicate', methods: ['POST'])]
+    public function checkDuplicate(Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $data = json_decode($request->getContent(), true);
+        $bonId = $data['bonId'] ?? null;
+        $employeId = $data['employeId'] ?? null;
+        $date = $data['date'] ?? null;
+
+        if (!$bonId || !$employeId || !$date) {
+            return $this->json(['valid' => false, 'error' => 'Paramètres manquants'], 400);
+        }
+
+        $bon = $this->bonRepo->find($bonId);
+        $employe = $this->userRepo->find($employeId);
+
+        if (!$bon || !$employe) {
+            return $this->json(['valid' => false, 'error' => 'Bon ou employé introuvable'], 404);
+        }
+
+        // Vérifier si une prestation existe déjà pour ce bon + employé + date
+        $dateObj = \DateTimeImmutable::createFromFormat('Y-m-d', $date);
+        $dateStart = $dateObj->setTime(0, 0, 0);
+        $dateEnd = $dateObj->setTime(23, 59, 59);
+
+        $existing = $this->prestationRepo->createQueryBuilder('p')
+            ->where('p.bonDeCommande = :bon')
+            ->andWhere('p.employe = :employe')
+            ->andWhere('p.datePrestation >= :start')
+            ->andWhere('p.datePrestation <= :end')
+            ->setParameter('bon', $bon)
+            ->setParameter('employe', $employe)
+            ->setParameter('start', $dateStart)
+            ->setParameter('end', $dateEnd)
+            ->getQuery()
+            ->getResult();
+
+        if (count($existing) > 0) {
+            return $this->json([
+                'valid' => false,
+                'duplicate' => true,
+                'message' => sprintf(
+                    'Le bon "%s" est déjà assigné à %s le %s',
+                    $bon->getClientNom(),
+                    $employe->getNom(),
+                    $dateObj->format('d/m/Y')
+                )
+            ]);
+        }
+
+        // Vérifier si le bon est déjà assigné à un autre employé le même jour
+        $existingOtherEmploye = $this->prestationRepo->createQueryBuilder('p')
+            ->where('p.bonDeCommande = :bon')
+            ->andWhere('p.employe != :employe')
+            ->andWhere('p.datePrestation >= :start')
+            ->andWhere('p.datePrestation <= :end')
+            ->setParameter('bon', $bon)
+            ->setParameter('employe', $employe)
+            ->setParameter('start', $dateStart)
+            ->setParameter('end', $dateEnd)
+            ->getQuery()
+            ->getResult();
+
+        if (count($existingOtherEmploye) > 0) {
+            $otherEmploye = $existingOtherEmploye[0]->getEmploye();
+            return $this->json([
+                'valid' => false,
+                'duplicate' => true,
+                'message' => sprintf(
+                    'Le bon "%s" est déjà assigné à %s le %s',
+                    $bon->getClientNom(),
+                    $otherEmploye->getNom(),
+                    $dateObj->format('d/m/Y')
+                )
+            ]);
+        }
+
+        return $this->json(['valid' => true, 'duplicate' => false]);
+    }
+
+    // =====================================================
     // ÉVÉNEMENTS CALENDRIER (FULLCALENDAR)
     // =====================================================
     #[Route('/events', name: 'admin_planning_events', methods: ['GET'])]
