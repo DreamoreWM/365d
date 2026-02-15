@@ -1810,8 +1810,11 @@
                 <div id="fullcalendar"></div>
             </div>
 
+            <!-- Batch Creation Panel (shown when bons selected) -->
+            <div id="calendarBatchPanel" style="display: none;"></div>
+
             <!-- Create Form (visible on large screens) -->
-            <div>
+            <div id="singleCreateFormWrapper">
                 <div class="create-form" id="calendarCreateForm">
                     <div class="section-title" style="margin-bottom: 20px; padding-bottom: 12px;">
                         <i class="material-icons">add_circle</i>
@@ -2458,6 +2461,16 @@ function initCalendar() {
         eventClick: function(info) {
             if (info.event.id === 'preview') return;
             info.jsEvent.preventDefault();
+
+            // Batch mode: use clicked event's time and employee
+            if (multiSelectMode && selectedBons.size > 0) {
+                const employeId = info.event.extendedProps?.employeId;
+                fillBatchPanelFromCalendar(info.event.start, employeId);
+                closeBonModal();
+                return;
+            }
+
+            // Normal mode: show event details
             showEventPopover(info.event, info.el);
         },
 
@@ -2468,7 +2481,16 @@ function initCalendar() {
         },
 
         dateClick: function(info) {
-            // Simple tap (especially on mobile) - prefill and open form
+            // Batch mode: fill batch panel with clicked date/time
+            if (multiSelectMode && selectedBons.size > 0) {
+                // Try to detect employee from the click position
+                const employeId = detectEmployeeFromClick(info);
+                fillBatchPanelFromCalendar(info.dateStr, employeId);
+                closeBonModal();
+                return;
+            }
+
+            // Normal mode: prefill single creation form
             prefillCreateForm(info.dateStr);
             addPreviewEvent(info.date, new Date(info.date.getTime() + 30 * 60000));
         },
@@ -3116,6 +3138,14 @@ function selectAllVisibleBons() {
 
     updateSelectionCounter();
     updateBatchPanel();
+
+    // Close modal and show instructions if we have selections
+    if (selectedBons.size > 0) {
+        setTimeout(() => {
+            closeBonModal();
+            showToast('info', 'Cliquez sur le calendrier pour définir la date, l\'heure et l\'employé');
+        }, 500);
+    }
 }
 
 function clearSelection() {
@@ -3143,10 +3173,17 @@ function updateSelectionCounter() {
 
 // ==================== BATCH CREATION PANEL ====================
 function updateBatchPanel() {
-    const panel = document.getElementById('batchCreatePanel');
+    // Update both panels (modal and calendar)
+    const modalPanel = document.getElementById('batchCreatePanel');
+    const calendarPanel = document.getElementById('calendarBatchPanel');
+    const singleFormWrapper = document.getElementById('singleCreateFormWrapper');
 
     if (!multiSelectMode || selectedBons.size === 0) {
-        panel.style.display = 'none';
+        if (modalPanel) modalPanel.style.display = 'none';
+        if (calendarPanel) {
+            calendarPanel.style.display = 'none';
+            if (singleFormWrapper) singleFormWrapper.style.display = 'block';
+        }
         return;
     }
 
@@ -3155,12 +3192,15 @@ function updateBatchPanel() {
         '<option value="' + e.id + '">' + e.nom + '</option>'
     ).join('');
 
-    panel.style.display = 'block';
-    panel.innerHTML =
+    const panelHTML =
         '<div class="batch-create-panel">' +
             '<div class="batch-panel-header">' +
                 '<i class="material-icons">playlist_add_check</i>' +
-                '<span>Créer ' + selectedBons.size + ' prestation' + (selectedBons.size > 1 ? 's' : '') + ' en lot</span>' +
+                '<span>' + selectedBons.size + ' bon' + (selectedBons.size > 1 ? 's' : '') + ' sélectionné' + (selectedBons.size > 1 ? 's' : '') + '</span>' +
+            '</div>' +
+            '<div style="padding: 12px; background: rgba(63, 81, 181, 0.05); border-radius: 6px; margin-bottom: 12px; font-size: 0.875rem; color: var(--text-light);">' +
+                '<i class="material-icons" style="font-size: 16px; vertical-align: middle; margin-right: 4px;">info</i>' +
+                'Cliquez sur un créneau du calendrier pour définir la date, l\'heure et l\'employé' +
             '</div>' +
             '<div class="batch-form-row">' +
                 '<div class="batch-form-group">' +
@@ -3174,16 +3214,95 @@ function updateBatchPanel() {
                 '<div class="batch-form-group">' +
                     '<label>Employé</label>' +
                     '<select id="batch_employe" required>' +
-                        '<option value="">Sélectionner...</option>' +
+                        '<option value="">Cliquez sur le calendrier...</option>' +
                         employes +
                     '</select>' +
                 '</div>' +
             '</div>' +
             '<button class="batch-create-btn" onclick="createBatchPrestations()" id="batchCreateBtn">' +
                 '<i class="material-icons">add_circle</i>' +
-                '<span>Créer les prestations</span>' +
+                '<span>Créer ' + selectedBons.size + ' prestation' + (selectedBons.size > 1 ? 's' : '') + '</span>' +
+            '</button>' +
+            '<button onclick="cancelBatchMode()" style="width: 100%; margin-top: 8px; padding: 8px; border: 1px solid var(--border-light); border-radius: 6px; background: transparent; color: var(--text-light); cursor: pointer;">' +
+                '<i class="material-icons" style="font-size: 16px; vertical-align: middle; margin-right: 4px;">close</i> Annuler' +
             '</button>' +
         '</div>';
+
+    // Show in modal if modal is open
+    if (modalPanel) {
+        modalPanel.style.display = 'block';
+        modalPanel.innerHTML = panelHTML;
+    }
+
+    // Show next to calendar if we have selections
+    if (calendarPanel && selectedBons.size > 0) {
+        calendarPanel.style.display = 'block';
+        calendarPanel.innerHTML = panelHTML;
+        if (singleFormWrapper) singleFormWrapper.style.display = 'none';
+    }
+}
+
+function cancelBatchMode() {
+    selectedBons.clear();
+    multiSelectMode = false;
+    const toggle = document.getElementById('multiSelectToggle');
+    if (toggle) toggle.checked = false;
+    updateSelectionCounter();
+    updateBatchPanel();
+    showToast('info', 'Mode sélection multiple désactivé');
+}
+
+function detectEmployeeFromClick(info) {
+    // Try to find events at the same time to guess which employee column was clicked
+    if (!calendar) return null;
+
+    const clickedDate = info.date;
+    const events = calendar.getEvents();
+
+    // Find events at roughly the same time
+    for (const event of events) {
+        const eventStart = event.start;
+        if (eventStart && Math.abs(eventStart.getTime() - clickedDate.getTime()) < 3600000) { // Within 1 hour
+            const employeId = event.extendedProps?.employeId;
+            if (employeId) return employeId;
+        }
+    }
+
+    return null;
+}
+
+function fillBatchPanelFromCalendar(dateTime, employeId) {
+    const dateInput = document.getElementById('batch_date');
+    const heureInput = document.getElementById('batch_heure');
+    const employeSelect = document.getElementById('batch_employe');
+
+    if (dateTime) {
+        const date = new Date(dateTime);
+        if (dateInput) {
+            dateInput.value = date.toISOString().split('T')[0];
+        }
+        if (heureInput) {
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            heureInput.value = hours + ':' + minutes;
+        }
+    }
+
+    if (employeId && employeSelect) {
+        employeSelect.value = employeId;
+        showToast('success', 'Date, heure et employé définis !');
+    } else {
+        showToast('success', 'Date et heure définies ! Sélectionnez un employé.');
+    }
+
+    // Visual feedback
+    const panel = document.getElementById('calendarBatchPanel');
+    if (panel) {
+        panel.style.boxShadow = '0 0 0 3px var(--primary), 0 2px 8px rgba(0,0,0,0.1)';
+        setTimeout(() => {
+            panel.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+        }, 1000);
+    }
 }
 
 async function createBatchPrestations() {

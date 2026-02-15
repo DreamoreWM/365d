@@ -60,6 +60,10 @@ class TypePrestation
     #[Groups(['type:read', 'type:write', 'bon:read'])]
     private ?array $champsPersonnalises = null;
 
+    #[ORM\Column(type: 'integer', nullable: true)]
+    #[Groups(['type:read', 'type:write', 'bon:read'])]
+    private ?int $dureeTheoriquenMinutes = null;
+
     #[ORM\OneToMany(mappedBy: 'typePrestation', targetEntity: Prestation::class)]
     private Collection $prestations;
 
@@ -89,6 +93,17 @@ class TypePrestation
     public function setChampsPersonnalises(?array $champsPersonnalises): static
     {
         $this->champsPersonnalises = $champsPersonnalises;
+        return $this;
+    }
+
+    public function getDureeTheoriqueMinutes(): ?int
+    {
+        return $this->dureeTheoriquenMinutes;
+    }
+
+    public function setDureeTheoriqueMinutes(?int $dureeTheoriquenMinutes): static
+    {
+        $this->dureeTheoriquenMinutes = $dureeTheoriquenMinutes;
         return $this;
     }
 

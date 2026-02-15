@@ -151,6 +151,13 @@
                 <span class="mdl-textfield__error">Le nombre doit être au moins 1</span>
             </div>
 
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ type.dureeTheoriqueMinutes ? 'is-dirty' : '' }}">
+                <input class="mdl-textfield__input" type="number" id="dureeTheoriqueMinutes" name="dureeTheoriqueMinutes"
+                       value="{{ type.dureeTheoriqueMinutes }}" min="5" step="5">
+                <label class="mdl-textfield__label" for="dureeTheoriqueMinutes">Durée théorique (en minutes)</label>
+                <span class="mdl-textfield__error">La durée doit être au moins 5 minutes</span>
+            </div>
+
             <div style="padding: 16px; background: rgba(63, 81, 181, 0.05); border-radius: 4px; margin-bottom: 16px;">
                 <div style="display: flex; align-items: flex-start; gap: 12px;">
                     <i class="material-icons" style="color: var(--primary); font-size: 24px;">lightbulb</i>

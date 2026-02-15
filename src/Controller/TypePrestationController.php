@@ -121,6 +121,7 @@ class TypePrestationController extends AbstractController
         $type->setNom($request->request->get('nom'));
         $type->setCode($request->request->get('code') ?: null);
         $type->setNombrePrestationsNecessaires((int) $request->request->get('nombrePrestationsNecessaires', 1));
+        $type->setDureeTheoriqueMinutes($request->request->get('dureeTheoriqueMinutes') ? (int) $request->request->get('dureeTheoriqueMinutes') : null);
 
         // Champs personnalises
         $champsJson = $request->request->get('champs_personnalises', '[]');
