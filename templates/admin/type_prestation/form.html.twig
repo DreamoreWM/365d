@@ -357,6 +357,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 result.push({ label, type: type || 'checkbox', position: i });
             }
         });
+        // Mettre à jour l'array fields en plus du hidden input
+        fields = result;
         hiddenInput.value = JSON.stringify(result);
     }
 
@@ -367,6 +369,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     addBtn.addEventListener('click', () => {
+        // Synchroniser d'abord les champs existants avant d'en ajouter un nouveau
+        syncHiddenInput();
         fields.push({ label: '', type: 'checkbox', position: fields.length });
         renderFields();
         // Focus the new input
@@ -377,6 +381,8 @@ document.addEventListener('DOMContentLoaded', function() {
     container.addEventListener('click', (e) => {
         const removeBtn = e.target.closest('.remove-field-btn');
         if (removeBtn) {
+            // Synchroniser d'abord les valeurs actuelles
+            syncHiddenInput();
             const row = removeBtn.closest('.custom-field-row');
             const index = parseInt(row.dataset.index);
             fields.splice(index, 1);
