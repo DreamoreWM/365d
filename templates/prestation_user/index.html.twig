@@ -770,6 +770,15 @@
                                     <div class="prev-detail"><i class="material-icons">person</i> {{ derniere.employe.nom }}</div>
                                     {% endif %}
 
+                                    {% set typeP = derniere.bonDeCommande ? derniere.bonDeCommande.typePrestation : derniere.typePrestation %}
+                                    {% if typeP %}
+                                    <div class="prev-detail"><i class="material-icons">category</i> {{ typeP.nom }}</div>
+                                    {% endif %}
+
+                                    {% if derniere.description %}
+                                    <div class="prev-detail"><i class="material-icons">notes</i> {{ derniere.description }}</div>
+                                    {% endif %}
+
                                     {% set infos = derniere.infosIntervention ?? {} %}
                                     {% if infos is not empty %}
                                     <div class="prev-infos-grid">
@@ -800,8 +809,19 @@
                                     </div>
                                     {% endif %}
 
+                                    {% if typeP and typeP.champsPersonnalises is not empty and derniere.valeursChampsPersonnalises is not empty %}
+                                    <div class="prev-infos-grid">
+                                        {% for v in derniere.valeursChampsPersonnalises %}
+                                        <span class="prev-chip {{ v.checked|default(false) ? 'chip-green' : '' }}" style="{{ not v.checked|default(false) ? 'background:#f5f5f5;color:#999;' : '' }}">
+                                            <i class="material-icons">{{ v.checked|default(false) ? 'check_box' : 'check_box_outline_blank' }}</i>
+                                            {{ v.label }}{% if v.value is defined and v.value is not null %} ({{ v.value }}){% endif %}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+
                                     {% if derniere.compteRendu and derniere.compteRendu|striptags|trim is not empty %}
-                                    <div class="prev-compte-rendu">{{ derniere.compteRendu|striptags|length > 150 ? derniere.compteRendu|striptags|slice(0, 150) ~ '…' : derniere.compteRendu|striptags }}</div>
+                                    <div class="prev-compte-rendu" style="max-height: 120px; overflow-y: auto;">{{ derniere.compteRendu|raw }}</div>
                                     {% endif %}
 
                                     {% if derniere.signature %}
