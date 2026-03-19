@@ -13,6 +13,9 @@ security:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
+        deploy:
+            pattern: ^/deploy
+            security: false
         api_login:
             pattern: ^/api/login
             stateless: true
