@@ -243,7 +243,7 @@ class BonDeCommandeController extends AbstractController
     }
 
     // =====================================================
-    // IMPORT OCR (Gemini Vision en priorité, Tesseract en fallback)
+    // IMPORT OCR (Gemini → Ollama → Tesseract)
     // =====================================================
     #[Route('/import-ocr', name: 'admin_bon_commande_import_ocr', methods: ['POST'])]
     public function importViaOcr(Request $request): Response
@@ -253,31 +253,29 @@ class BonDeCommandeController extends AbstractController
             $file->move(sys_get_temp_dir(), basename($tmpPath));
 
             $geminiApiKey = $_ENV['GEMINI_API_KEY'] ?? '';
-            $logPath = $this->getParameter('kernel.project_dir') . '/var/ocr_debug.log';
+            $ollamaUrl    = rtrim($_ENV['OLLAMA_URL'] ?? '', '/');
+            $ollamaModel  = $_ENV['OLLAMA_MODEL'] ?? 'llava';
+            $logPath      = $this->getParameter('kernel.project_dir') . '/var/ocr_debug.log';
 
             if ($geminiApiKey) {
                 // === CHEMIN GEMINI ===
                 $result = $this->extractWithGemini($tmpPath, $geminiApiKey, $logPath, $file->getClientOriginalName());
                 unlink($tmpPath);
+            } elseif ($ollamaUrl) {
+                // === CHEMIN OLLAMA ===
+                $result = $this->extractWithOllama($tmpPath, $ollamaUrl, $ollamaModel, $logPath, $file->getClientOriginalName());
+                unlink($tmpPath);
+            }
 
+            if (isset($result)) {
                 $numeroCommande = $result['numeroCommande'] ?? '';
                 $nomClient      = $result['clientNom'] ?? '';
                 $adresse        = $result['clientAdresse'] ?? '';
                 $telephone      = $result['clientTelephone'] ?? '';
                 $complement     = $result['clientComplementAdresse'] ?? '';
                 $dateLimite     = $result['dateLimiteExecution'] ?? '';
-                $codeGemini     = $result['typePrestation'] ?? '';
+                $detectedTypeId = $this->detectTypePrestationId($result['typePrestation'] ?? '');
 
-                // Recherche du type de prestation par code
-                $detectedTypeId = '';
-                $typePrestations = $this->em->getRepository(TypePrestation::class)->findAll();
-                foreach ($typePrestations as $tp) {
-                    $code = $tp->getCode();
-                    if ($code && stripos($codeGemini, $code) !== false) {
-                        $detectedTypeId = $tp->getId();
-                        break;
-                    }
-                }
             } else {
                 // === CHEMIN TESSERACT (fallback) ===
                 $processedPath = $this->preprocessImageForOcr($tmpPath);
@@ -372,15 +370,7 @@ class BonDeCommandeController extends AbstractController
                     $adresse = $codePostalVille;
                 }
 
-                $detectedTypeId = '';
-                $typePrestations = $this->em->getRepository(TypePrestation::class)->findAll();
-                foreach ($typePrestations as $tp) {
-                    $code = $tp->getCode();
-                    if ($code && stripos($text, $code) !== false) {
-                        $detectedTypeId = $tp->getId();
-                        break;
-                    }
-                }
+                $detectedTypeId = $this->detectTypePrestationId($text);
 
                 // Log Tesseract
                 $log = "=== Tesseract OCR " . date('Y-m-d H:i:s') . " ===\n";
@@ -410,6 +400,107 @@ class BonDeCommandeController extends AbstractController
 
         $this->addFlash('danger', 'Aucun fichier reçu');
         return $this->redirectToRoute('admin_bon_commande_index');
+    }
+
+    // =====================================================
+    // MÉTHODE PRIVÉE : EXTRACTION VIA GEMINI VISION
+    // =====================================================
+    // =====================================================
+    // MÉTHODE PRIVÉE : DÉTECTION TYPE PRESTATION PAR CODE
+    // =====================================================
+    private function detectTypePrestationId(string $codeOuTexte): string
+    {
+        if (!$codeOuTexte) {
+            return '';
+        }
+        foreach ($this->em->getRepository(TypePrestation::class)->findAll() as $tp) {
+            $code = $tp->getCode();
+            if ($code && stripos($codeOuTexte, $code) !== false) {
+                return (string) $tp->getId();
+            }
+        }
+        return '';
+    }
+
+    // =====================================================
+    // MÉTHODE PRIVÉE : EXTRACTION VIA OLLAMA (local)
+    // =====================================================
+    private function extractWithOllama(string $imagePath, string $ollamaUrl, string $model, string $logPath, string $originalName): array
+    {
+        $ext = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
+
+        // Ollama ne supporte pas les PDFs en natif : on tente quand même mais ce sera vide
+        if ($ext === 'pdf') {
+            $log = "=== Ollama OCR " . date('Y-m-d H:i:s') . " ===\n";
+            $log .= "Fichier: $originalName\n";
+            $log .= "ERREUR : Ollama ne supporte pas les PDFs. Utilisez Gemini ou convertissez en image.\n\n";
+            file_put_contents($logPath, $log, FILE_APPEND);
+            return [];
+        }
+
+        $imageData = base64_encode(file_get_contents($imagePath));
+
+        $prompt = <<<'PROMPT'
+Tu analyses un bon de commande de désinfestation / désinsectisation émis par un bailleur social.
+
+Ce document contient DEUX types de contacts à ne SURTOUT PAS confondre :
+1. Le BAILLEUR (donneur d'ordre, propriétaire) : affiché en haut à gauche dans un encadré (ex : Vilogia, Partenord, ICF, etc.). NE PAS utiliser ces informations.
+2. Le LOCATAIRE (occupant actuel du logement à traiter) : affiché dans la section "Prestation Parties Privatives", identifié par "Occupant actuel" ou "Logement Occupé". C'est LUI le client à renseigner.
+
+Extrais UNIQUEMENT les informations du LOCATAIRE.
+
+Retourne un JSON avec exactement ces champs (chaînes vides si non trouvé) :
+{
+  "numeroCommande": "numéro de marché ou commande sans espace",
+  "clientNom": "civilité + nom complet du locataire",
+  "clientAdresse": "numéro + rue + résidence éventuelle, saut de ligne, code postal + ville",
+  "clientTelephone": "téléphone du locataire, chiffres uniquement sans espaces",
+  "clientComplementAdresse": "logement n°, porte n°, étage, type...",
+  "dateLimiteExecution": "date limite au format YYYY-MM-DD",
+  "typePrestation": "code alphanumérique entre parenthèses (ex: 13D16N)"
+}
+
+Réponds UNIQUEMENT avec le JSON brut, sans markdown ni texte supplémentaire.
+PROMPT;
+
+        $payload = [
+            'model'  => $model,
+            'prompt' => $prompt,
+            'images' => [$imageData],
+            'format' => 'json',
+            'stream' => false,
+            'options' => ['temperature' => 0],
+        ];
+
+        $ch = curl_init("{$ollamaUrl}/api/generate");
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_POSTFIELDS     => json_encode($payload),
+            CURLOPT_TIMEOUT        => 120,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $log = "=== Ollama OCR ($model) " . date('Y-m-d H:i:s') . " ===\n";
+        $log .= "Fichier: $originalName\n";
+
+        if ($httpCode !== 200 || !$response) {
+            $log .= "ERREUR HTTP $httpCode\n$response\n\n";
+            file_put_contents($logPath, $log, FILE_APPEND);
+            return [];
+        }
+
+        $decoded  = json_decode($response, true);
+        $jsonText = $decoded['response'] ?? '{}';
+        $result   = json_decode($jsonText, true) ?? [];
+
+        $log .= "Résultat Ollama:\n" . json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
+        file_put_contents($logPath, $log, FILE_APPEND);
+
+        return $result;
     }
 
     // =====================================================
