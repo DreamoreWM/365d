@@ -12,7 +12,7 @@ class DeployController extends AbstractController
     #[Route('/deploy', name: 'deploy_webhook', methods: ['POST'])]
     public function deploy(Request $request): Response
     {
-        $secret = $_ENV['DEPLOY_SECRET'] ?? '';
+        $secret = getenv('DEPLOY_SECRET') ?: '';
 
         // Vérification signature GitHub
         $signature = $request->headers->get('X-Hub-Signature-256');
