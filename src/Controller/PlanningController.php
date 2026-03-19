@@ -10,6 +10,7 @@ use App\Repository\PrestationRepository;
 use App\Repository\UserRepository;
 use App\Repository\BonDeCommandeRepository;
 use App\Repository\GroupeGeographiqueRepository;
+use App\Repository\TypePrestationRepository;
 use App\Service\PrestationManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -27,6 +28,7 @@ class PlanningController extends AbstractController
         private UserRepository $userRepo,
         private BonDeCommandeRepository $bonRepo,
         private GroupeGeographiqueRepository $groupeGeoRepo,
+        private TypePrestationRepository $typePrestationRepo,
         private PrestationManager $prestationManager
     ) {}
 
@@ -67,12 +69,16 @@ class PlanningController extends AbstractController
         // Groupes géographiques pour le filtrage
         $groupesGeo = $this->groupeGeoRepo->findAllActifs();
 
+        // Types de prestation pour le filtrage
+        $typesPrestations = $this->typePrestationRepo->findAll();
+
         return $this->render('admin/planning/index.html.twig', [
             'employes' => $employes,
             'selectedDate' => $selectedDate,
             'selectedEmployeId' => $selectedEmployeId,
             'prestations' => $prestations,
             'groupesGeo' => $groupesGeo,
+            'typesPrestations' => $typesPrestations,
         ]);
     }
 
@@ -271,9 +277,13 @@ class PlanningController extends AbstractController
                 'dateCommande' => $bon->getDateCommande()?->format('d/m/Y'),
                 'statut' => $bon->getStatut()->value,
                 'codePostal' => $codePostal,
+                'typePrestation' => $bon->getTypePrestation() ? [
+                    'id' => $bon->getTypePrestation()->getId(),
+                    'nom' => $bon->getTypePrestation()->getNom(),
+                ] : null,
             ];
         }
-        
+
         return $this->json($results);
     }
 
@@ -286,10 +296,11 @@ class PlanningController extends AbstractController
         $query = $request->query->get('q', '');
         $statut = $request->query->get('statut', '');
         $groupeGeoId = $request->query->get('groupe_geo', '');
+        $typePrestationId = $request->query->get('type_prestation', '');
         $sort = $request->query->get('sort', 'date_desc');
-        
+
         // Si aucun filtre n'est appliqué et pas de recherche
-        if (strlen($query) < 2 && !$statut && !$groupeGeoId) {
+        if (strlen($query) < 2 && !$statut && !$groupeGeoId && !$typePrestationId) {
             // Retourner les bons disponibles par défaut
             return $this->bonsDisponibles($bonRepo);
         }
@@ -326,6 +337,12 @@ class PlanningController extends AbstractController
                     $qb->andWhere('(' . implode(' OR ', $codePostalConditions) . ')');
                 }
             }
+        }
+
+        // Filtre par type de prestation
+        if ($typePrestationId) {
+            $qb->andWhere('b.typePrestation = :typePrestation')
+               ->setParameter('typePrestation', $typePrestationId);
         }
         
         // Tri
@@ -385,9 +402,13 @@ class PlanningController extends AbstractController
                 'statut' => $bon->getStatut()->value,
                 'codePostal' => $codePostal,
                 'groupeGeo' => $groupeGeo,
+                'typePrestation' => $bon->getTypePrestation() ? [
+                    'id' => $bon->getTypePrestation()->getId(),
+                    'nom' => $bon->getTypePrestation()->getNom(),
+                ] : null,
             ];
         }
-        
+
         return $this->json($results);
     }
 

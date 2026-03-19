@@ -630,9 +630,20 @@
         transition: all 0.2s;
     }
 
+    .prestation-card.status-a-programmer  { border-left: 4px solid #e65100 !important; background: rgba(255, 152, 0, 0.07) !important; }
+    .prestation-card.status-programme     { border-left: 4px solid var(--primary) !important; background: rgba(63, 81, 181, 0.05) !important; }
+    .prestation-card.status-en-cours      { border-left: 4px solid #ff9800 !important; background: rgba(255, 152, 0, 0.08) !important; }
+    .prestation-card.status-termine       { border-left: 4px solid #2e7d32 !important; background: rgba(46, 125, 50, 0.08) !important; }
+    .prestation-card.status-non-effectue  { border-left: 4px solid #d32f2f !important; background: rgba(211, 47, 47, 0.08) !important; }
+
     body.dark-mode .prestation-card {
         background: rgba(63, 81, 181, 0.1);
     }
+
+    body.dark-mode .prestation-card.status-termine      { background: rgba(46, 125, 50, 0.15) !important; }
+    body.dark-mode .prestation-card.status-non-effectue { background: rgba(211, 47, 47, 0.15) !important; }
+    body.dark-mode .prestation-card.status-en-cours     { background: rgba(255, 152, 0, 0.12) !important; }
+    body.dark-mode .prestation-card.status-a-programmer { background: rgba(255, 152, 0, 0.10) !important; }
 
     .prestation-card:hover {
         background: rgba(63, 81, 181, 0.1);
@@ -689,13 +700,17 @@
         font-weight: 500;
     }
 
-    .badge-programme { background: #e3f2fd; color: #1565c0; }
-    .badge-en-cours { background: #fff3e0; color: #ff9800; }
-    .badge-termine { background: #e8f5e9; color: #2e7d32; }
+    .badge-a-programmer  { background: #fff3e0; color: #e65100; }
+    .badge-programme     { background: #e3f2fd; color: #1565c0; }
+    .badge-en-cours      { background: #fff3e0; color: #ff9800; }
+    .badge-termine       { background: #e8f5e9; color: #2e7d32; }
+    .badge-non-effectue  { background: #ffebee; color: #d32f2f; }
 
-    body.dark-mode .badge-programme { background: rgba(21, 101, 192, 0.2); color: #64b5f6; }
-    body.dark-mode .badge-en-cours { background: rgba(255, 152, 0, 0.2); color: #ffb74d; }
-    body.dark-mode .badge-termine { background: rgba(46, 125, 50, 0.2); color: #81c784; }
+    body.dark-mode .badge-a-programmer  { background: rgba(230, 81, 0, 0.2); color: #ffb74d; }
+    body.dark-mode .badge-programme     { background: rgba(21, 101, 192, 0.2); color: #64b5f6; }
+    body.dark-mode .badge-en-cours      { background: rgba(255, 152, 0, 0.2); color: #ffb74d; }
+    body.dark-mode .badge-termine       { background: rgba(46, 125, 50, 0.2); color: #81c784; }
+    body.dark-mode .badge-non-effectue  { background: rgba(211, 47, 47, 0.2); color: #ef9a9a; }
 
     .geo-badge {
         display: inline-flex;
@@ -1960,7 +1975,7 @@
                         {% for prestation in prestations %}
                             <div class="timeline-item">
                                 <div class="timeline-dot"></div>
-                                <div class="prestation-card">
+                                <div class="prestation-card status-{{ prestation.statut.cssClass }}">
                                     <div class="prestation-time">
                                         {{ prestation.datePrestation|date('H:i') }}
                                     </div>
@@ -2279,6 +2294,13 @@
                     <option value="termin&eacute;">Termin&eacute;</option>
                 </select>
 
+                <select class="filter-select" id="filterTypePrestation" onchange="searchBons()">
+                    <option value="">Tous les types</option>
+                    {% for type in typesPrestations %}
+                        <option value="{{ type.id }}">{{ type.nom }}</option>
+                    {% endfor %}
+                </select>
+
                 <select class="filter-select" id="filterGroupe" onchange="searchBons()">
                     <option value="">Tous les groupes g&eacute;ographiques</option>
                     {% for groupe in groupesGeo %}
@@ -2455,7 +2477,25 @@ function initCalendar() {
 
         eventClassNames: function(arg) {
             if (arg.event.id === 'preview') return ['fc-preview-event'];
-            return [];
+            const cssClass = arg.event.extendedProps.statutCssClass;
+            return cssClass ? ['fc-event-statut-' + cssClass] : [];
+        },
+
+        eventDidMount: function(arg) {
+            if (arg.event.id === 'preview') return;
+            const statusColors = {
+                'à programmer': '#e65100',
+                'programmé':    '#3f51b5',
+                'en cours':     '#ff9800',
+                'terminé':      '#2e7d32',
+                'non effectué': '#d32f2f',
+            };
+            const statut = arg.event.extendedProps.statut;
+            const color = statusColors[statut];
+            if (color) {
+                arg.el.style.backgroundColor = color;
+                arg.el.style.borderColor = color;
+            }
         },
 
         eventClick: function(info) {
@@ -2817,7 +2857,8 @@ function openBonModal() {
     document.getElementById('bonCommandeModal').classList.add('open');
     document.getElementById('bonSearchInput').focus();
 
-    document.getElementById('filterStatut').value = 'disponible';
+    document.getElementById('filterStatut').value = 'à programmer';
+    document.getElementById('filterTypePrestation').value = '';
     document.getElementById('filterGroupe').value = '';
     document.getElementById('filterSort').value = 'date_desc';
 
@@ -2896,6 +2937,7 @@ async function searchBons() {
 
     const query = document.getElementById('bonSearchInput').value.trim();
     const statut = document.getElementById('filterStatut').value;
+    const typePrestation = document.getElementById('filterTypePrestation').value;
     const groupeGeo = document.getElementById('filterGroupe').value;
     const sort = document.getElementById('filterSort').value;
     const resultsContainer = document.getElementById('bonSearchResults');
@@ -2904,7 +2946,7 @@ async function searchBons() {
 
     searchTimeout = setTimeout(async () => {
         try {
-            const params = new URLSearchParams({ q: query, statut: statut, groupe_geo: groupeGeo, sort: sort });
+            const params = new URLSearchParams({ q: query, statut: statut, type_prestation: typePrestation, groupe_geo: groupeGeo, sort: sort });
             const response = await fetch('/admin/planning/search-bons?' + params);
             const bons = await response.json();
             displaySearchResults(bons);
@@ -2960,6 +3002,7 @@ function displaySearchResults(bons) {
                     '<div class="bon-info">' +
                         '<span class="bon-info-item"><i class="material-icons">receipt</i> BC ' + (bon.numeroCommande || '#' + bon.id) + '</span>' +
                         '<span class="bon-info-item"><i class="material-icons">event</i> ' + (bon.dateCommande || 'N/A') + '</span>' +
+                        (bon.typePrestation ? '<span class="bon-info-item"><i class="material-icons">category</i> ' + bon.typePrestation.nom + '</span>' : '') +
                         '<span class="bon-info-item"><i class="material-icons">location_on</i> ' + (bon.clientAdresse ? bon.clientAdresse.substring(0, 30) + '...' : 'N/A') + '</span>' +
                         geoHtml +
                     '</div>' +

@@ -328,6 +328,126 @@
         color: #aaa;
     }
 
+    /* ========== PREVIOUS INTERVENTION RECAP ========== */
+    .prev-intervention-recap {
+        margin-top: 8px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #fafafa;
+    }
+
+    .prev-intervention-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #555;
+        transition: background 0.2s;
+    }
+
+    .prev-intervention-header:hover {
+        background: #f0f0f0;
+    }
+
+    .prev-intervention-header .chevron {
+        margin-left: auto;
+        transition: transform 0.2s;
+        font-size: 20px;
+    }
+
+    .prev-intervention-recap.open .prev-intervention-header .chevron {
+        transform: rotate(180deg);
+    }
+
+    .prev-intervention-body {
+        display: none;
+        padding: 0 14px 12px;
+    }
+
+    .prev-intervention-recap.open .prev-intervention-body {
+        display: block;
+    }
+
+    .prev-detail {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+        color: #666;
+        margin-bottom: 8px;
+    }
+
+    .prev-detail .material-icons {
+        font-size: 16px;
+        color: #999;
+    }
+
+    .prev-infos-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+
+    .prev-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 16px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .prev-chip .material-icons {
+        font-size: 14px;
+    }
+
+    .chip-green { background: #e8f5e9; color: #2e7d32; }
+    .chip-red { background: #ffebee; color: #c62828; }
+    .chip-orange { background: #fff3e0; color: #e65100; }
+
+    .prev-compte-rendu {
+        font-size: 0.82rem;
+        color: #666;
+        line-height: 1.4;
+        padding: 8px 10px;
+        background: rgba(63, 81, 181, 0.04);
+        border-left: 3px solid var(--primary);
+        border-radius: 4px;
+        font-style: italic;
+    }
+
+    body.dark-mode .prev-intervention-recap {
+        border-color: #444;
+        background: rgba(255,255,255,0.05);
+    }
+
+    body.dark-mode .prev-intervention-header {
+        color: #bbb;
+    }
+
+    body.dark-mode .prev-intervention-header:hover {
+        background: rgba(255,255,255,0.08);
+    }
+
+    body.dark-mode .prev-detail {
+        color: #aaa;
+    }
+
+    body.dark-mode .prev-compte-rendu {
+        color: #aaa;
+        background: rgba(63, 81, 181, 0.08);
+    }
+
+    body.dark-mode .chip-green { background: rgba(46, 125, 50, 0.2); color: #81c784; }
+    body.dark-mode .chip-red { background: rgba(198, 40, 40, 0.2); color: #ef9a9a; }
+    body.dark-mode .chip-orange { background: rgba(230, 81, 0, 0.2); color: #ffb74d; }
+
     /* Card footer */
     .prestation-card-footer {
         padding: 12px 20px 16px;
@@ -589,8 +709,7 @@
                                     <br><small style="color: #757575;">{{ p.bonDeCommande.clientComplementAdresse }}</small>
                                 {% endif %}
                             </div>
-                            {% set fullAddress = p.bonDeCommande.clientAdresse ~ (p.bonDeCommande.clientComplementAdresse ? ' ' ~ p.bonDeCommande.clientComplementAdresse : '') %}
-                            <a href="https://www.google.com/maps/search/?api=1&query={{ fullAddress|url_encode }}"
+                            <a href="https://www.google.com/maps/search/?api=1&query={{ p.bonDeCommande.adresseGps|url_encode }}"
                                target="_blank" class="gps-btn" title="Ouvrir dans Maps">
                                 <i class="material-icons">navigation</i>
                             </a>
@@ -623,6 +742,78 @@
                         </div>
                         {% endif %}
 
+                        <!-- Passages -->
+                        {% if p.bonDeCommande %}
+                            {% set nbTerminees = p.bonDeCommande.prestations|filter(pr => pr.statut.value == 'terminé')|length %}
+                            {% set nbNecessaires = p.bonDeCommande.nombrePrestationsNecessaires %}
+                            {% if nbNecessaires > 0 %}
+                            <div class="info-item">
+                                <i class="material-icons">repeat</i>
+                                <div class="info-item-text">Passage {{ nbTerminees }} / {{ nbNecessaires }}</div>
+                            </div>
+                            {% endif %}
+                        {% endif %}
+
+                        <!-- Récap dernière intervention précédente -->
+                        {% if p.bonDeCommande %}
+                            {% set prestaPrecedentes = p.bonDeCommande.prestations|filter(pr => pr.id != p.id and pr.statut.value == 'terminé')|sort((a, b) => b.datePrestation <=> a.datePrestation) %}
+                            {% set derniere = prestaPrecedentes|first %}
+                            {% if derniere %}
+                            <div class="prev-intervention-recap">
+                                <div class="prev-intervention-header" onclick="this.parentElement.classList.toggle('open')">
+                                    <i class="material-icons">history</i>
+                                    <span>Dernière intervention — {{ derniere.datePrestation|date('d/m/Y') }}</span>
+                                    <i class="material-icons chevron">expand_more</i>
+                                </div>
+                                <div class="prev-intervention-body">
+                                    {% if derniere.employe %}
+                                    <div class="prev-detail"><i class="material-icons">person</i> {{ derniere.employe.nom }}</div>
+                                    {% endif %}
+
+                                    {% set infos = derniere.infosIntervention ?? {} %}
+                                    {% if infos is not empty %}
+                                    <div class="prev-infos-grid">
+                                        {% if infos.presenceConstatee is defined %}
+                                        <span class="prev-chip {{ infos.presenceConstatee == 'oui' ? 'chip-green' : 'chip-red' }}">
+                                            <i class="material-icons">{{ infos.presenceConstatee == 'oui' ? 'person' : 'person_off' }}</i>
+                                            Présence: {{ infos.presenceConstatee }}
+                                        </span>
+                                        {% endif %}
+                                        {% if infos.niveauInfestation is defined %}
+                                        <span class="prev-chip {{ infos.niveauInfestation == 'eleve' ? 'chip-red' : (infos.niveauInfestation == 'moyen' ? 'chip-orange' : 'chip-green') }}">
+                                            <i class="material-icons">bug_report</i>
+                                            Infestation: {{ infos.niveauInfestation }}
+                                        </span>
+                                        {% endif %}
+                                        {% if infos.logementPropre is defined %}
+                                        <span class="prev-chip {{ infos.logementPropre == 'oui' ? 'chip-green' : 'chip-red' }}">
+                                            <i class="material-icons">cleaning_services</i>
+                                            Propre: {{ infos.logementPropre }}
+                                        </span>
+                                        {% endif %}
+                                        {% if infos.logementEncombre is defined %}
+                                        <span class="prev-chip {{ infos.logementEncombre == 'oui' ? 'chip-red' : 'chip-green' }}">
+                                            <i class="material-icons">inventory_2</i>
+                                            Encombré: {{ infos.logementEncombre }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+
+                                    {% if derniere.compteRendu and derniere.compteRendu|striptags|trim is not empty %}
+                                    <div class="prev-compte-rendu">{{ derniere.compteRendu|striptags|length > 150 ? derniere.compteRendu|striptags|slice(0, 150) ~ '…' : derniere.compteRendu|striptags }}</div>
+                                    {% endif %}
+
+                                    {% if derniere.signature %}
+                                    <div style="margin-top: 6px;">
+                                        <img src="{{ derniere.signature }}" alt="Signature" style="max-width: 120px; max-height: 40px; border: 1px solid var(--border-light); border-radius: 4px; background: white;">
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endif %}
+
                     </div>
 
                     <!-- Card Footer -->
@@ -631,11 +822,26 @@
                             <i class="material-icons">{{ p.statut.icon }}</i>
                             {{ p.statut.label }}
                         </span>
-                        <a href="{{ path('app_user_prestation_view', {id: p.id}) }}"
-                           class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored open-btn">
-                            <i class="material-icons">visibility</i>
-                            Ouvrir
-                        </a>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            {% if p.datePrestation|date('Y-m-d') == 'now'|date('Y-m-d') and p.statut.value != 'non effectué' %}
+                                <form method="post"
+                                      action="{{ path('app_user_prestation_absent', {id: p.id}) }}"
+                                      style="display: inline;"
+                                      onsubmit="return confirm('Marquer cette prestation comme non effectuée ?');">
+                                    <button type="submit"
+                                            class="mdl-button mdl-js-button mdl-button--raised"
+                                            style="background: #d32f2f; color: white; min-width: unset; padding: 0 12px;">
+                                        <i class="material-icons" style="font-size: 18px; vertical-align: middle;">person_off</i>
+                                        Absent
+                                    </button>
+                                </form>
+                            {% endif %}
+                            <a href="{{ path('app_user_prestation_view', {id: p.id}) }}"
+                               class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored open-btn">
+                                <i class="material-icons">visibility</i>
+                                Ouvrir
+                            </a>
+                        </div>
                     </div>
 
                 </div>

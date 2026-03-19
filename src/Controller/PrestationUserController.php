@@ -106,6 +106,23 @@ class PrestationUserController extends AbstractController
         ]);
     }
 
+    #[Route('/{id}/absent', name: 'app_user_prestation_absent', methods: ['POST'])]
+    public function marquerAbsent(Prestation $prestation, EntityManagerInterface $em): Response
+    {
+        $datePrestation = $prestation->getDatePrestation();
+        if (!$datePrestation || $datePrestation->format('Y-m-d') !== (new \DateTimeImmutable('today'))->format('Y-m-d')) {
+            $this->addFlash('danger', 'Action impossible : pas le jour de la prestation');
+            return $this->redirectToRoute('app_user_prestations');
+        }
+
+        $prestation->setStatut(StatutPrestation::NON_EFFECTUE);
+        $em->flush();
+
+        return $this->redirectToRoute('app_user_prestations', [
+            'date' => $datePrestation->format('Y-m-d'),
+        ]);
+    }
+
 #[Route('/{id}/terminer', name: 'app_user_prestation_terminer', methods: ['POST'])]
 public function terminer(Prestation $prestation, EntityManagerInterface $em): Response
 {
