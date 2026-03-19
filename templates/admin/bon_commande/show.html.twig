@@ -466,11 +466,18 @@
             <a href="{{ path('admin_bon_commande_edit', {id: bon.id}) }}" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored" title="Modifier">
                 <i class="material-icons">edit</i>
             </a>
+            <button type="button" onclick="confirmDeleteBon()" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab" style="background: #d32f2f; color: white;" title="Supprimer">
+                <i class="material-icons">delete</i>
+            </button>
             <a href="{{ path('admin_bon_commande_index') }}" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab" style="background: white; color: var(--primary);" title="Retour">
                 <i class="material-icons">arrow_back</i>
             </a>
         </div>
     </div>
+
+    <form id="delete-bon-form" method="POST" action="{{ path('admin_bon_commande_delete', {id: bon.id}) }}" style="display: none;">
+        <input type="hidden" name="_token" value="{{ csrf_token('delete') }}">
+    </form>
 
     <!-- Info Grid -->
     <div class="info-grid">
@@ -857,4 +864,15 @@
 
 </div>
 
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+function confirmDeleteBon() {
+    if (confirm('Êtes-vous sûr de vouloir supprimer le bon de commande de {{ bon.clientNom|e('js') }} ?\n\nCette action est irréversible.')) {
+        document.getElementById('delete-bon-form').submit();
+    }
+}
+</script>
 {% endblock %}
