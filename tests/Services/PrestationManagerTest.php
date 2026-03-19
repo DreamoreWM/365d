@@ -79,6 +79,57 @@ class PrestationManagerTest extends TestCase
         $this->assertSame(StatutPrestation::NON_EFFECTUE, $prestation->getStatut());
     }
 
+    public function testPrestationEnCoursPasseEnNonEffectueSiDatePassee(): void
+    {
+        $manager = $this->createManager();
+
+        $prestation = new Prestation();
+        $prestation->setDatePrestation((new \DateTimeImmutable())->modify('-1 day'));
+        $prestation->setStatut(StatutPrestation::EN_COURS);
+
+        $manager->updatePrestationStatut($prestation);
+
+        $this->assertSame(
+            StatutPrestation::NON_EFFECTUE,
+            $prestation->getStatut(),
+            'Une prestation EN_COURS dont la date est passée doit passer en NON_EFFECTUE'
+        );
+    }
+
+    public function testPrestationTermineeAvecDateFutureResteTerminee(): void
+    {
+        $manager = $this->createManager();
+
+        $prestation = new Prestation();
+        $prestation->setDatePrestation((new \DateTimeImmutable())->modify('+5 days'));
+        $prestation->setStatut(StatutPrestation::TERMINE);
+
+        $manager->updatePrestationStatut($prestation);
+
+        $this->assertSame(
+            StatutPrestation::TERMINE,
+            $prestation->getStatut(),
+            'Une prestation TERMINE ne doit pas repasser en PROGRAMME même si la date est future'
+        );
+    }
+
+    public function testPrestationNonEffectueeAvecDateFutureResteNonEffectuee(): void
+    {
+        $manager = $this->createManager();
+
+        $prestation = new Prestation();
+        $prestation->setDatePrestation((new \DateTimeImmutable())->modify('+3 days'));
+        $prestation->setStatut(StatutPrestation::NON_EFFECTUE);
+
+        $manager->updatePrestationStatut($prestation);
+
+        $this->assertSame(
+            StatutPrestation::NON_EFFECTUE,
+            $prestation->getStatut(),
+            'Une prestation NON_EFFECTUE ne doit pas repasser en PROGRAMME même si la date est future'
+        );
+    }
+
     public function testPrestationStatutNonEffectueEtTermineRestentStables()
     {
         $manager = $this->createManager();

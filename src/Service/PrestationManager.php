@@ -18,13 +18,12 @@ class PrestationManager
      * Met à jour le statut d'une prestation selon la date et le statut actuel.
      *
      * Règles :
+     * - si déjà TERMINE ou NON_EFFECTUE => on garde (statuts terminaux verrouillés)
      * - pas de date => A_PROGRAMMER
      * - date == aujourd'hui (comparaison jour seul) => EN_COURS
      * - date > aujourd'hui => PROGRAMME
      * - date < aujourd'hui :
-     *     - si la prestation était PROGRAMME => NON_EFFECTUE
-     *     - si déjà NON_EFFECTUE => on garde NON_EFFECTUE
-     *     - si déjà TERMINE => on garde TERMINE
+     *     - si la prestation était PROGRAMME ou EN_COURS => NON_EFFECTUE
      *     - sinon => TERMINE
      */
     public function updatePrestationStatut(Prestation $prestation): void
@@ -33,6 +32,12 @@ class PrestationManager
 
         if (!$date) {
             $prestation->setStatut(StatutPrestation::A_PROGRAMMER);
+            return;
+        }
+
+        // Les statuts terminaux ne changent jamais automatiquement
+        $currentStatut = $prestation->getStatut();
+        if ($currentStatut === StatutPrestation::TERMINE || $currentStatut === StatutPrestation::NON_EFFECTUE) {
             return;
         }
 
@@ -54,21 +59,7 @@ class PrestationManager
             return;
         }
 
-        // Date passée
-        $currentStatut = $prestation->getStatut();
-
-        // Si déjà terminé, on garde ce statut
-        if ($currentStatut === StatutPrestation::TERMINE) {
-            return;
-        }
-
-        // Si déjà non effectué, on garde ce statut
-        if ($currentStatut === StatutPrestation::NON_EFFECTUE) {
-            return;
-        }
-
-        // Si elle était programmée ou en cours et la date est passée => non effectué
-        // (car elle n'a pas été complétée)
+        // Date passée : la prestation était PROGRAMME ou EN_COURS => non effectué
         if ($currentStatut === StatutPrestation::PROGRAMME || $currentStatut === StatutPrestation::EN_COURS) {
             $prestation->setStatut(StatutPrestation::NON_EFFECTUE);
             return;

@@ -751,6 +751,76 @@
                         <div class="prestation-description">{{ prestation.description }}</div>
                     {% endif %}
 
+                    <!-- Compte-rendu -->
+                    {% if prestation.compteRendu and prestation.compteRendu|striptags|trim is not empty %}
+                        <div style="margin-bottom: 12px;">
+                            <div class="prestation-detail-label" style="margin-bottom: 6px;">
+                                <i class="material-icons" style="font-size: 16px; vertical-align: middle; color: var(--primary);">description</i>
+                                Compte-rendu
+                            </div>
+                            <div style="padding: 10px; background: rgba(63, 81, 181, 0.04); border-left: 3px solid var(--primary); border-radius: 4px; font-size: 0.9rem; line-height: 1.5; max-height: 120px; overflow-y: auto;">
+                                {{ prestation.compteRendu|raw }}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Infos intervention -->
+                    {% set infos = prestation.infosIntervention ?? {} %}
+                    {% if infos is not empty %}
+                        <div style="margin-bottom: 12px;">
+                            <div class="prestation-detail-label" style="margin-bottom: 6px;">
+                                <i class="material-icons" style="font-size: 16px; vertical-align: middle; color: var(--primary);">fact_check</i>
+                                Informations intervention
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                {% if infos.presenceConstatee is defined %}
+                                <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 500; background: {{ infos.presenceConstatee == 'oui' ? '#e8f5e9; color: #2e7d32' : '#ffebee; color: #c62828' }};">
+                                    <i class="material-icons" style="font-size: 14px;">{{ infos.presenceConstatee == 'oui' ? 'person' : 'person_off' }}</i>
+                                    Présence: {{ infos.presenceConstatee }}
+                                </span>
+                                {% endif %}
+                                {% if infos.niveauInfestation is defined %}
+                                <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 500; background: {{ infos.niveauInfestation == 'eleve' ? '#ffebee; color: #c62828' : (infos.niveauInfestation == 'moyen' ? '#fff3e0; color: #e65100' : '#e8f5e9; color: #2e7d32') }};">
+                                    <i class="material-icons" style="font-size: 14px;">bug_report</i>
+                                    Infestation: {{ infos.niveauInfestation }}
+                                </span>
+                                {% endif %}
+                                {% if infos.logementPropre is defined %}
+                                <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 500; background: {{ infos.logementPropre == 'oui' ? '#e8f5e9; color: #2e7d32' : '#ffebee; color: #c62828' }};">
+                                    <i class="material-icons" style="font-size: 14px;">cleaning_services</i>
+                                    Propre: {{ infos.logementPropre }}
+                                </span>
+                                {% endif %}
+                                {% if infos.logementEncombre is defined %}
+                                <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 500; background: {{ infos.logementEncombre == 'oui' ? '#ffebee; color: #c62828' : '#e8f5e9; color: #2e7d32' }};">
+                                    <i class="material-icons" style="font-size: 14px;">inventory_2</i>
+                                    Encombré: {{ infos.logementEncombre }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Champs personnalisés -->
+                    {% set typeP = prestation.bonDeCommande ? prestation.bonDeCommande.typePrestation : prestation.typePrestation %}
+                    {% if typeP and typeP.champsPersonnalises is not empty and prestation.valeursChampsPersonnalises is not empty %}
+                        <div style="margin-bottom: 12px;">
+                            <div class="prestation-detail-label" style="margin-bottom: 6px;">
+                                <i class="material-icons" style="font-size: 16px; vertical-align: middle; color: var(--primary);">checklist</i>
+                                Détails intervention
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                {% for v in prestation.valeursChampsPersonnalises %}
+                                    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 500; background: {{ v.checked|default(false) ? '#e8f5e9; color: #2e7d32' : '#f5f5f5; color: #999' }};">
+                                        <i class="material-icons" style="font-size: 14px;">{{ v.checked|default(false) ? 'check_box' : 'check_box_outline_blank' }}</i>
+                                        {{ v.label }}
+                                        {% if v.value is defined and v.value is not null %}({{ v.value }}){% endif %}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+
                     <!-- Signature -->
                     {% if prestation.signature %}
                         <div style="margin-bottom: 12px;">

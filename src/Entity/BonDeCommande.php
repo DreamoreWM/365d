@@ -164,6 +164,49 @@ class BonDeCommande
         return $this;
     }
 
+    /**
+     * Retourne l'adresse nettoyée pour la recherche Google Maps.
+     * Extrait : [numéro] [rue] [code postal] [ville]
+     * Supprime : nom de résidence/bâtiment, infos logement/porte/étage.
+     */
+    public function getAdresseGps(): ?string
+    {
+        $adresse = $this->clientAdresse;
+        if (!$adresse) {
+            return null;
+        }
+
+        // Normaliser les retours à la ligne et espaces multiples en un seul espace
+        $adresse = preg_replace('/[\r\n]+/', ' ', $adresse);
+        $adresse = preg_replace('/\s+/', ' ', trim($adresse));
+
+        // Types de voies courants
+        $typesVoie = 'RUE|R|AVENUE|AV|BOULEVARD|BD|BVD|PLACE|PL|IMPASSE|IMP|ALLEE|ALL|CHEMIN|CH|ROUTE|RTE|PASSAGE|PASS|COURS|SQUARE|SQ|CITE|LIEU.DIT|VOIE|SENTIER|ROND.POINT|QUAI';
+
+        // Pattern : numéro + type de voie + nom de voie + (bruit éventuel) + code postal + ville (+ bruit)
+        if (preg_match('/^(\d+(?:\s*(?:BIS|TER|[A-Z]))?)\s+(' . $typesVoie . ')\s+(.+?)\s+(\d{5})\s+(\S+(?:\s+\S+)?)/i', $adresse, $matches)) {
+            $numero = trim($matches[1]);
+            $typeVoie = trim($matches[2]);
+            $apresTypeVoie = trim($matches[3]);
+            $codePostal = $matches[4];
+            $ville = trim($matches[5]);
+
+            // Retirer le nom de résidence/bâtiment du nom de rue
+            $motsBatiment = ['PAVILLON', 'RESIDENCE', 'BATIMENT', 'BAT', 'TOUR', 'IMMEUBLE', 'VILLA', 'LOTISSEMENT', 'LOT', 'HAMEAU', 'FOYER', 'ENTREE', 'BLOC', 'GROUPE', 'ENSEMBLE'];
+            $pattern = '/\s+(?:' . implode('|', $motsBatiment) . ')\b.*/i';
+            $nomRue = preg_replace($pattern, '', $apresTypeVoie);
+
+            // Retirer les infos logement de la ville
+            $ville = preg_replace('/\s+LOGEMENT\b.*/i', '', $ville);
+
+            return $numero . ' ' . $typeVoie . ' ' . $nomRue . ' ' . $codePostal . ' ' . $ville;
+        }
+
+        // Fallback : retirer les infos logement et noms de bâtiment
+        $cleaned = preg_replace('/\s*LOGEMENT\b.*/i', '', $adresse);
+        return $cleaned;
+    }
+
     public function getClientTelephone(): ?string
     {
         return $this->clientTelephone;
