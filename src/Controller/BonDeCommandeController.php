@@ -243,7 +243,7 @@ class BonDeCommandeController extends AbstractController
     }
 
     // =====================================================
-    // IMPORT OCR
+    // IMPORT OCR (Gemini Vision en priorité, Tesseract en fallback)
     // =====================================================
     #[Route('/import-ocr', name: 'admin_bon_commande_import_ocr', methods: ['POST'])]
     public function importViaOcr(Request $request): Response
@@ -252,175 +252,253 @@ class BonDeCommandeController extends AbstractController
             $tmpPath = sys_get_temp_dir() . '/' . uniqid('ocr_') . '.' . $file->guessExtension();
             $file->move(sys_get_temp_dir(), basename($tmpPath));
 
-            // Preprocessing pour améliorer la reconnaissance OCR
-            $processedPath = $this->preprocessImageForOcr($tmpPath);
+            $geminiApiKey = $_ENV['GEMINI_API_KEY'] ?? '';
+            $logPath = $this->getParameter('kernel.project_dir') . '/var/ocr_debug.log';
 
-            $ocr = new TesseractOCR($processedPath);
-            $text = $ocr->lang('fra', 'eng')->psm(3)->run();
+            if ($geminiApiKey) {
+                // === CHEMIN GEMINI ===
+                $result = $this->extractWithGemini($tmpPath, $geminiApiKey, $logPath, $file->getClientOriginalName());
+                unlink($tmpPath);
 
-            unlink($tmpPath);
-            if ($processedPath !== $tmpPath) {
-                unlink($processedPath);
-            }
+                $numeroCommande = $result['numeroCommande'] ?? '';
+                $nomClient      = $result['clientNom'] ?? '';
+                $adresse        = $result['clientAdresse'] ?? '';
+                $telephone      = $result['clientTelephone'] ?? '';
+                $complement     = $result['clientComplementAdresse'] ?? '';
+                $dateLimite     = $result['dateLimiteExecution'] ?? '';
+                $codeGemini     = $result['typePrestation'] ?? '';
 
-            $textBrut = $text; // Texte brut avant corrections
-
-            // ---- Corrections OCR courantes ----
-            $text = $this->fixOcrText($text);
-
-            $allLines = array_values(array_filter(array_map('trim', explode("\n", $text))));
-
-            $numeroCommande = '';
-            $complement = '';
-            $adresse = '';
-            $nomClient = '';
-            $telephone = '';
-            $codePostalVille = '';
-            $dateLimite = '';
-
-            // 0. Date limite : "Travaux à réaliser pour le DD/MM/YYYY"
-            foreach ($allLines as $line) {
-                if (preg_match('/Travaux\s+.+\s+pour\s+le\s+(\d{2}\/\d{2}\/\d{4})/iu', $line, $m)) {
-                    $parts = explode('/', $m[1]);
-                    $dateLimite = $parts[2] . '-' . $parts[1] . '-' . $parts[0]; // YYYY-MM-DD
-                    break;
+                // Recherche du type de prestation par code
+                $detectedTypeId = '';
+                $typePrestations = $this->em->getRepository(TypePrestation::class)->findAll();
+                foreach ($typePrestations as $tp) {
+                    $code = $tp->getCode();
+                    if ($code && stripos($codeGemini, $code) !== false) {
+                        $detectedTypeId = $tp->getId();
+                        break;
+                    }
                 }
-            }
+            } else {
+                // === CHEMIN TESSERACT (fallback) ===
+                $processedPath = $this->preprocessImageForOcr($tmpPath);
 
-            // 1. N° Commande : chercher dans TOUT le texte "Commande n°XXXXX"
-            // Capture alphanumérique car le 1er caractère peut être une lettre (ex: I26280)
-            foreach ($allLines as $line) {
-                if (preg_match('/Commande\s*n.?\s*([A-Z0-9]{4,})/iu', $line, $m)) {
-                    $numeroCommande = trim($m[1]);
-                    // OCR confond souvent I→1, O→0 : le 1er caractère est toujours une lettre (Partenord)
-                    $firstChar = $numeroCommande[0] ?? '';
-                    if (ctype_digit($firstChar)) {
-                        $map = ['1' => 'I', '0' => 'O'];
-                        if (isset($map[$firstChar])) {
-                            $numeroCommande = $map[$firstChar] . substr($numeroCommande, 1);
+                $ocr = new TesseractOCR($processedPath);
+                $text = $ocr->lang('fra', 'eng')->psm(3)->run();
+
+                unlink($tmpPath);
+                if ($processedPath !== $tmpPath) {
+                    unlink($processedPath);
+                }
+
+                $textBrut = $text;
+                $text = $this->fixOcrText($text);
+                $allLines = array_values(array_filter(array_map('trim', explode("\n", $text))));
+
+                $numeroCommande = '';
+                $complement = '';
+                $adresse = '';
+                $nomClient = '';
+                $telephone = '';
+                $codePostalVille = '';
+                $dateLimite = '';
+
+                foreach ($allLines as $line) {
+                    if (preg_match('/Travaux\s+.+\s+pour\s+le\s+(\d{2}\/\d{2}\/\d{4})/iu', $line, $m)) {
+                        $parts = explode('/', $m[1]);
+                        $dateLimite = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
+                        break;
+                    }
+                }
+
+                foreach ($allLines as $line) {
+                    if (preg_match('/Commande\s*n.?\s*([A-Z0-9]{4,})/iu', $line, $m)) {
+                        $numeroCommande = trim($m[1]);
+                        $firstChar = $numeroCommande[0] ?? '';
+                        if (ctype_digit($firstChar)) {
+                            $map = ['1' => 'I', '0' => 'O'];
+                            if (isset($map[$firstChar])) {
+                                $numeroCommande = $map[$firstChar] . substr($numeroCommande, 1);
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                $startIndex = 0;
+                foreach ($allLines as $i => $line) {
+                    if (stripos($line, 'Prestation') !== false && stripos($line, 'Privatives') !== false) {
+                        $startIndex = $i + 1;
+                        break;
+                    }
+                }
+
+                $clientLines = array_slice($allLines, $startIndex);
+                foreach ($clientLines as $line) {
+                    if (!$adresse && preg_match('/[A-Z0-9]+\s+(RUE|R|AVENUE|AV|BOULEVARD|BLVD|BD|ALL[EÉ]E|IMPASSE|IMP|CHEMIN|CH|PLACE|PL|ROUTE|RTE|PASSAGE|VOIE)\b/i', $line)) {
+                        $adresse = trim($line);
+                    }
+                    if (!$complement && preg_match('/LOGEMENT\s*n.?\s*\d+/iu', $line)) {
+                        $complement = trim($line);
+                    }
+                    if (!$codePostalVille && preg_match('/^\d{5}\s+[A-ZÉÈÊÀÂ\s-]+$/u', $line)) {
+                        $codePostalVille = trim($line);
+                    }
+                    if (!$nomClient) {
+                        $nameExtracted = null;
+                        if (preg_match('/^M[.\s]+(MME\s+)?(.+?)\s*-\s*/i', $line, $m)) {
+                            $nameExtracted = trim($m[2]);
+                        } elseif (preg_match('/^MR\s+(ET\s+MME\s+)?(.+?)\s*-\s*/i', $line, $m)) {
+                            $nameExtracted = trim($m[2]);
+                        } elseif (preg_match('/Logement\s+Occup.+?\s*:\s*(MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)?(.+?)\s*-\s*/iu', $line, $m)) {
+                            $nameExtracted = trim($m[2]);
+                        } elseif (preg_match('/^:\s*(MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)(.+?)\s*-\s*/i', $line, $m)) {
+                            $nameExtracted = trim($m[2]);
+                        }
+                        if ($nameExtracted) {
+                            $nomClient = $nameExtracted;
                         }
                     }
-                    break;
-                }
-            }
-
-            // 2. Trouver la section "Prestation Parties Privatives" - les infos client sont APRÈS
-            $startIndex = 0;
-            foreach ($allLines as $i => $line) {
-                if (stripos($line, 'Prestation') !== false && stripos($line, 'Privatives') !== false) {
-                    $startIndex = $i + 1;
-                    break;
-                }
-            }
-
-            // 3. Extraire les données uniquement APRÈS le marqueur
-            $clientLines = array_slice($allLines, $startIndex);
-            foreach ($clientLines as $line) {
-                // Adresse : lettre ou numéro + type de voie
-                if (!$adresse && preg_match('/[A-Z0-9]+\s+(RUE|R|AVENUE|AV|BOULEVARD|BLVD|BD|ALL[EÉ]E|IMPASSE|IMP|CHEMIN|CH|PLACE|PL|ROUTE|RTE|PASSAGE|VOIE)\b/i', $line)) {
-                    $adresse = trim($line);
-                }
-
-                // Complément : ligne LOGEMENT n° avec étage/type
-                if (!$complement && preg_match('/LOGEMENT\s*n.?\s*\d+/iu', $line)) {
-                    $complement = trim($line);
-                }
-
-                // Code postal + ville (ex: "59120 LOOS")
-                if (!$codePostalVille && preg_match('/^\d{5}\s+[A-ZÉÈÊÀÂ\s-]+$/u', $line)) {
-                    $codePostalVille = trim($line);
-                }
-
-                // Nom : plusieurs formats possibles
-                if (!$nomClient) {
-                    $nameExtracted = null;
-                    // "M. MME NOM - ..." ou "M. NOM - ..."
-                    if (preg_match('/^M[.\s]+(MME\s+)?(.+?)\s*-\s*/i', $line, $m)) {
-                        $nameExtracted = trim($m[2]);
-                    // "MR NOM - ..." ou "MR ET MME NOM - ..."
-                    } elseif (preg_match('/^MR\s+(ET\s+MME\s+)?(.+?)\s*-\s*/i', $line, $m)) {
-                        $nameExtracted = trim($m[2]);
-                    // "Logement Occupé : MME NOM - ..." ou ": M. NOM - ..."
-                    } elseif (preg_match('/Logement\s+Occup.+?\s*:\s*(MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)?(.+?)\s*-\s*/iu', $line, $m)) {
-                        $nameExtracted = trim($m[2]);
-                    // Ligne commençant par ": M. NOM -" (Logement Occupé sur ligne précédente)
-                    } elseif (preg_match('/^:\s*(MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)(.+?)\s*-\s*/i', $line, $m)) {
-                        $nameExtracted = trim($m[2]);
+                    if (!$telephone && preg_match('/Portable\s*:\s*(\d+)/i', $line, $m)) {
+                        $telephone = trim($m[1]);
                     }
-                    if ($nameExtracted) {
-                        $nomClient = $nameExtracted;
+                    if (!$telephone && preg_match('/Téléphone\s*:\s*(\d+)/i', $line, $m)) {
+                        $telephone = trim($m[1]);
                     }
                 }
 
-                // Téléphone : priorité Portable > Téléphone
-                if (!$telephone && preg_match('/Portable\s*:\s*(\d+)/i', $line, $m)) {
-                    $telephone = trim($m[1]);
+                if ($codePostalVille && $adresse) {
+                    $adresse = $adresse . "\n" . $codePostalVille;
+                } elseif ($codePostalVille && !$adresse) {
+                    $adresse = $codePostalVille;
                 }
-                if (!$telephone && preg_match('/Téléphone\s*:\s*(\d+)/i', $line, $m)) {
-                    $telephone = trim($m[1]);
+
+                $detectedTypeId = '';
+                $typePrestations = $this->em->getRepository(TypePrestation::class)->findAll();
+                foreach ($typePrestations as $tp) {
+                    $code = $tp->getCode();
+                    if ($code && stripos($text, $code) !== false) {
+                        $detectedTypeId = $tp->getId();
+                        break;
+                    }
                 }
+
+                // Log Tesseract
+                $log = "=== Tesseract OCR " . date('Y-m-d H:i:s') . " ===\n";
+                $log .= "Fichier: " . $file->getClientOriginalName() . "\n";
+                $log .= "\n--- TEXTE BRUT ---\n" . $textBrut . "\n";
+                $log .= "\n--- TEXTE CORRIGÉ ---\n" . $text . "\n";
+                $log .= "\n--- DONNÉES EXTRAITES ---\n";
+                $log .= "N° Commande: " . ($numeroCommande ?: 'NON TROUVÉ') . "\n";
+                $log .= "Nom client: " . ($nomClient ?: 'NON TROUVÉ') . "\n";
+                $log .= "Téléphone: " . ($telephone ?: 'NON TROUVÉ') . "\n";
+                $log .= "Adresse: " . ($adresse ?: 'NON TROUVÉ') . "\n";
+                $log .= "Complément: " . ($complement ?: 'NON TROUVÉ') . "\n";
+                $log .= "Date limite: " . ($dateLimite ?: 'NON TROUVÉ') . "\n\n";
+                file_put_contents($logPath, $log, FILE_APPEND);
             }
 
-            // Combiner adresse + code postal
-            if ($codePostalVille && $adresse) {
-                $adresse = $adresse . "\n" . $codePostalVille;
-            } elseif ($codePostalVille && !$adresse) {
-                $adresse = $codePostalVille;
-            }
-
-            // Détection automatique du type de prestation via code OCR
-            $detectedTypeId = '';
-            $typePrestations = $this->em->getRepository(TypePrestation::class)->findAll();
-            foreach ($typePrestations as $tp) {
-                $code = $tp->getCode();
-                if ($code && stripos($text, $code) !== false) {
-                    $detectedTypeId = $tp->getId();
-                    break;
-                }
-            }
-
-            // Log OCR pour debug
-            $logPath = $this->getParameter('kernel.project_dir') . '/var/ocr_debug.log';
-            $log = "=== OCR Import " . date('Y-m-d H:i:s') . " ===\n";
-            $log .= "Fichier: " . $file->getClientOriginalName() . "\n";
-            $log .= "\n--- TEXTE BRUT (avant corrections) ---\n";
-            $log .= $textBrut . "\n";
-            $log .= "\n--- TEXTE CORRIGÉ (après fixOcrText) ---\n";
-            $log .= $text . "\n";
-            $log .= "\n--- DONNÉES EXTRAITES ---\n";
-            $log .= "N° Commande: " . ($numeroCommande ?: 'NON TROUVÉ') . "\n";
-            $log .= "Nom client: " . ($nomClient ?: 'NON TROUVÉ') . "\n";
-            $log .= "Téléphone: " . ($telephone ?: 'NON TROUVÉ') . "\n";
-            $log .= "Adresse: " . ($adresse ?: 'NON TROUVÉ') . "\n";
-            $log .= "Complément: " . ($complement ?: 'NON TROUVÉ') . "\n";
-            $log .= "Code postal+ville: " . ($codePostalVille ?: 'NON TROUVÉ') . "\n";
-            $log .= "Date limite: " . ($dateLimite ?: 'NON TROUVÉ') . "\n";
-            $log .= "Type prestation détecté: " . ($detectedTypeId ?: 'NON TROUVÉ') . "\n";
-            $log .= "Section client (après index $startIndex) ---\n";
-            foreach ($clientLines as $i => $line) {
-                $log .= "  [$i] $line\n";
-            }
-            $log .= "\n--- TOUTES LES LIGNES ---\n";
-            foreach ($allLines as $i => $line) {
-                $log .= "[$i] $line\n";
-            }
-            $log .= "\n\n";
-            file_put_contents($logPath, $log, FILE_APPEND);
-
-            // Redirection vers formulaire "nouveau bon" avec données pré-remplies
             return $this->redirectToRoute('admin_bon_commande_new', [
-                'numeroCommande' => $numeroCommande,
-                'clientNom' => $nomClient,
-                'clientAdresse' => $adresse,
-                'clientTelephone' => $telephone,
-                'clientComplementAdresse' => $complement,
-                'dateLimiteExecution' => $dateLimite,
-                'typePrestation' => $detectedTypeId,
+                'numeroCommande'         => $numeroCommande,
+                'clientNom'              => $nomClient,
+                'clientAdresse'          => $adresse,
+                'clientTelephone'        => $telephone,
+                'clientComplementAdresse'=> $complement,
+                'dateLimiteExecution'    => $dateLimite,
+                'typePrestation'         => $detectedTypeId,
             ]);
         }
 
         $this->addFlash('danger', 'Aucun fichier reçu');
         return $this->redirectToRoute('admin_bon_commande_index');
+    }
+
+    // =====================================================
+    // MÉTHODE PRIVÉE : EXTRACTION VIA GEMINI VISION
+    // =====================================================
+    private function extractWithGemini(string $imagePath, string $apiKey, string $logPath, string $originalName): array
+    {
+        $ext = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
+        $mimeType = match ($ext) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png'         => 'image/png',
+            'webp'        => 'image/webp',
+            'pdf'         => 'application/pdf',
+            default       => 'image/jpeg',
+        };
+
+        $imageData = base64_encode(file_get_contents($imagePath));
+
+        $prompt = <<<'PROMPT'
+Tu analyses un bon de commande de désinfestation / désinsectisation émis par un bailleur social.
+
+Ce document contient DEUX types de contacts à ne SURTOUT PAS confondre :
+
+1. Le BAILLEUR (donneur d'ordre, propriétaire) : affiché en haut à gauche dans un encadré (ex : Vilogia, Partenord, ICF, etc.). Ce sont ses coordonnées à lui. NE PAS utiliser ces informations.
+
+2. Le LOCATAIRE (occupant actuel du logement à traiter) : affiché dans la section "Prestation Parties Privatives", identifié par "Occupant actuel", "Logement Occupé" ou similaire. C'est LUI le client à renseigner.
+
+Tu dois extraire UNIQUEMENT les informations du LOCATAIRE (occupant du logement), pas du bailleur, pas du prestataire.
+
+Retourne un JSON avec exactement ces champs (chaînes vides si non trouvé) :
+{
+  "numeroCommande": "numéro de marché ou commande, sans espace (ex: 009910)",
+  "clientNom": "civilité + nom complet du locataire (ex: MME DECAMBRAY Ilona)",
+  "clientAdresse": "numéro + rue + nom de résidence éventuel, puis saut de ligne, puis code postal + ville (ex: 101 AVENUE DE LA LIBERTE RESIDENCE JACQUES BREL\n59130 LAMBERSART)",
+  "clientTelephone": "numéro de téléphone du locataire uniquement (domicile ou portable), chiffres seulement sans espaces",
+  "clientComplementAdresse": "complément d'adresse : logement n°, porte n°, étage, type... (ex: Logement n° 203355, porte n°4-03, 4° étage, Type 4)",
+  "dateLimiteExecution": "date limite d'exécution au format YYYY-MM-DD",
+  "typePrestation": "code alphanumérique de la prestation entre parenthèses (ex: 13D16N)"
+}
+
+Réponds UNIQUEMENT avec le JSON brut, sans markdown, sans texte supplémentaire.
+PROMPT;
+
+        $payload = [
+            'contents' => [[
+                'parts' => [
+                    ['text' => $prompt],
+                    ['inline_data' => [
+                        'mime_type' => $mimeType,
+                        'data'      => $imageData,
+                    ]],
+                ],
+            ]],
+            'generationConfig' => [
+                'temperature'        => 0,
+                'response_mime_type' => 'application/json',
+            ],
+        ];
+
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={$apiKey}";
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_POSTFIELDS     => json_encode($payload),
+            CURLOPT_TIMEOUT        => 45,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $log = "=== Gemini OCR " . date('Y-m-d H:i:s') . " ===\n";
+        $log .= "Fichier: $originalName\n";
+
+        if ($httpCode !== 200 || !$response) {
+            $log .= "ERREUR HTTP $httpCode\n$response\n\n";
+            file_put_contents($logPath, $log, FILE_APPEND);
+            return [];
+        }
+
+        $decoded  = json_decode($response, true);
+        $jsonText = $decoded['candidates'][0]['content']['parts'][0]['text'] ?? '{}';
+        $result   = json_decode($jsonText, true) ?? [];
+
+        $log .= "Résultat Gemini:\n" . json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
+        file_put_contents($logPath, $log, FILE_APPEND);
+
+        return $result;
     }
 
     // =====================================================
