@@ -3436,53 +3436,47 @@ function displaySearchResults(bons) {
     tableHTML += '<th>Client</th><th>Adresse</th><th>N° BC</th><th>Statut</th><th>Prestations</th><th>Actions</th></tr></thead><tbody>';
 
     bons.forEach(bon => {
-        const progress = bon.nombrePrestationsNecessaires > 0
-            ? (bon.nombrePrestations / bon.nombrePrestationsNecessaires * 100).toFixed(0)
-            : 0;
-
         const isComplete = bon.nombrePrestations >= bon.nombrePrestationsNecessaires && bon.nombrePrestationsNecessaires > 0;
-        const isDisponible = bon.nombrePrestations < bon.nombrePrestationsNecessaires;
+        const badgeClass = isComplete ? 'complet' : 'disponible';
+        const badgeText = isComplete ? 'Complet' : (bon.nombrePrestationsNecessaires - bon.nombrePrestations) + ' restantes';
+        const rowClass = selectedBons.has(bon.id) ? 'selected' : '';
 
-        const badgeHtml = isComplete
-            ? '<span class="badge complet"><i class="material-icons" style="font-size: 12px;">check_circle</i> Complet</span>'
-            : '<span class="badge disponible"><i class="material-icons" style="font-size: 12px;">schedule</i> ' + (bon.nombrePrestationsNecessaires - bon.nombrePrestations) + ' restantes</span>';
+        tableHTML += '<tr class="' + rowClass + '" data-bon-id="' + bon.id + '">';
 
-        const geoHtml = bon.groupeGeo
-            ? '<span class="geo-badge" style="background: ' + bon.groupeGeo.couleur + ';"><i class="material-icons" style="font-size: 12px;">place</i> ' + bon.groupeGeo.nom + '</span>'
-            : bon.codePostal
-                ? '<span class="geo-badge" style="background: #757575;"><i class="material-icons" style="font-size: 12px;">place</i> ' + bon.codePostal + '</span>'
-                : '';
+        // Checkbox si multi-select
+        if (multiSelectMode) {
+            tableHTML += '<td><input type="checkbox" ' + (selectedBons.has(bon.id) ? 'checked' : '') + ' onchange="toggleBonSelection(' + bon.id + ')"></td>';
+        }
 
-        const checkboxHtml = multiSelectMode
-            ? '<input type="checkbox" class="bon-item-checkbox" data-bon-id="' + bon.id + '" onchange="toggleBonSelection(' + bon.id + ')" ' + (selectedBons.has(bon.id) ? 'checked' : '') + '>'
-            : '';
+        // Client
+        tableHTML += '<td class="table-client">' + bon.clientNom + '</td>';
 
-        const itemClass = 'bon-item' + (multiSelectMode ? ' has-checkbox' : '') + (selectedBons.has(bon.id) ? ' selected' : '');
-        const clickHandler = multiSelectMode ? 'toggleBonSelection(' + bon.id + ')' : 'selectBonFromSearch(' + bon.id + ')';
+        // Adresse
+        tableHTML += '<td>' + (bon.clientAdresse || 'N/A') + '</td>';
 
-        return '<div class="' + itemClass + '">' +
-            checkboxHtml +
-            '<div class="bon-item-header">' +
-                '<div onclick="' + clickHandler + '" style="flex: 1; cursor: pointer;">' +
-                    '<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">' +
-                        '<div class="bon-client" style="flex: 1;">' + bon.clientNom + '</div>' +
-                        badgeHtml +
-                    '</div>' +
-                    '<div class="bon-info">' +
-                        '<span class="bon-info-item"><i class="material-icons">receipt</i> BC ' + (bon.numeroCommande || '#' + bon.id) + '</span>' +
-                        '<span class="bon-info-item"><i class="material-icons">event</i> ' + (bon.dateCommande || 'N/A') + '</span>' +
-                        '<span class="bon-info-item"><i class="material-icons">location_on</i> ' + (bon.clientAdresse ? bon.clientAdresse.substring(0, 30) + '...' : 'N/A') + '</span>' +
-                        geoHtml +
-                    '</div>' +
-                    '<div class="bon-progress">' +
-                        '<div class="progress-bar"><div class="progress-fill" style="width: ' + progress + '%;"></div></div>' +
-                        '<div class="progress-text">' + bon.nombrePrestations + '/' + bon.nombrePrestationsNecessaires + '</div>' +
-                    '</div>' +
-                '</div>' +
-                '<button onclick="viewBonDetails(' + bon.id + '); event.stopPropagation();" class="mdl-button mdl-js-button mdl-button--icon" title="Voir" style="color: var(--primary);"><i class="material-icons">visibility</i></button>' +
-            '</div>' +
-        '</div>';
-    }).join('');
+        // Numéro BC
+        tableHTML += '<td>' + (bon.numeroCommande || '#' + bon.id) + '</td>';
+
+        // Statut
+        tableHTML += '<td><span class="table-badge ' + badgeClass + '">' + badgeText + '</span></td>';
+
+        // Prestations
+        tableHTML += '<td>' + bon.nombrePrestations + ' / ' + bon.nombrePrestationsNecessaires + '</td>';
+
+        // Actions
+        tableHTML += '<td class="table-actions">';
+        if (!multiSelectMode) {
+            tableHTML += '<button class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" onclick="selectBonFromSearch(' + bon.id + ')" style="height: 32px; line-height: 32px;"><i class="material-icons" style="font-size: 18px; vertical-align: middle;">add</i> Sélectionner</button>';
+        }
+        tableHTML += '<button class="mdl-button mdl-js-button mdl-button--icon" onclick="viewBonDetails(' + bon.id + ')" title="Voir détails"><i class="material-icons">visibility</i></button>';
+        tableHTML += '</td>';
+
+        tableHTML += '</tr>';
+    });
+
+    tableHTML += '</tbody></table>';
+
+    resultsContainer.innerHTML = tableHTML;
 
     if (typeof componentHandler !== 'undefined') componentHandler.upgradeAllRegistered();
     updateBatchPanel();
@@ -3499,9 +3493,10 @@ async function selectBonFromSearch(bonId) {
         updateBonSelection(bon, bonId, 'tl_selected_bon', 'tl_selectedBonClient', 'tl_selectedBonInfo', 'tl_selectedBonDisplay', 'tl_noBonSelected', 'tl_submit-btn');
         updateBonSelection(bon, bonId, 'mobile_selected_bon', 'mobileSelectedBonClient', 'mobileSelectedBonInfo', 'mobileSelectedBonDisplay', 'mobileNoBonSelected', 'mobile-submit-btn');
 
-        // Switch to create mode instead of closing modal
-        switchRightPanelMode('create');
         showToast('success', 'Bon sélectionné : ' + bon.clientNom);
+
+        // Scroll to calendar
+        document.getElementById('fullcalendar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (error) {
         console.error('Erreur selection:', error);
         showToast('error', 'Erreur lors de la sélection');
