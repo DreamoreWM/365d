@@ -746,13 +746,78 @@
             </div>
 
             {% if autre.compteRendu %}
-            <div style="padding: 10px; background: rgba(63, 81, 181, 0.03); border-radius: 4px; border-left: 3px solid var(--primary); font-size: 0.9rem; color: var(--text-light); line-height: 1.5; max-height: 100px; overflow-y: auto;">
-                {{ autre.compteRendu|raw }}
+            <div style="margin-bottom: 10px;">
+                <div style="font-size: 0.8rem; color: #757575; margin-bottom: 4px;">
+                    <i class="material-icons" style="font-size: 14px; vertical-align: middle; color: var(--primary);">description</i>
+                    Compte-rendu
+                </div>
+                <div style="padding: 10px; background: rgba(63, 81, 181, 0.03); border-radius: 4px; border-left: 3px solid var(--primary); font-size: 0.9rem; color: var(--text-light); line-height: 1.5; max-height: 100px; overflow-y: auto;">
+                    {{ autre.compteRendu|raw }}
+                </div>
+            </div>
+            {% endif %}
+
+            {% set autreInfos = autre.infosIntervention ?? {} %}
+            {% if autreInfos is not empty %}
+            <div style="margin-bottom: 10px;">
+                <div style="font-size: 0.8rem; color: #757575; margin-bottom: 6px;">
+                    <i class="material-icons" style="font-size: 14px; vertical-align: middle; color: var(--primary);">fact_check</i>
+                    Informations intervention
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                    {% if autreInfos.presenceConstatee is defined %}
+                    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 500; background: {{ autreInfos.presenceConstatee == 'oui' ? '#e8f5e9; color: #2e7d32' : '#ffebee; color: #c62828' }};">
+                        <i class="material-icons" style="font-size: 14px;">{{ autreInfos.presenceConstatee == 'oui' ? 'person' : 'person_off' }}</i>
+                        Présence: {{ autreInfos.presenceConstatee }}
+                    </span>
+                    {% endif %}
+                    {% if autreInfos.niveauInfestation is defined %}
+                    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 500; background: {{ autreInfos.niveauInfestation == 'eleve' ? '#ffebee; color: #c62828' : (autreInfos.niveauInfestation == 'moyen' ? '#fff3e0; color: #e65100' : '#e8f5e9; color: #2e7d32') }};">
+                        <i class="material-icons" style="font-size: 14px;">bug_report</i>
+                        Infestation: {{ autreInfos.niveauInfestation }}
+                    </span>
+                    {% endif %}
+                    {% if autreInfos.logementPropre is defined %}
+                    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 500; background: {{ autreInfos.logementPropre == 'oui' ? '#e8f5e9; color: #2e7d32' : '#ffebee; color: #c62828' }};">
+                        <i class="material-icons" style="font-size: 14px;">cleaning_services</i>
+                        Propre: {{ autreInfos.logementPropre }}
+                    </span>
+                    {% endif %}
+                    {% if autreInfos.logementEncombre is defined %}
+                    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 500; background: {{ autreInfos.logementEncombre == 'oui' ? '#ffebee; color: #c62828' : '#e8f5e9; color: #2e7d32' }};">
+                        <i class="material-icons" style="font-size: 14px;">inventory_2</i>
+                        Encombré: {{ autreInfos.logementEncombre }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% set autreTypeP = autre.bonDeCommande ? autre.bonDeCommande.typePrestation : autre.typePrestation %}
+            {% if autreTypeP and autreTypeP.champsPersonnalises is not empty and autre.valeursChampsPersonnalises is not empty %}
+            <div style="margin-bottom: 10px;">
+                <div style="font-size: 0.8rem; color: #757575; margin-bottom: 6px;">
+                    <i class="material-icons" style="font-size: 14px; vertical-align: middle; color: var(--primary);">checklist</i>
+                    Détails intervention
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                    {% for v in autre.valeursChampsPersonnalises %}
+                        <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 500; background: {{ v.checked|default(false) ? '#e8f5e9; color: #2e7d32' : '#f5f5f5; color: #999' }};">
+                            <i class="material-icons" style="font-size: 14px;">{{ v.checked|default(false) ? 'check_box' : 'check_box_outline_blank' }}</i>
+                            {{ v.label }}
+                            {% if v.value is defined and v.value is not null %}({{ v.value }}){% endif %}
+                        </span>
+                    {% endfor %}
+                </div>
             </div>
             {% endif %}
 
             {% if autre.signature %}
             <div style="margin-top: 10px;">
+                <div style="font-size: 0.8rem; color: #757575; margin-bottom: 4px;">
+                    <i class="material-icons" style="font-size: 14px; vertical-align: middle; color: var(--primary);">draw</i>
+                    Signature client
+                </div>
                 <img src="{{ autre.signature }}" alt="Signature" style="max-width: 150px; max-height: 60px; border: 1px solid var(--border-light); border-radius: 4px; background: white;">
             </div>
             {% endif %}
