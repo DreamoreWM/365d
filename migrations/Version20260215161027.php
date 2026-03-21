@@ -20,12 +20,12 @@ final class Version20260215161027 extends AbstractMigration
     public function up(Schema $schema): void
     {
         // this up() migration is auto-generated, please modify it to your needs
-        $this->addSql('ALTER TABLE type_prestation ADD duree_theoriquen_minutes INT DEFAULT NULL');
+        $this->addSql('ALTER TABLE type_prestation ADD duree_theorique_minutes INT DEFAULT NULL');
     }
 
     public function down(Schema $schema): void
     {
         // this down() migration is auto-generated, please modify it to your needs
-        $this->addSql('ALTER TABLE type_prestation DROP duree_theoriquen_minutes');
+        $this->addSql('ALTER TABLE type_prestation DROP duree_theorique_minutes');
     }
 }
