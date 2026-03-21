@@ -39,7 +39,7 @@ class DeployController extends AbstractController
         $output[] = 'Project dir: ' . $projectDir;
 
         // Git pull (compatible Windows)
-        $gitCommand = 'cd /d "' . $projectDir . '" && git pull --rebase 2>&1';
+        $gitCommand = 'cd /d "' . $projectDir . '" && git pull --rebase --autostash 2>&1';
         $output[] = 'Commande: ' . $gitCommand;
 
         exec($gitCommand, $gitLines, $gitCode);
