@@ -88,8 +88,21 @@ class BonDeCommandeController extends AbstractController
 
         $bonDeCommandes = $qb->getQuery()->getResult();
 
+        // Helper : applique le filtre de recherche à un query builder de comptage
+        $applySearch = function ($countQb, string $alias) use ($search) {
+            if ($search) {
+                $countQb->andWhere(
+                    "$alias.clientNom LIKE :searchCount
+                    OR $alias.clientEmail LIKE :searchCount
+                    OR $alias.clientTelephone LIKE :searchCount
+                    OR $alias.numeroCommande LIKE :searchCount"
+                )->setParameter('searchCount', '%' . $search . '%');
+            }
+            return $countQb;
+        };
+
         // Compter les urgents pour le badge (seulement les bons "à programmer")
-        $urgentsCount = $this->repository->createQueryBuilder('b2')
+        $urgentsQb = $this->repository->createQueryBuilder('b2')
             ->select('COUNT(DISTINCT b2.id)')
             ->leftJoin('b2.prestations', 'p2')
             ->where('b2.statut = :aProgrammer2')
@@ -98,36 +111,35 @@ class BonDeCommandeController extends AbstractController
             )
             ->setParameter('nonEffectue2', StatutPrestation::NON_EFFECTUE)
             ->setParameter('deadlineProche2', new \DateTimeImmutable('+7 days'))
-            ->setParameter('aProgrammer2', StatutBonDeCommande::A_PROGRAMMER)
-            ->getQuery()
-            ->getSingleScalarResult();
+            ->setParameter('aProgrammer2', StatutBonDeCommande::A_PROGRAMMER);
+        $applySearch($urgentsQb, 'b2');
+        $urgentsCount = $urgentsQb->getQuery()->getSingleScalarResult();
 
-        // Compter les bons par onglet pour les badges
-        $tousCount = $this->repository->createQueryBuilder('bc')
-            ->select('COUNT(DISTINCT bc.id)')
-            ->getQuery()
-            ->getSingleScalarResult();
+        // Compter les bons par onglet pour les badges (en respectant le filtre de recherche)
+        $tousQb = $this->repository->createQueryBuilder('bc')->select('COUNT(DISTINCT bc.id)');
+        $applySearch($tousQb, 'bc');
+        $tousCount = $tousQb->getQuery()->getSingleScalarResult();
 
-        $aProgrammerCount = $this->repository->createQueryBuilder('bc')
+        $aProgrammerQb = $this->repository->createQueryBuilder('bc')
             ->select('COUNT(DISTINCT bc.id)')
             ->where('bc.statut = :statut')
-            ->setParameter('statut', StatutBonDeCommande::A_PROGRAMMER)
-            ->getQuery()
-            ->getSingleScalarResult();
+            ->setParameter('statut', StatutBonDeCommande::A_PROGRAMMER);
+        $applySearch($aProgrammerQb, 'bc');
+        $aProgrammerCount = $aProgrammerQb->getQuery()->getSingleScalarResult();
 
-        $enCoursCount = $this->repository->createQueryBuilder('bc')
+        $enCoursQb = $this->repository->createQueryBuilder('bc')
             ->select('COUNT(DISTINCT bc.id)')
             ->where('bc.statut IN (:statuts)')
-            ->setParameter('statuts', [StatutBonDeCommande::PROGRAMME, StatutBonDeCommande::EN_COURS])
-            ->getQuery()
-            ->getSingleScalarResult();
+            ->setParameter('statuts', [StatutBonDeCommande::PROGRAMME, StatutBonDeCommande::EN_COURS]);
+        $applySearch($enCoursQb, 'bc');
+        $enCoursCount = $enCoursQb->getQuery()->getSingleScalarResult();
 
-        $terminesCount = $this->repository->createQueryBuilder('bc')
+        $terminesQb = $this->repository->createQueryBuilder('bc')
             ->select('COUNT(DISTINCT bc.id)')
             ->where('bc.statut = :statut')
-            ->setParameter('statut', StatutBonDeCommande::TERMINE)
-            ->getQuery()
-            ->getSingleScalarResult();
+            ->setParameter('statut', StatutBonDeCommande::TERMINE);
+        $applySearch($terminesQb, 'bc');
+        $terminesCount = $terminesQb->getQuery()->getSingleScalarResult();
 
         return $this->render('admin/bon_commande/index.html.twig', [
             'bonDeCommandes' => $bonDeCommandes,
