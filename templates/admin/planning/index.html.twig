@@ -510,6 +510,10 @@ body.dark-mode .ev-pop-row { color: #aaa; }
 .s-termine       { background: #e8f5e9; color: #2e7d32; }
 .s-non-effectue  { background: #ffebee; color: #c62828; }
 
+/* Preview event on calendar */
+.fc-preview-event { opacity: 0.75; }
+.fc-preview-event .fc-event-main { font-style: italic; }
+
 /* Toast */
 .toasts { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
 .toast { padding: 12px 18px; border-radius: 8px; color: white; font-size: 0.88rem; font-weight: 500; box-shadow: 0 4px 16px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px; animation: toastIn 0.3s ease; }
@@ -736,9 +740,10 @@ let activeEmps = new Set(EMPLOYES.map(e => e.id));
 let statut    = 'à programmer';
 let groupe    = '';
 let empLoads  = {};
-let calendar  = null;
-let searchTm  = null;
-let bonCache  = [];  // { id, ...data }
+let calendar     = null;
+let searchTm     = null;
+let bonCache     = [];  // { id, ...data }
+let previewEvent = null;
 
 // ====== UTILS ======
 function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
@@ -867,6 +872,7 @@ function pickBon(id) {
 
 function resetBon() {
     selBon = null;
+    if (previewEvent) { previewEvent.remove(); previewEvent = null; }
     document.getElementById('selBonBox').style.display = 'none';
     document.getElementById('searchArea').style.display = 'block';
     document.getElementById('wStep1').classList.remove('done');
@@ -892,6 +898,26 @@ function pickEmp(id, nom) {
     refreshSummary();
 }
 
+function updateCalendarPreview() {
+    if (previewEvent) { previewEvent.remove(); previewEvent = null; }
+    const date  = document.getElementById('dateInp').value;
+    const heure = document.getElementById('timeInp').value;
+    if (!date || !heure || !calendar) return;
+    const [h, m] = heure.split(':').map(Number);
+    const endH = String(h + 1).padStart(2, '0');
+    const endM = String(m).padStart(2, '0');
+    previewEvent = calendar.addEvent({
+        id:         '__preview__',
+        title:      '📍 Nouvelle intervention',
+        start:      `${date}T${heure}`,
+        end:        `${date}T${endH}:${endM}`,
+        color:      '#ff9800',
+        textColor:  '#fff',
+        classNames: ['fc-preview-event'],
+        editable:   false,
+    });
+}
+
 function onDateChange() {
     const inp = document.getElementById('dateInp');
     const d = inp.value;
@@ -914,6 +940,7 @@ function refreshSummary() {
     document.getElementById('fDate').value  = date;
     document.getElementById('fHeure').value = heure;
     document.getElementById('fNote').value  = document.getElementById('noteInp')?.value ?? '';
+    updateCalendarPreview();
 
     const ready = selBon && selEmpId && date && heure;
     document.getElementById('btnCreate').disabled = !ready;
@@ -962,6 +989,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBonFich
 
 function onSubmit(e) {
     if (!selBon || !selEmpId) { e.preventDefault(); return false; }
+    if (previewEvent) { previewEvent.remove(); previewEvent = null; }
     document.getElementById('btnCreate').disabled = true;
     document.getElementById('btnCreate').innerHTML = '<i class="material-icons">hourglass_empty</i> Création…';
     return true;
