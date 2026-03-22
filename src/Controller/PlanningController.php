@@ -310,10 +310,10 @@ class PlanningController extends AbstractController
         $groupeGeoId = $request->query->get('groupe_geo', '');
         $typePrestationId = $request->query->get('type_prestation', '');
         $sort = $request->query->get('sort', 'date_desc');
+        $all = $request->query->get('all', '');
 
-        // Si aucun filtre n'est appliqué et pas de recherche
-        if (strlen($query) < 2 && !$statut && !$groupeGeoId && !$typePrestationId) {
-            // Retourner les bons disponibles par défaut
+        // Sans filtre et sans flag all= → raccourci bons disponibles
+        if (!$all && strlen($query) < 2 && !$statut && !$groupeGeoId && !$typePrestationId) {
             return $this->bonsDisponibles($bonRepo);
         }
         

@@ -732,7 +732,7 @@ let selBon    = null;
 let selEmpId  = null;
 let selEmpNom = null;
 let activeEmps = new Set(EMPLOYES.map(e => e.id));
-let statut         = 'à programmer';
+let statut         = '';
 let groupe         = '';
 let typePrestation = '';
 let empLoads  = {};
@@ -818,7 +818,7 @@ function setTypePrestation(btn, val) {
 function doSearch() {
     const q = document.getElementById('wizSearch').value.trim();
     // Fetch sans aucun filtre (sauf texte) → counts exacts sur toutes les dimensions, filtre client-side
-    const p = new URLSearchParams({ q, statut: '', groupe_geo: '', type_prestation: '' });
+    const p = new URLSearchParams({ q, statut: '', groupe_geo: '', type_prestation: '', all: '1' });
     document.getElementById('bonList').innerHTML = '<div class="search-msg"><i class="material-icons">hourglass_empty</i>Recherche…</div>';
     fetch(`/admin/planning/search-bons?${p}`)
         .then(r => r.json())
