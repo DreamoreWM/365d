@@ -537,8 +537,8 @@ class PlanningController extends AbstractController
             return $this->json([]);
         }
 
-        $startDate = new \DateTimeImmutable($start);
-        $endDate = new \DateTimeImmutable($end);
+        $startDate = new \DateTimeImmutable(str_replace(' ', '+', $start));
+        $endDate   = new \DateTimeImmutable(str_replace(' ', '+', $end));
 
         $qb = $this->prestationRepo->createQueryBuilder('p')
             ->leftJoin('p.employe', 'e')
@@ -635,29 +635,35 @@ class PlanningController extends AbstractController
     public function stats(Request $request): JsonResponse
     {
         $date = $request->query->get('date', date('Y-m-d'));
-        $dateObj = new \DateTimeImmutable($date);
-        
+        $dateObj   = new \DateTimeImmutable($date);
+        $dateStart = $dateObj->setTime(0, 0, 0);
+        $dateEnd   = $dateObj->setTime(23, 59, 59);
+
         // Statistiques du jour
         $statsJour = $this->prestationRepo->createQueryBuilder('p')
             ->select('COUNT(p.id) as total')
             ->addSelect('SUM(CASE WHEN p.statut = :programme THEN 1 ELSE 0 END) as programme')
             ->addSelect('SUM(CASE WHEN p.statut = :en_cours THEN 1 ELSE 0 END) as en_cours')
             ->addSelect('SUM(CASE WHEN p.statut = :termine THEN 1 ELSE 0 END) as termine')
-            ->where('DATE(p.datePrestation) = :date')
+            ->where('p.datePrestation >= :start')
+            ->andWhere('p.datePrestation <= :end')
             ->setParameter('programme', StatutPrestation::PROGRAMME->value)
             ->setParameter('en_cours', StatutPrestation::EN_COURS->value)
             ->setParameter('termine', StatutPrestation::TERMINE->value)
-            ->setParameter('date', $date)
+            ->setParameter('start', $dateStart)
+            ->setParameter('end', $dateEnd)
             ->getQuery()
             ->getSingleResult();
-        
+
         // Charge par employé
         $chargeEmployes = $this->prestationRepo->createQueryBuilder('p')
             ->select('e.id, e.nom')
             ->addSelect('COUNT(p.id) as nombre_prestations')
             ->join('p.employe', 'e')
-            ->where('DATE(p.datePrestation) = :date')
-            ->setParameter('date', $date)
+            ->where('p.datePrestation >= :start')
+            ->andWhere('p.datePrestation <= :end')
+            ->setParameter('start', $dateStart)
+            ->setParameter('end', $dateEnd)
             ->groupBy('e.id')
             ->orderBy('nombre_prestations', 'DESC')
             ->getQuery()
