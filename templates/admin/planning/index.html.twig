@@ -590,6 +590,14 @@ body.dark-mode .ev-pop-row { color: #aaa; }
                             {% endfor %}
                         </div>
                         {% endif %}
+                        {% if typesPrestations|length > 0 %}
+                        <div class="chips" id="typeChips">
+                            <button class="chip active" data-t="" onclick="setTypePrestation(this,'')">Tous types</button>
+                            {% for t in typesPrestations %}
+                            <button class="chip" data-t="{{ t.id }}" onclick="setTypePrestation(this,'{{ t.id }}')">{{ t.nom }}</button>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                         <div class="bon-list" id="bonList">
                             <div class="search-msg"><i class="material-icons">hourglass_empty</i>Chargement…</div>
                         </div>
@@ -711,8 +719,9 @@ let selBon    = null;
 let selEmpId  = null;
 let selEmpNom = null;
 let activeEmps = new Set(EMPLOYES.map(e => e.id));
-let statut    = 'à programmer';
-let groupe    = '';
+let statut         = 'à programmer';
+let groupe         = '';
+let typePrestation = '';
 let empLoads  = {};
 let calendar     = null;
 let searchTm     = null;
@@ -787,10 +796,15 @@ function setGroupe(btn, val) {
     document.querySelectorAll('#geoChips .chip').forEach(b => b.classList.toggle('active', b.dataset.g === val));
     doSearch();
 }
+function setTypePrestation(btn, val) {
+    typePrestation = val;
+    document.querySelectorAll('#typeChips .chip').forEach(b => b.classList.toggle('active', b.dataset.t === val));
+    doSearch();
+}
 
 function doSearch() {
     const q = document.getElementById('wizSearch').value.trim();
-    const p = new URLSearchParams({ q, statut, groupe_geo: groupe });
+    const p = new URLSearchParams({ q, statut, groupe_geo: groupe, type_prestation: typePrestation });
     document.getElementById('bonList').innerHTML = '<div class="search-msg"><i class="material-icons">hourglass_empty</i>Recherche…</div>';
     fetch(`/admin/planning/search-bons?${p}`)
         .then(r => r.json())
