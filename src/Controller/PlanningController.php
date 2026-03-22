@@ -323,18 +323,20 @@ class PlanningController extends AbstractController
             }
         }
         
-        // Filtre par groupe géographique (basé sur le code postal dans l'adresse)
+        // Filtre par groupe géographique (basé sur le nom de ville dans l'adresse)
         if ($groupeGeoId) {
             $groupe = $this->groupeGeoRepo->find($groupeGeoId);
             if ($groupe && !empty($groupe->getVilles())) {
-                // Créer une condition pour matcher les codes postaux
-                $codePostalConditions = [];
-                foreach ($groupe->getVilles() as $codePostal) {
-                    $codePostalConditions[] = "b.clientAdresse LIKE :cp_" . $codePostal;
-                    $qb->setParameter('cp_' . $codePostal, '% ' . $codePostal . ' %');
+                $villeConditions = [];
+                foreach ($groupe->getVilles() as $index => $ville) {
+                    // Sanitize parameter name (city names may contain spaces/accents)
+                    $paramKey = 'ville_' . $index;
+                    $villeConditions[] = "b.clientAdresse LIKE :" . $paramKey;
+                    // No trailing space: city name is often at end of address (e.g. "59120 Loos")
+                    $qb->setParameter($paramKey, '% ' . $ville . '%');
                 }
-                if (!empty($codePostalConditions)) {
-                    $qb->andWhere('(' . implode(' OR ', $codePostalConditions) . ')');
+                if (!empty($villeConditions)) {
+                    $qb->andWhere('(' . implode(' OR ', $villeConditions) . ')');
                 }
             }
         }
@@ -376,11 +378,13 @@ class PlanningController extends AbstractController
             }
             
             // Déterminer le groupe géographique
+            // villes[] stores city names, villesData[] stores objects with codePostal
             $groupeGeo = null;
             if ($codePostal) {
                 $groupes = $this->groupeGeoRepo->findAllActifs();
                 foreach ($groupes as $groupe) {
-                    if (in_array($codePostal, $groupe->getVilles())) {
+                    $codesPostauxGroupe = array_column($groupe->getVillesData(), 'codePostal');
+                    if (in_array($codePostal, $codesPostauxGroupe)) {
                         $groupeGeo = [
                             'id' => $groupe->getId(),
                             'nom' => $groupe->getNom(),
