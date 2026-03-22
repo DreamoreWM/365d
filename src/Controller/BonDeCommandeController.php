@@ -102,10 +102,41 @@ class BonDeCommandeController extends AbstractController
             ->getQuery()
             ->getSingleScalarResult();
 
+        // Compter les bons par onglet pour les badges
+        $tousCount = $this->repository->createQueryBuilder('bc')
+            ->select('COUNT(DISTINCT bc.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $aProgrammerCount = $this->repository->createQueryBuilder('bc')
+            ->select('COUNT(DISTINCT bc.id)')
+            ->where('bc.statut = :statut')
+            ->setParameter('statut', StatutBonDeCommande::A_PROGRAMMER)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $enCoursCount = $this->repository->createQueryBuilder('bc')
+            ->select('COUNT(DISTINCT bc.id)')
+            ->where('bc.statut IN (:statuts)')
+            ->setParameter('statuts', [StatutBonDeCommande::PROGRAMME, StatutBonDeCommande::EN_COURS])
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $terminesCount = $this->repository->createQueryBuilder('bc')
+            ->select('COUNT(DISTINCT bc.id)')
+            ->where('bc.statut = :statut')
+            ->setParameter('statut', StatutBonDeCommande::TERMINE)
+            ->getQuery()
+            ->getSingleScalarResult();
+
         return $this->render('admin/bon_commande/index.html.twig', [
             'bonDeCommandes' => $bonDeCommandes,
             'currentTab' => $tab,
             'urgentsCount' => (int) $urgentsCount,
+            'tousCount' => (int) $tousCount,
+            'aProgrammerCount' => (int) $aProgrammerCount,
+            'enCoursCount' => (int) $enCoursCount,
+            'terminesCount' => (int) $terminesCount,
         ]);
     }
 
