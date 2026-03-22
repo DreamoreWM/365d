@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Prestation;
 use App\Entity\User;
 use App\Entity\BonDeCommande;
+use App\Enum\StatutBonDeCommande;
 use App\Enum\StatutPrestation;
 use App\Repository\PrestationRepository;
 use App\Repository\UserRepository;
@@ -318,7 +319,13 @@ class PlanningController extends AbstractController
         }
         
         $qb = $bonRepo->createQueryBuilder('b');
-        
+
+        // Depuis le wizard planning (all=1) : exclure les bons déjà programmés ou en cours
+        if ($all && !$statut) {
+            $qb->andWhere('b.statut NOT IN (:exclus)')
+               ->setParameter('exclus', [StatutBonDeCommande::PROGRAMME->value, StatutBonDeCommande::EN_COURS->value]);
+        }
+
         // Recherche textuelle
         if (strlen($query) >= 2) {
             $qb->andWhere('(b.clientNom LIKE :query OR b.clientAdresse LIKE :query OR b.numeroCommande LIKE :query)')

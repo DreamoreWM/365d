@@ -590,8 +590,8 @@ body.dark-mode .ev-pop-row { color: #aaa; }
                             <input type="text" id="wizSearch" placeholder="Client, adresse, numéro BC…" oninput="debSearch()">
                         </div>
                         <div class="chips" id="statutChips">
-                            <button class="chip active" data-s="" onclick="setStatut(this,'')">Tous</button>
-                            <button class="chip" data-s="à programmer" onclick="setStatut(this,'à programmer')">À programmer</button>
+                            <button class="chip" data-s="" onclick="setStatut(this,'')">Tous</button>
+                            <button class="chip active" data-s="à programmer" onclick="setStatut(this,'à programmer')">À programmer</button>
                             <button class="chip" data-s="programmé" onclick="setStatut(this,'programmé')">Programmé</button>
                             <button class="chip" data-s="terminé" onclick="setStatut(this,'terminé')">Terminé</button>
                         </div>
@@ -732,7 +732,7 @@ let selBon    = null;
 let selEmpId  = null;
 let selEmpNom = null;
 let activeEmps = new Set(EMPLOYES.map(e => e.id));
-let statut         = '';
+let statut         = 'à programmer';
 let groupe         = '';
 let typePrestation = '';
 let empLoads  = {};
