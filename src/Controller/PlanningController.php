@@ -40,7 +40,7 @@ class PlanningController extends AbstractController
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
-        $selectedDate = $request->query->get('date', date('Y-m-d'));
+        $selectedDate = $request->query->get('date', date('Y-m-d', strtotime('+1 day')));
         $selectedEmployeId = $request->query->get('employe');
 
         // Liste des employés

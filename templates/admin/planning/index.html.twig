@@ -378,6 +378,8 @@ body.dark-mode .bon-modal { background: var(--card-dark); }
 }
 body.dark-mode .field-inp { background: var(--card-dark); border-color: var(--border-dark); color: var(--text-dark); }
 .field-inp:focus { outline: none; border-color: var(--primary); }
+.field-inp.filled { border-color: var(--primary); background: rgba(63,81,181,0.05); }
+body.dark-mode .field-inp.filled { background: rgba(63,81,181,0.12); }
 .quick-btns { display: flex; gap: 6px; flex-wrap: wrap; }
 .quick-btn {
     padding: 6px 13px;
@@ -865,7 +867,9 @@ function pickEmp(id, nom) {
 }
 
 function onDateChange() {
-    const d = document.getElementById('dateInp').value;
+    const inp = document.getElementById('dateInp');
+    const d = inp.value;
+    inp.classList.toggle('filled', !!d);
     if (d) { loadStats(d); calendar?.gotoDate(d); }
     refreshSummary();
 }
@@ -980,7 +984,9 @@ function initCalendar() {
         dateClick: function(info) {
             const dateStr = info.dateStr.slice(0,10);
             const timeStr = info.dateStr.includes('T') ? info.dateStr.slice(11,16) : '09:00';
-            document.getElementById('dateInp').value = dateStr;
+            const di = document.getElementById('dateInp');
+            di.value = dateStr;
+            di.classList.add('filled');
             document.getElementById('timeInp').value = timeStr;
             loadStats(dateStr);
             refreshSummary();
@@ -1046,7 +1052,9 @@ document.addEventListener('DOMContentLoaded', () => {
     renderEmpPanel();
     initCalendar();
     doSearch();
-    const today = document.getElementById('dateInp').value || new Date().toISOString().slice(0,10);
+    const di = document.getElementById('dateInp');
+    const today = di.value || new Date().toISOString().slice(0,10);
+    if (di.value) di.classList.add('filled');
     loadStats(today);
 });
 </script>
