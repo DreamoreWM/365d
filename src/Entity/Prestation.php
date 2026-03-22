@@ -121,6 +121,21 @@ class Prestation
     #[Groups(['prestation:read', 'prestation:write'])]
     private ?array $infosIntervention = null;
 
+    #[ORM\Column(type: 'json', nullable: true)]
+    #[Groups(['prestation:read', 'prestation:write'])]
+    private ?array $boitesRats = null;
+
+    public function getBoitesRats(): ?array
+    {
+        return $this->boitesRats;
+    }
+
+    public function setBoitesRats(?array $boitesRats): static
+    {
+        $this->boitesRats = $boitesRats;
+        return $this;
+    }
+
     public function getInfosIntervention(): ?array
     {
         return $this->infosIntervention;

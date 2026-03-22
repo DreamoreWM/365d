@@ -106,6 +106,30 @@ class PrestationUserController extends AbstractController
         ]);
     }
 
+    #[Route('/{id}/boites-rats', name: 'app_user_prestation_boites_rats', methods: ['POST'])]
+    public function saveBoitesRats(Prestation $prestation, Request $request, EntityManagerInterface $em): Response
+    {
+        if ($prestation->getEmploye() !== $this->getUser()) {
+            return $this->json(['error' => 'Access denied'], 403);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        if (!isset($data['positions']) || !is_array($data['positions'])) {
+            return $this->json(['error' => 'Invalid payload'], 400);
+        }
+
+        $sanitized = array_map(fn($p) => [
+            'lat'   => (float) ($p['lat'] ?? 0),
+            'lng'   => (float) ($p['lng'] ?? 0),
+            'label' => substr((string) ($p['label'] ?? ''), 0, 50),
+        ], $data['positions']);
+
+        $prestation->setBoitesRats($sanitized);
+        $em->flush();
+
+        return $this->json(['status' => 'ok', 'count' => count($sanitized)]);
+    }
+
     #[Route('/{id}/absent', name: 'app_user_prestation_absent', methods: ['POST'])]
     public function marquerAbsent(Prestation $prestation, EntityManagerInterface $em): Response
     {

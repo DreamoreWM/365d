@@ -186,6 +186,28 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
 
+    #rat-map {
+        height: 450px;
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid var(--border-light);
+        z-index: 0;
+    }
+    .map-toolbar {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    .map-legend {
+        font-size: 0.85rem;
+        color: #757575;
+        padding: 6px 12px;
+        background: rgba(63,81,181,0.05);
+        border-radius: 6px;
+    }
+
     .prev-chip {
         display: inline-flex;
         align-items: center;
@@ -1206,6 +1228,120 @@
             </div>
         </form>
 
+    {% endif %}
+
+    {# ===== CADASTRE MAP : dératisation uniquement ===== #}
+    {% set _typeNom = prestation.bonDeCommande and prestation.bonDeCommande.typePrestation
+        ? prestation.bonDeCommande.typePrestation.nom
+        : (prestation.typePrestation ? prestation.typePrestation.nom : '') %}
+    {% if 'dératisation' in _typeNom|lower or 'deratisation' in _typeNom|lower %}
+
+    <div class="section-card" id="cadastre-map-section" style="margin-top: 20px;">
+        <div class="section-title">
+            <i class="material-icons">map</i>
+            <span>Carte cadastrale — Boîtes à rats</span>
+        </div>
+        <p style="font-size:0.85rem; color:#757575; margin: 0 0 12px;">
+            <i class="material-icons" style="font-size:14px; vertical-align:middle;">info</i>
+            Cliquez sur la carte pour placer une boîte. Clic droit ou double-clic sur un marqueur existant pour le supprimer.
+        </p>
+        <div class="map-toolbar">
+            <button type="button" id="btn-save-boites"
+                    class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
+                <i class="material-icons" style="vertical-align:middle; margin-right:4px;">save</i>
+                Enregistrer positions
+            </button>
+            <span id="map-save-status" style="font-size:0.9rem; color:#757575;"></span>
+            <span class="map-legend"><b id="boites-count">0</b> boîte(s) placée(s)</span>
+        </div>
+        <div id="rat-map"></div>
+    </div>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <script>
+    (function () {
+        const SAVE_URL       = '{{ path('app_user_prestation_boites_rats', {id: prestation.id}) }}';
+        const ADDRESS_GPS    = {{ (prestation.bonDeCommande ? prestation.bonDeCommande.adresseGps : '')|json_encode|raw }};
+        const INITIAL_BOITES = {{ (prestation.boitesRats ?? [])|json_encode|raw }};
+
+        const map = L.map('rat-map', { doubleClickZoom: false }).setView([46.8, 2.3], 6);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 21,
+        }).addTo(map);
+
+        L.tileLayer(
+            'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0' +
+            '&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=bdparcellaire' +
+            '&FORMAT=image%2Fpng&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+            { attribution: '© IGN — Géoportail', opacity: 0.6, maxZoom: 21, minZoom: 15 }
+        ).addTo(map);
+
+        let markers = [];
+        let counter = (INITIAL_BOITES.length || 0);
+
+        function updateCount() {
+            document.getElementById('boites-count').textContent = markers.length;
+        }
+
+        function addMarker(lat, lng, label) {
+            const lbl = label || ('Boîte ' + (++counter));
+            const m = L.marker([lat, lng], { title: lbl }).bindPopup(lbl).addTo(map);
+            m._boiteLabel = lbl;
+            m.on('contextmenu', () => removeMarker(m));
+            m.on('dblclick', (e) => { L.DomEvent.stop(e); removeMarker(m); });
+            markers.push(m);
+            updateCount();
+        }
+
+        function removeMarker(m) {
+            map.removeLayer(m);
+            markers = markers.filter(x => x !== m);
+            updateCount();
+        }
+
+        INITIAL_BOITES.forEach(b => addMarker(b.lat, b.lng, b.label));
+
+        map.on('click', (e) => addMarker(e.latlng.lat, e.latlng.lng, null));
+
+        if (ADDRESS_GPS) {
+            fetch('https://api-adresse.data.gouv.fr/search/?q=' + encodeURIComponent(ADDRESS_GPS) + '&limit=1')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.features && data.features.length > 0) {
+                        const [lon, lat] = data.features[0].geometry.coordinates;
+                        map.setView([lat, lon], 19);
+                    }
+                })
+                .catch(() => {});
+        }
+
+        document.getElementById('btn-save-boites').addEventListener('click', () => {
+            const status = document.getElementById('map-save-status');
+            status.style.color = '#757575';
+            status.textContent = 'Enregistrement…';
+
+            fetch(SAVE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ positions: markers.map(m => ({ lat: m.getLatLng().lat, lng: m.getLatLng().lng, label: m._boiteLabel })) }),
+            })
+            .then(r => r.json())
+            .then(data => {
+                status.style.color = data.status === 'ok' ? '#4caf50' : '#ef5350';
+                status.textContent = data.status === 'ok'
+                    ? data.count + ' boîte(s) enregistrée(s) ✓'
+                    : 'Erreur lors de la sauvegarde.';
+            })
+            .catch(() => { status.style.color = '#ef5350'; status.textContent = 'Erreur réseau.'; });
+        });
+
+        setTimeout(() => map.invalidateSize(), 300);
+    })();
+    </script>
     {% endif %}
 
 </div>
