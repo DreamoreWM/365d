@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Prestation;
 use App\Entity\User;
 use App\Entity\BonDeCommande;
+use App\Enum\StatutBonDeCommande;
 use App\Enum\StatutPrestation;
 use App\Repository\PrestationRepository;
 use App\Repository\UserRepository;
@@ -259,14 +260,25 @@ class PlanningController extends AbstractController
         
         $bons = $qb->getQuery()->getResult();
         
+        $groupes = $this->groupeGeoRepo->findAllActifs();
+
         $results = [];
         foreach ($bons as $bon) {
-            // Extraire le code postal de l'adresse
             $codePostal = null;
             if (preg_match('/\b(\d{5})\b/', $bon->getClientAdresse(), $matches)) {
                 $codePostal = $matches[1];
             }
-            
+
+            $groupeGeo = null;
+            if ($codePostal) {
+                foreach ($groupes as $g) {
+                    if (in_array($codePostal, array_column($g->getVillesData(), 'codePostal'))) {
+                        $groupeGeo = ['id' => $g->getId(), 'nom' => $g->getNom(), 'couleur' => $g->getCouleur()];
+                        break;
+                    }
+                }
+            }
+
             $results[] = [
                 'id' => $bon->getId(),
                 'clientNom' => $bon->getClientNom(),
@@ -277,6 +289,7 @@ class PlanningController extends AbstractController
                 'dateCommande' => $bon->getDateCommande()?->format('d/m/Y'),
                 'statut' => $bon->getStatut()->value,
                 'codePostal' => $codePostal,
+                'groupeGeo' => $groupeGeo,
                 'typePrestation' => $bon->getTypePrestation() ? [
                     'id' => $bon->getTypePrestation()->getId(),
                     'nom' => $bon->getTypePrestation()->getNom(),
@@ -298,15 +311,21 @@ class PlanningController extends AbstractController
         $groupeGeoId = $request->query->get('groupe_geo', '');
         $typePrestationId = $request->query->get('type_prestation', '');
         $sort = $request->query->get('sort', 'date_desc');
+        $all = $request->query->get('all', '');
 
-        // Si aucun filtre n'est appliqué et pas de recherche
-        if (strlen($query) < 2 && !$statut && !$groupeGeoId && !$typePrestationId) {
-            // Retourner les bons disponibles par défaut
+        // Sans filtre et sans flag all= → raccourci bons disponibles
+        if (!$all && strlen($query) < 2 && !$statut && !$groupeGeoId && !$typePrestationId) {
             return $this->bonsDisponibles($bonRepo);
         }
         
         $qb = $bonRepo->createQueryBuilder('b');
-        
+
+        // Depuis le wizard planning (all=1) : uniquement les bons à programmer
+        if ($all && !$statut) {
+            $qb->andWhere('b.statut = :aprog')
+               ->setParameter('aprog', StatutBonDeCommande::A_PROGRAMMER->value);
+        }
+
         // Recherche textuelle
         if (strlen($query) >= 2) {
             $qb->andWhere('(b.clientNom LIKE :query OR b.clientAdresse LIKE :query OR b.numeroCommande LIKE :query)')
