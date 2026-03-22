@@ -739,16 +739,36 @@
 
     <!-- Tab Navigation -->
     <div class="tab-nav">
-        <a href="{{ path('admin_bon_commande_index', app.request.query.all|merge({tab: 'tous'})) }}" class="{{ currentTab == 'tous' ? 'active' : '' }}">Tous</a>
+        <a href="{{ path('admin_bon_commande_index', app.request.query.all|merge({tab: 'tous'})) }}" class="{{ currentTab == 'tous' ? 'active' : '' }}">
+            Tous
+            {% if tousCount > 0 %}
+                <span class="tab-badge">{{ tousCount > 99 ? '99+' : tousCount }}</span>
+            {% endif %}
+        </a>
         <a href="{{ path('admin_bon_commande_index', app.request.query.all|merge({tab: 'urgents'})) }}" class="{{ currentTab == 'urgents' ? 'active' : '' }}">
             Urgents
             {% if urgentsCount > 0 %}
-                <span class="tab-badge">{{ urgentsCount }}</span>
+                <span class="tab-badge">{{ urgentsCount > 99 ? '99+' : urgentsCount }}</span>
             {% endif %}
         </a>
-        <a href="{{ path('admin_bon_commande_index', app.request.query.all|merge({tab: 'a_programmer'})) }}" class="{{ currentTab == 'a_programmer' ? 'active' : '' }}">À programmer</a>
-        <a href="{{ path('admin_bon_commande_index', app.request.query.all|merge({tab: 'en_cours'})) }}" class="{{ currentTab == 'en_cours' ? 'active' : '' }}">En cours</a>
-        <a href="{{ path('admin_bon_commande_index', app.request.query.all|merge({tab: 'termines'})) }}" class="{{ currentTab == 'termines' ? 'active' : '' }}">Terminés</a>
+        <a href="{{ path('admin_bon_commande_index', app.request.query.all|merge({tab: 'a_programmer'})) }}" class="{{ currentTab == 'a_programmer' ? 'active' : '' }}">
+            À programmer
+            {% if aProgrammerCount > 0 %}
+                <span class="tab-badge">{{ aProgrammerCount > 99 ? '99+' : aProgrammerCount }}</span>
+            {% endif %}
+        </a>
+        <a href="{{ path('admin_bon_commande_index', app.request.query.all|merge({tab: 'en_cours'})) }}" class="{{ currentTab == 'en_cours' ? 'active' : '' }}">
+            En cours
+            {% if enCoursCount > 0 %}
+                <span class="tab-badge">{{ enCoursCount > 99 ? '99+' : enCoursCount }}</span>
+            {% endif %}
+        </a>
+        <a href="{{ path('admin_bon_commande_index', app.request.query.all|merge({tab: 'termines'})) }}" class="{{ currentTab == 'termines' ? 'active' : '' }}">
+            Terminés
+            {% if terminesCount > 0 %}
+                <span class="tab-badge">{{ terminesCount > 99 ? '99+' : terminesCount }}</span>
+            {% endif %}
+        </a>
     </div>
 
     <!-- Filter Card -->
