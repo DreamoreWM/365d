@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd PDF recap section to admin prestation show page\n\nReuses the existing prestation_pdf route to display a PDF preview and download button when the prestation status is \"terminé\", matching the behavior already available in the user prestation view.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(composer require:*)",
+      "Bash(php bin/console lexik:jwt:generate-keypair:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd priority UX for admin tables with working pagination\n\n- Add dateLimiteExecution field to BonDeCommande with deadline helpers\n- Add tab navigation \\(Tous/Urgents/À programmer/En cours/Terminés\\)\n- Urgents tab shows only \"à programmer\" bons with non-effectuée or close deadline\n  \\(bons with scheduled prestations or already terminated are excluded\\)\n- Priority sorting and red/orange row highlighting\n- Display deadline column with visual indicators\n- Add dateLimiteExecution to bon de commande form and detail page\n- Replace fake pagination with real client-side pagination \\(15 rows/page\\)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(php bin/console doctrine:migrations:diff:*)",
+      "Bash(php bin/console doctrine:migrations:migrate:*)",
+      "Bash(git commit:*)",
+      "Bash(php bin/phpunit:*)"
+    ]
+  }
+}
