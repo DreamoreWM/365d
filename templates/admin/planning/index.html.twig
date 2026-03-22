@@ -238,6 +238,8 @@ body.dark-mode #wizSearch { background: var(--card-dark); border-color: var(--bo
 }
 body.dark-mode .chip { border-color: var(--border-dark); color: var(--text-dark); }
 .chip.active { background: var(--primary); border-color: var(--primary); color: white; }
+.chip-count { display:inline-block; background:rgba(0,0,0,0.12); border-radius:10px; padding:0 5px; font-size:0.68rem; margin-left:4px; font-weight:600; vertical-align:middle; }
+.chip.active .chip-count { background:rgba(255,255,255,0.28); }
 
 .bon-list { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
 .bon-card {
@@ -784,6 +786,32 @@ function loadStats(date) {
 }
 
 // ====== SEARCH ======
+function fmtCount(n) { return n > 99 ? '99+' : String(n); }
+
+function applyFilterCounts(data) {
+    document.querySelectorAll('#statutChips .chip').forEach(btn => {
+        const s = btn.dataset.s;
+        const n = s === '' ? data.total : (data.statuts[s] ?? 0);
+        let badge = btn.querySelector('.chip-count');
+        if (!badge) { badge = document.createElement('span'); badge.className = 'chip-count'; btn.appendChild(badge); }
+        badge.textContent = fmtCount(n);
+    });
+    document.querySelectorAll('#geoChips .chip').forEach(btn => {
+        const g = btn.dataset.g;
+        const n = g === '' ? data.total : (data.groupes[g] ?? 0);
+        let badge = btn.querySelector('.chip-count');
+        if (!badge) { badge = document.createElement('span'); badge.className = 'chip-count'; btn.appendChild(badge); }
+        badge.textContent = fmtCount(n);
+    });
+    document.querySelectorAll('#typeChips .chip').forEach(btn => {
+        const t = btn.dataset.t;
+        const n = t === '' ? data.total : (data.types[t] ?? 0);
+        let badge = btn.querySelector('.chip-count');
+        if (!badge) { badge = document.createElement('span'); badge.className = 'chip-count'; btn.appendChild(badge); }
+        badge.textContent = fmtCount(n);
+    });
+}
+
 function debSearch() { clearTimeout(searchTm); searchTm = setTimeout(doSearch, 280); }
 
 function setStatut(btn, val) {
@@ -1094,6 +1122,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderEmpPanel();
     initCalendar();
     doSearch();
+    fetch('/admin/planning/filter-counts').then(r => r.json()).then(applyFilterCounts);
     const di = document.getElementById('dateInp');
     const today = di.value || new Date().toISOString().slice(0,10);
     if (di.value) di.classList.add('filled');

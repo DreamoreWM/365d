@@ -288,6 +288,67 @@ class PlanningController extends AbstractController
     }
 
     // =====================================================
+    // COMPTAGES PAR FILTRE (badges sur les chips)
+    // =====================================================
+    #[Route('/filter-counts', name: 'admin_planning_filter_counts', methods: ['GET'])]
+    public function filterCounts(BonDeCommandeRepository $bonRepo): JsonResponse
+    {
+        // Total général
+        $total = (int) $bonRepo->createQueryBuilder('b')
+            ->select('COUNT(b.id)')
+            ->getQuery()->getSingleScalarResult();
+
+        // Comptages par statut
+        $rows = $bonRepo->createQueryBuilder('b')
+            ->select('b.statut, COUNT(b.id) as cnt')
+            ->groupBy('b.statut')
+            ->getQuery()->getResult();
+
+        $statuts = [];
+        foreach ($rows as $row) {
+            $statuts[$row['statut']->value] = (int) $row['cnt'];
+        }
+
+        // Comptages par type de prestation
+        $rows = $bonRepo->createQueryBuilder('b')
+            ->select('IDENTITY(b.typePrestation) as typeId, COUNT(b.id) as cnt')
+            ->where('b.typePrestation IS NOT NULL')
+            ->groupBy('b.typePrestation')
+            ->getQuery()->getResult();
+
+        $types = [];
+        foreach ($rows as $row) {
+            $types[(int) $row['typeId']] = (int) $row['cnt'];
+        }
+
+        // Comptages par groupe géographique (même logique LIKE que searchBons)
+        $groupes = [];
+        foreach ($this->groupeGeoRepo->findAllActifs() as $groupe) {
+            $villes = $groupe->getVilles();
+            if (empty($villes)) {
+                $groupes[$groupe->getId()] = 0;
+                continue;
+            }
+            $qb = $bonRepo->createQueryBuilder('b')->select('COUNT(b.id)');
+            $conditions = [];
+            foreach ($villes as $index => $ville) {
+                $pk = 'v' . $index;
+                $conditions[] = "b.clientAdresse LIKE :$pk";
+                $qb->setParameter($pk, '% ' . $ville . '%');
+            }
+            $qb->where('(' . implode(' OR ', $conditions) . ')');
+            $groupes[$groupe->getId()] = (int) $qb->getQuery()->getSingleScalarResult();
+        }
+
+        return $this->json([
+            'total'   => $total,
+            'statuts' => $statuts,
+            'types'   => $types,
+            'groupes' => $groupes,
+        ]);
+    }
+
+    // =====================================================
     // RECHERCHE DE BONS AVEC FILTRES AVANCÉS
     // =====================================================
     #[Route('/search-bons', name: 'admin_planning_search_bons', methods: ['GET'])]
