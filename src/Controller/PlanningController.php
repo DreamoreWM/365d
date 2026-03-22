@@ -323,18 +323,39 @@ class PlanningController extends AbstractController
             }
         }
         
-        // Filtre par groupe géographique (basé sur le code postal dans l'adresse)
+        // Filtre par groupe géographique
         if ($groupeGeoId) {
             $groupe = $this->groupeGeoRepo->find($groupeGeoId);
-            if ($groupe && !empty($groupe->getVilles())) {
-                // Créer une condition pour matcher les codes postaux
-                $codePostalConditions = [];
-                foreach ($groupe->getVilles() as $codePostal) {
-                    $codePostalConditions[] = "b.clientAdresse LIKE :cp_" . $codePostal;
-                    $qb->setParameter('cp_' . $codePostal, '% ' . $codePostal . ' %');
+            if ($groupe) {
+                $geoConditions = [];
+                $idx = 0;
+
+                // villesData contient codePostal + nom, villes contient uniquement les noms
+                $villesData = $groupe->getVillesData();
+                if (!empty($villesData)) {
+                    foreach ($villesData as $villeData) {
+                        if (!empty($villeData['codePostal'])) {
+                            $geoConditions[] = "b.clientAdresse LIKE :geo_{$idx}";
+                            $qb->setParameter("geo_{$idx}", '%' . $villeData['codePostal'] . '%');
+                            $idx++;
+                        } elseif (!empty($villeData['nom'])) {
+                            $geoConditions[] = "b.clientAdresse LIKE :geo_{$idx}";
+                            $qb->setParameter("geo_{$idx}", '%' . $villeData['nom'] . '%');
+                            $idx++;
+                        }
+                    }
+                } else {
+                    foreach ($groupe->getVilles() as $ville) {
+                        if (!empty($ville)) {
+                            $geoConditions[] = "b.clientAdresse LIKE :geo_{$idx}";
+                            $qb->setParameter("geo_{$idx}", '%' . $ville . '%');
+                            $idx++;
+                        }
+                    }
                 }
-                if (!empty($codePostalConditions)) {
-                    $qb->andWhere('(' . implode(' OR ', $codePostalConditions) . ')');
+
+                if (!empty($geoConditions)) {
+                    $qb->andWhere('(' . implode(' OR ', $geoConditions) . ')');
                 }
             }
         }
