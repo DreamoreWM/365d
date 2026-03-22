@@ -259,14 +259,25 @@ class PlanningController extends AbstractController
         
         $bons = $qb->getQuery()->getResult();
         
+        $groupes = $this->groupeGeoRepo->findAllActifs();
+
         $results = [];
         foreach ($bons as $bon) {
-            // Extraire le code postal de l'adresse
             $codePostal = null;
             if (preg_match('/\b(\d{5})\b/', $bon->getClientAdresse(), $matches)) {
                 $codePostal = $matches[1];
             }
-            
+
+            $groupeGeo = null;
+            if ($codePostal) {
+                foreach ($groupes as $g) {
+                    if (in_array($codePostal, array_column($g->getVillesData(), 'codePostal'))) {
+                        $groupeGeo = ['id' => $g->getId(), 'nom' => $g->getNom(), 'couleur' => $g->getCouleur()];
+                        break;
+                    }
+                }
+            }
+
             $results[] = [
                 'id' => $bon->getId(),
                 'clientNom' => $bon->getClientNom(),
@@ -277,6 +288,7 @@ class PlanningController extends AbstractController
                 'dateCommande' => $bon->getDateCommande()?->format('d/m/Y'),
                 'statut' => $bon->getStatut()->value,
                 'codePostal' => $codePostal,
+                'groupeGeo' => $groupeGeo,
                 'typePrestation' => $bon->getTypePrestation() ? [
                     'id' => $bon->getTypePrestation()->getId(),
                     'nom' => $bon->getTypePrestation()->getNom(),
