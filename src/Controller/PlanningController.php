@@ -320,10 +320,10 @@ class PlanningController extends AbstractController
         
         $qb = $bonRepo->createQueryBuilder('b');
 
-        // Depuis le wizard planning (all=1) : exclure les bons déjà programmés ou en cours
+        // Depuis le wizard planning (all=1) : uniquement les bons à programmer
         if ($all && !$statut) {
-            $qb->andWhere('b.statut NOT IN (:exclus)')
-               ->setParameter('exclus', [StatutBonDeCommande::PROGRAMME->value, StatutBonDeCommande::EN_COURS->value]);
+            $qb->andWhere('b.statut = :aprog')
+               ->setParameter('aprog', StatutBonDeCommande::A_PROGRAMMER->value);
         }
 
         // Recherche textuelle
