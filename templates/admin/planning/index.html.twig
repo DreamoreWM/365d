@@ -1,5 +1,4 @@
 {% extends 'dashboard/layout.html.twig' %}
-
 {% block title %}Planning{% endblock %}
 
 {% block content %}
@@ -7,3972 +6,1048 @@
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 
 <style>
-    .planning-container {
-        max-width: 1600px;
-        margin: 0 auto;
-    }
-
-    .page-header {
-        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-        color: white;
-        padding: 32px 24px;
-        border-radius: 12px;
-        margin-bottom: 24px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 16px;
-    }
-
-    body.dark-mode .page-header {
-        box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-    }
-
-    .page-header h1 {
-        margin: 0;
-        font-size: 2rem;
-        font-weight: 400;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .view-toggle {
-        display: flex;
-        gap: 4px;
-        background: rgba(255,255,255,0.15);
-        border-radius: 8px;
-        padding: 4px;
-    }
-
-    .view-btn {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 16px;
-        border: none;
-        border-radius: 6px;
-        background: transparent;
-        color: rgba(255,255,255,0.7);
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: 500;
-        transition: all 0.2s;
-    }
-
-    .view-btn:hover {
-        background: rgba(255,255,255,0.1);
-        color: white;
-    }
-
-    .view-btn.active {
-        background: rgba(255,255,255,0.25);
-        color: white;
-    }
-
-    .view-btn .material-icons {
-        font-size: 20px;
-    }
-
-    /* ========== CALENDAR VIEW ========== */
-    .calendar-section {
-        display: none;
-    }
-
-    .calendar-section.active {
-        display: block;
-    }
-
-    /* Nouveau layout : recherche en haut, calendrier en bas */
-    .planning-container {
-        display: flex;
-        flex-direction: column;
-        gap: 24px;
-        max-width: 1600px;
-        margin: 0 auto;
-    }
-
-    .search-section {
-        background: var(--card-light);
-        border-radius: 12px;
-        padding: 24px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    body.dark-mode .search-section {
-        background: var(--card-dark);
-        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-    }
-
-    .calendar-layout {
-        display: grid;
-        grid-template-columns: 220px 1fr;
-        gap: 24px;
-    }
-
-    /* Employee Panel */
-    .employee-panel {
-        background: var(--card-light);
-        border-radius: 12px;
-        padding: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        position: sticky;
-        top: 24px;
-        max-height: calc(100vh - 200px);
-        overflow-y: auto;
-    }
-
-    body.dark-mode .employee-panel {
-        background: var(--card-dark);
-        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-    }
-
-    .panel-header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 1rem;
-        font-weight: 500;
-        color: var(--text-light);
-        margin-bottom: 12px;
-        padding-bottom: 8px;
-        border-bottom: 2px solid var(--border-light);
-    }
-
-    body.dark-mode .panel-header {
-        color: var(--text-dark);
-        border-bottom-color: var(--border-dark);
-    }
-
-    .panel-header .material-icons {
-        color: var(--primary);
-        font-size: 22px;
-    }
-
-    .employee-actions {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 12px;
-    }
-
-    .employee-actions button {
-        flex: 1;
-        padding: 6px 8px;
-        border: 1px solid var(--border-light);
-        border-radius: 6px;
-        background: transparent;
-        color: var(--text-light);
-        font-size: 0.75rem;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    body.dark-mode .employee-actions button {
-        border-color: var(--border-dark);
-        color: var(--text-dark);
-    }
-
-    .employee-actions button:hover {
-        background: rgba(63, 81, 181, 0.1);
-        border-color: var(--primary);
-    }
-
-    .employee-list {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .employee-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 10px;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-size: 0.875rem;
-        color: var(--text-light);
-    }
-
-    body.dark-mode .employee-item {
-        color: var(--text-dark);
-    }
-
-    .employee-item:hover {
-        background: rgba(63, 81, 181, 0.05);
-    }
-
-    body.dark-mode .employee-item:hover {
-        background: rgba(63, 81, 181, 0.1);
-    }
-
-    .employee-item.unchecked {
-        opacity: 0.4;
-    }
-
-    .employee-item.unchecked .employee-color-dot {
-        background: #ccc !important;
-    }
-
-    .employee-color-dot {
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        flex-shrink: 0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-    }
-
-    .employee-item input[type="checkbox"] {
-        display: none;
-    }
-
-    .employee-item span {
-        flex: 1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .employee-count {
-        font-size: 0.7rem;
-        background: rgba(63, 81, 181, 0.1);
-        color: var(--primary);
-        padding: 2px 6px;
-        border-radius: 8px;
-        min-width: 20px;
-        text-align: center;
-    }
-
-    body.dark-mode .employee-count {
-        background: rgba(63, 81, 181, 0.2);
-    }
-
-    /* Panneaux réductibles */
-    .employee-panel.collapsed .panel-content,
-    .right-panel.collapsed .panel-content {
-        display: none;
-    }
-
-    .employee-panel.collapsed,
-    .right-panel.collapsed {
-        padding: 8px;
-        width: 48px;
-    }
-
-    .panel-toggle-btn {
-        background: none;
-        border: none;
-        color: var(--primary);
-        cursor: pointer;
-        padding: 4px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-        margin-left: auto;
-    }
-
-    .panel-toggle-btn:hover {
-        background: rgba(63, 81, 181, 0.1);
-    }
-
-    .panel-toggle-btn .material-icons {
-        font-size: 20px;
-        transition: transform 0.3s;
-    }
-
-    .employee-panel.collapsed .panel-toggle-btn .material-icons {
-        transform: rotate(180deg);
-    }
-
-    /* Right Panel */
-    .right-panel {
-        background: var(--card-light);
-        border-radius: 12px;
-        padding: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        position: sticky;
-        top: 24px;
-        max-height: calc(100vh - 200px);
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-    }
-
-    body.dark-mode .right-panel {
-        background: var(--card-dark);
-        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-    }
-
-    .mode-toggle {
-        display: flex;
-        gap: 4px;
-        background: rgba(63, 81, 181, 0.08);
-        border-radius: 8px;
-        padding: 4px;
-        margin-right: auto;
-    }
-
-    .mode-btn {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 12px;
-        border: none;
-        border-radius: 6px;
-        background: transparent;
-        color: var(--text-light);
-        cursor: pointer;
-        font-size: 0.875rem;
-        font-weight: 500;
-        transition: all 0.2s;
-    }
-
-    body.dark-mode .mode-btn {
-        color: var(--text-dark);
-    }
-
-    .mode-btn:hover {
-        background: rgba(63, 81, 181, 0.1);
-    }
-
-    .mode-btn.active {
-        background: white;
-        color: var(--primary);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-
-    body.dark-mode .mode-btn.active {
-        background: rgba(255,255,255,0.1);
-    }
-
-    .mode-btn .material-icons {
-        font-size: 18px;
-    }
-
-    .panel-mode {
-        display: none;
-        flex: 1;
-        overflow-y: auto;
-    }
-
-    .panel-mode.active {
-        display: flex;
-        flex-direction: column;
-    }
-
-    /* VRAIS ONGLETS (style tabs) */
-    .search-filters {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-        margin: 16px 0;
-    }
-
-    .tab-group {
-        background: var(--card-light);
-        border-radius: 8px;
-        overflow: hidden;
-        border: 1px solid var(--border-light);
-    }
-
-    body.dark-mode .tab-group {
-        background: rgba(0,0,0,0.2);
-        border-color: var(--border-dark);
-    }
-
-    .tab-header {
-        padding: 10px 14px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: #757575;
-        background: rgba(63, 81, 181, 0.05);
-        border-bottom: 1px solid var(--border-light);
-    }
-
-    body.dark-mode .tab-header {
-        color: #999;
-        background: rgba(63, 81, 181, 0.1);
-        border-bottom-color: var(--border-dark);
-    }
-
-    .tabs {
-        display: flex;
-        flex-wrap: wrap;
-        padding: 4px;
-        gap: 4px;
-    }
-
-    .tab {
-        flex: 1;
-        min-width: fit-content;
-        padding: 8px 12px;
-        border: none;
-        background: transparent;
-        color: var(--text-light);
-        font-size: 0.8rem;
-        font-weight: 500;
-        cursor: pointer;
-        border-radius: 4px;
-        transition: all 0.2s;
-        white-space: nowrap;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-    }
-
-    body.dark-mode .tab {
-        color: var(--text-dark);
-    }
-
-    .tab:hover {
-        background: rgba(63, 81, 181, 0.08);
-    }
-
-    .tab.active {
-        background: var(--primary);
-        color: white;
-        box-shadow: 0 2px 4px rgba(63, 81, 181, 0.3);
-    }
-
-    .tab-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        display: inline-block;
-    }
-
-    /* TABLEAU DE RÉSULTATS */
-    .results-table {
-        width: 100%;
-        border-collapse: collapse;
-        background: var(--card-light);
-        border-radius: 8px;
-        overflow: hidden;
-    }
-
-    body.dark-mode .results-table {
-        background: rgba(0,0,0,0.2);
-    }
-
-    .results-table th {
-        background: rgba(63, 81, 181, 0.08);
-        padding: 12px 16px;
-        text-align: left;
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: #757575;
-        text-transform: uppercase;
-        border-bottom: 2px solid var(--border-light);
-    }
-
-    body.dark-mode .results-table th {
-        background: rgba(63, 81, 181, 0.15);
-        color: #999;
-        border-bottom-color: var(--border-dark);
-    }
-
-    .results-table td {
-        padding: 14px 16px;
-        border-bottom: 1px solid var(--border-light);
-        font-size: 0.875rem;
-    }
-
-    body.dark-mode .results-table td {
-        border-bottom-color: var(--border-dark);
-    }
-
-    .results-table tbody tr:hover {
-        background: rgba(63, 81, 181, 0.05);
-        cursor: pointer;
-    }
-
-    body.dark-mode .results-table tbody tr:hover {
-        background: rgba(63, 81, 181, 0.1);
-    }
-
-    .results-table tbody tr.selected {
-        background: rgba(63, 81, 181, 0.15) !important;
-    }
-
-    .table-client {
-        font-weight: 500;
-    }
-
-    .table-badge {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-
-    .table-badge.disponible {
-        background: #e3f2fd;
-        color: #1976d2;
-    }
-
-    .table-badge.complet {
-        background: #e8f5e9;
-        color: #388e3c;
-    }
-
-    body.dark-mode .table-badge.disponible {
-        background: rgba(25, 118, 210, 0.2);
-        color: #64b5f6;
-    }
-
-    body.dark-mode .table-badge.complet {
-        background: rgba(56, 142, 60, 0.2);
-        color: #81c784;
-    }
-
-    /* Calendar Container */
-    .calendar-main {
-        min-height: 700px;
-    }
-
-    #fullcalendar {
-        background: var(--card-light);
-        border-radius: 12px;
-        padding: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    body.dark-mode #fullcalendar {
-        background: var(--card-dark);
-        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-    }
-
-    /* FullCalendar theme overrides */
-    .fc {
-        --fc-button-bg-color: var(--primary);
-        --fc-button-border-color: var(--primary-dark);
-        --fc-button-hover-bg-color: var(--primary-dark);
-        --fc-button-hover-border-color: var(--primary-dark);
-        --fc-button-active-bg-color: var(--primary-dark);
-        --fc-button-active-border-color: var(--primary-dark);
-        --fc-today-bg-color: rgba(63, 81, 181, 0.08);
-        --fc-border-color: #e0e0e0;
-        --fc-event-border-color: transparent;
-        font-family: 'Roboto', sans-serif;
-    }
-
-    body.dark-mode .fc {
-        --fc-border-color: var(--border-dark);
-        --fc-page-bg-color: var(--card-dark);
-        --fc-neutral-bg-color: rgba(255,255,255,0.03);
-        --fc-today-bg-color: rgba(63, 81, 181, 0.15);
-        color: var(--text-dark);
-    }
-
-    body.dark-mode .fc .fc-col-header-cell {
-        color: var(--text-dark);
-    }
-
-    body.dark-mode .fc .fc-timegrid-axis {
-        color: var(--text-dark);
-    }
-
-    body.dark-mode .fc .fc-timegrid-slot-label {
-        color: #b0b0b0;
-    }
-
-    body.dark-mode .fc .fc-day-today .fc-col-header-cell-cushion {
-        color: white;
-    }
-
-    .fc .fc-toolbar-title {
-        font-size: 1.25rem !important;
-        font-weight: 500;
-    }
-
-    .fc .fc-button {
-        border-radius: 6px !important;
-        font-size: 0.875rem !important;
-        padding: 6px 12px !important;
-    }
-
-    .fc .fc-button-group .fc-button {
-        border-radius: 0 !important;
-    }
-
-    .fc .fc-button-group .fc-button:first-child {
-        border-radius: 6px 0 0 6px !important;
-    }
-
-    .fc .fc-button-group .fc-button:last-child {
-        border-radius: 0 6px 6px 0 !important;
-    }
-
-    /* Custom event rendering */
-    .fc-event {
-        border-radius: 4px !important;
-        border: none !important;
-        padding: 2px 4px;
-        font-size: 0.75rem;
-        cursor: pointer;
-    }
-
-    .fc-event-custom {
-        padding: 2px 4px;
-        line-height: 1.3;
-        overflow: hidden;
-    }
-
-    .fc-event-title-custom {
-        font-weight: 500;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .fc-event-employee {
-        font-size: 0.65rem;
-        opacity: 0.85;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .fc-event-time-custom {
-        display: none;
-    }
-
-    /* Preview event (slot selection) */
-    .fc-event.fc-preview-event {
-        border: 2px dashed var(--primary) !important;
-        background: rgba(63, 81, 181, 0.15) !important;
-        animation: previewPulse 1.5s ease-in-out infinite;
-    }
-
-    body.dark-mode .fc-event.fc-preview-event {
-        background: rgba(63, 81, 181, 0.25) !important;
-    }
-
-    @keyframes previewPulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.6; }
-    }
-
-    .fc-preview-content {
-        padding: 4px 6px;
-        color: var(--primary);
-        font-weight: 500;
-        font-size: 0.8rem;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
-
-    .fc-preview-content .material-icons {
-        font-size: 16px;
-    }
-
-    /* Event Popover */
-    .event-popover {
-        position: absolute;
-        z-index: 9999;
-        width: 300px;
-        background: var(--card-light);
-        border-radius: 10px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-        overflow: hidden;
-        animation: popoverIn 0.2s ease;
-    }
-
-    body.dark-mode .event-popover {
-        background: var(--card-dark);
-        box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-    }
-
-    @keyframes popoverIn {
-        from { opacity: 0; transform: translateY(-8px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    .popover-header {
-        padding: 14px 16px;
-        color: white;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .popover-header strong {
-        font-size: 0.9rem;
-    }
-
-    .popover-close {
-        background: none;
-        border: none;
-        color: white;
-        cursor: pointer;
-        padding: 4px;
-        border-radius: 50%;
-        display: flex;
-        transition: background 0.2s;
-    }
-
-    .popover-close:hover {
-        background: rgba(255,255,255,0.2);
-    }
-
-    .popover-close .material-icons {
-        font-size: 18px;
-    }
-
-    .popover-body {
-        padding: 14px 16px;
-    }
-
-    .popover-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 6px 0;
-        font-size: 0.85rem;
-        color: var(--text-light);
-    }
-
-    body.dark-mode .popover-row {
-        color: var(--text-dark);
-    }
-
-    .popover-row .material-icons {
-        font-size: 18px;
-        color: #757575;
-        flex-shrink: 0;
-    }
-
-    body.dark-mode .popover-row .material-icons {
-        color: #b0b0b0;
-    }
-
-    .popover-actions {
-        display: flex;
-        gap: 8px;
-        margin-top: 12px;
-        padding-top: 12px;
-        border-top: 1px solid var(--border-light);
-    }
-
-    body.dark-mode .popover-actions {
-        border-top-color: var(--border-dark);
-    }
-
-    /* ========== TIMELINE VIEW (existing) ========== */
-    .timeline-section {
-        display: none;
-    }
-
-    .timeline-section.active {
-        display: block;
-    }
-
-    .filters-card {
-        background: var(--card-light);
-        border-radius: 12px;
-        padding: 24px;
-        margin-bottom: 24px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    body.dark-mode .filters-card {
-        background: var(--card-dark);
-        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-    }
-
-    .filters-grid {
-        display: grid;
-        grid-template-columns: auto 1fr auto;
-        gap: 16px;
-        align-items: end;
-    }
-
-    .stats-row {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px;
-        margin-bottom: 24px;
-    }
-
-    .stat-card {
-        background: var(--card-light);
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        position: relative;
-        overflow: hidden;
-    }
-
-    body.dark-mode .stat-card {
-        background: var(--card-dark);
-        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-    }
-
-    .stat-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-    }
-
-    .stat-card.primary::before { background: var(--primary); }
-    .stat-card.success::before { background: #4CAF50; }
-    .stat-card.warning::before { background: #FF9800; }
-    .stat-card.info::before { background: #00BCD4; }
-
-    .stat-value {
-        font-size: 2rem;
-        font-weight: 600;
-        margin: 8px 0;
-    }
-
-    .stat-label {
-        font-size: 0.875rem;
-        color: #757575;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    body.dark-mode .stat-label {
-        color: #b0b0b0;
-    }
-
-    .main-grid {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 24px;
-    }
-
-    .prestations-section {
-        background: var(--card-light);
-        border-radius: 12px;
-        padding: 28px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    body.dark-mode .prestations-section {
-        background: var(--card-dark);
-        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-    }
-
-    .section-title {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-size: 1.5rem;
-        font-weight: 500;
-        color: var(--text-light);
-        margin-bottom: 24px;
-        padding-bottom: 16px;
-        border-bottom: 2px solid var(--border-light);
-    }
-
-    body.dark-mode .section-title {
-        color: var(--text-dark);
-        border-bottom-color: var(--border-dark);
-    }
-
-    .section-title .material-icons {
-        color: var(--primary);
-        font-size: 28px;
-    }
-
-    .timeline-view {
-        position: relative;
-        padding-left: 30px;
-    }
-
-    .timeline-line {
-        position: absolute;
-        left: 10px;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background: linear-gradient(to bottom, var(--primary), var(--primary-dark));
-    }
-
-    .timeline-item {
-        position: relative;
-        margin-bottom: 24px;
-    }
-
-    .timeline-dot {
-        position: absolute;
-        left: -24px;
-        top: 8px;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: var(--primary);
-        border: 2px solid white;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-
-    body.dark-mode .timeline-dot {
-        border-color: var(--card-dark);
-    }
-
-    .prestation-card {
-        background: rgba(63, 81, 181, 0.05);
-        border-radius: 8px;
-        padding: 16px;
-        border-left: 4px solid var(--primary);
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        transition: all 0.2s;
-    }
-
-    body.dark-mode .prestation-card {
-        background: rgba(63, 81, 181, 0.1);
-    }
-
-    .prestation-card:hover {
-        background: rgba(63, 81, 181, 0.1);
-        transform: translateX(4px);
-        box-shadow: 0 4px 12px rgba(63, 81, 181, 0.2);
-    }
-
-    body.dark-mode .prestation-card:hover {
-        background: rgba(63, 81, 181, 0.15);
-    }
-
-    .prestation-time {
-        width: 80px;
-        text-align: center;
-        font-weight: 600;
-        font-size: 1.125rem;
-        color: var(--primary);
-    }
-
-    .prestation-info {
-        flex: 1;
-    }
-
-    .prestation-client {
-        font-weight: 500;
-        color: var(--text-light);
-        margin-bottom: 4px;
-    }
-
-    body.dark-mode .prestation-client {
-        color: var(--text-dark);
-    }
-
-    .prestation-details {
-        font-size: 0.875rem;
-        color: #757575;
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        flex-wrap: wrap;
-    }
-
-    body.dark-mode .prestation-details {
-        color: #b0b0b0;
-    }
-
-    .prestation-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-
-    .badge-programme { background: #e3f2fd; color: #1565c0; }
-    .badge-en-cours { background: #fff3e0; color: #ff9800; }
-    .badge-termine { background: #e8f5e9; color: #2e7d32; }
-
-    body.dark-mode .badge-programme { background: rgba(21, 101, 192, 0.2); color: #64b5f6; }
-    body.dark-mode .badge-en-cours { background: rgba(255, 152, 0, 0.2); color: #ffb74d; }
-    body.dark-mode .badge-termine { background: rgba(46, 125, 50, 0.2); color: #81c784; }
-
-    .geo-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 3px 8px;
-        border-radius: 8px;
-        font-size: 0.7rem;
-        font-weight: 600;
-        color: white;
-    }
-
-    .prestation-actions {
-        display: flex;
-        gap: 8px;
-    }
-
-    .btn-icon {
-        width: 36px;
-        height: 36px;
-        min-width: 36px;
-        padding: 0;
-        border-radius: 50%;
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 60px 20px;
-        color: #757575;
-    }
-
-    body.dark-mode .empty-state {
-        color: #b0b0b0;
-    }
-
-    .empty-state .material-icons {
-        font-size: 80px;
-        margin-bottom: 16px;
-        opacity: 0.5;
-    }
-
-    /* ========== CREATE FORM ========== */
-    .create-form {
-        background: var(--card-light);
-        border-radius: 12px;
-        padding: 24px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        position: sticky;
-        top: 24px;
-    }
-
-    body.dark-mode .create-form {
-        background: var(--card-dark);
-        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-    }
-
-    .quick-actions {
-        display: flex;
-        gap: 12px;
-        margin-bottom: 20px;
-        padding: 16px;
-        background: rgba(63, 81, 181, 0.05);
-        border-radius: 8px;
-    }
-
-    body.dark-mode .quick-actions {
-        background: rgba(63, 81, 181, 0.1);
-    }
-
-    .quick-action-btn {
-        flex: 1;
-        height: 40px;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-    }
-
-    /* ========== MODALS ========== */
-    .modal-overlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.6);
-        z-index: 9998;
-        opacity: 0;
-        transition: opacity 0.3s;
-        backdrop-filter: blur(5px);
-    }
-
-    .modal-overlay.open {
-        display: block;
-        opacity: 1;
-    }
-
-    .modal-container {
-        display: none;
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 90%;
-        max-width: 1000px;
-        max-height: 90vh;
-        background: var(--card-light);
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        z-index: 9999;
-        opacity: 0;
-        overflow: hidden;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    body.dark-mode .modal-container {
-        background: var(--card-dark);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-    }
-
-    .modal-container.open {
-        display: block;
-        opacity: 1;
-    }
-
-    .modal-header {
-        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-        color: white;
-        padding: 24px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .modal-header h3 {
-        margin: 0;
-        font-size: 1.5rem;
-        font-weight: 400;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .modal-close {
-        background: none;
-        border: none;
-        color: white;
-        cursor: pointer;
-        padding: 8px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: background 0.2s;
-    }
-
-    .modal-close:hover {
-        background: rgba(255, 255, 255, 0.2);
-    }
-
-    .modal-body {
-        padding: 24px;
-        max-height: calc(90vh - 80px);
-        overflow-y: auto;
-    }
-
-    .search-filters-section {
-        background: rgba(63, 81, 181, 0.05);
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 20px;
-    }
-
-    body.dark-mode .search-filters-section {
-        background: rgba(63, 81, 181, 0.1);
-    }
-
-    .search-box {
-        margin-bottom: 16px;
-    }
-
-    .search-box input {
-        width: 100%;
-        padding: 12px 16px 12px 48px;
-        border: 2px solid var(--border-light);
-        border-radius: 8px;
-        font-size: 1rem;
-        background: white;
-        color: var(--text-light);
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236c757d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cpath d='m21 21-4.35-4.35'%3E%3C/path%3E%3C/svg%3E");
-        background-position: 16px center;
-        background-repeat: no-repeat;
-    }
-
-    body.dark-mode .search-box input {
-        background-color: #2a2a2a;
-        border-color: var(--border-dark);
-        color: var(--text-dark);
-    }
-
-    .search-box input:focus {
-        outline: none;
-        border-color: var(--primary);
-    }
-
-    .filters-row {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 12px;
-    }
-
-    .filter-select {
-        width: 100%;
-        padding: 10px 12px;
-        border: 2px solid var(--border-light);
-        border-radius: 8px;
-        font-size: 0.875rem;
-        background: white;
-        color: var(--text-light);
-        cursor: pointer;
-    }
-
-    body.dark-mode .filter-select {
-        background: #2a2a2a;
-        border-color: var(--border-dark);
-        color: var(--text-dark);
-    }
-
-    .filter-select:focus {
-        outline: none;
-        border-color: var(--primary);
-    }
-
-    .bons-list {
-        max-height: 500px;
-        overflow-y: auto;
-    }
-
-    .bon-item {
-        padding: 16px;
-        background: white;
-        border-radius: 8px;
-        margin-bottom: 12px;
-        cursor: pointer;
-        transition: all 0.2s;
-        border: 2px solid transparent;
-        position: relative;
-    }
-
-    body.dark-mode .bon-item {
-        background: #2a2a2a;
-    }
-
-    .bon-item:hover {
-        border-color: var(--primary);
-        transform: translateX(4px);
-        box-shadow: 0 4px 12px rgba(63, 81, 181, 0.15);
-    }
-
-    .bon-item.selected {
-        border-color: var(--primary);
-        background: rgba(63, 81, 181, 0.1);
-    }
-
-    .bon-item-checkbox {
-        position: absolute;
-        top: 12px;
-        left: 12px;
-        width: 20px;
-        height: 20px;
-        cursor: pointer;
-        accent-color: var(--primary);
-    }
-
-    .bon-item.has-checkbox {
-        padding-left: 44px;
-    }
-
-    .bon-item-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: start;
-        margin-bottom: 8px;
-    }
-
-    .bon-client {
-        font-weight: 500;
-        color: var(--text-light);
-    }
-
-    body.dark-mode .bon-client {
-        color: var(--text-dark);
-    }
-
-    .bon-info {
-        font-size: 0.75rem;
-        color: #757575;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-    }
-
-    body.dark-mode .bon-info {
-        color: #b0b0b0;
-    }
-
-    .bon-info-item {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
-
-    .bon-info-item .material-icons {
-        font-size: 14px;
-    }
-
-    .bon-progress {
-        margin-top: 8px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .progress-bar {
-        flex: 1;
-        height: 6px;
-        background: #e0e0e0;
-        border-radius: 3px;
-        overflow: hidden;
-    }
-
-    body.dark-mode .progress-bar {
-        background: #424242;
-    }
-
-    .progress-fill {
-        height: 100%;
-        background: var(--primary);
-        transition: width 0.3s;
-    }
-
-    .progress-text {
-        font-size: 0.7rem;
-        color: #757575;
-        min-width: 60px;
-        text-align: right;
-    }
-
-    body.dark-mode .progress-text {
-        color: #b0b0b0;
-    }
-
-    /* ========== MULTI-SELECT & BATCH CREATION ========== */
-    .selection-toolbar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 12px 16px;
-        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-        color: white;
-        border-radius: 8px;
-        margin-bottom: 12px;
-        animation: slideDown 0.3s ease;
-    }
-
-    @keyframes slideDown {
-        from { opacity: 0; transform: translateY(-10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    .selection-info {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-size: 0.9rem;
-    }
-
-    .selection-count {
-        background: rgba(255, 255, 255, 0.25);
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-weight: 500;
-    }
-
-    .selection-actions {
-        display: flex;
-        gap: 8px;
-    }
-
-    .selection-actions button {
-        padding: 6px 12px;
-        border: none;
-        border-radius: 6px;
-        background: rgba(255, 255, 255, 0.2);
-        color: white;
-        cursor: pointer;
-        font-size: 0.85rem;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
-
-    .selection-actions button:hover {
-        background: rgba(255, 255, 255, 0.3);
-    }
-
-    .selection-actions button .material-icons {
-        font-size: 18px;
-    }
-
-    .batch-create-panel {
-        background: var(--card-light);
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 16px;
-        border: 2px solid var(--primary);
-        animation: slideDown 0.3s ease;
-    }
-
-    body.dark-mode .batch-create-panel {
-        background: var(--card-dark);
-    }
-
-    .batch-panel-header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 12px;
-        font-weight: 500;
-        color: var(--text-light);
-    }
-
-    body.dark-mode .batch-panel-header {
-        color: var(--text-dark);
-    }
-
-    .batch-panel-header .material-icons {
-        color: var(--primary);
-        font-size: 22px;
-    }
-
-    .batch-form-row {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 12px;
-        margin-bottom: 12px;
-    }
-
-    .batch-form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .batch-form-group label {
-        font-size: 0.75rem;
-        color: #757575;
-        font-weight: 500;
-    }
-
-    body.dark-mode .batch-form-group label {
-        color: #b0b0b0;
-    }
-
-    .batch-form-group input,
-    .batch-form-group select {
-        padding: 8px 12px;
-        border: 1px solid var(--border-light);
-        border-radius: 6px;
-        background: var(--card-light);
-        color: var(--text-light);
-        font-size: 0.875rem;
-    }
-
-    body.dark-mode .batch-form-group input,
-    body.dark-mode .batch-form-group select {
-        background: var(--card-dark);
-        color: var(--text-dark);
-        border-color: var(--border-dark);
-    }
-
-    .batch-create-btn {
-        width: 100%;
-        padding: 12px;
-        border: none;
-        border-radius: 6px;
-        background: var(--primary);
-        color: white;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-    }
-
-    .batch-create-btn:hover {
-        background: var(--primary-dark);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(63, 81, 181, 0.3);
-    }
-
-    .batch-create-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
-    .batch-create-btn .material-icons {
-        font-size: 20px;
-    }
-
-    /* Toast Notifications */
-    .toast-container {
-        position: fixed;
-        top: 80px;
-        right: 24px;
-        z-index: 10000;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .toast {
-        min-width: 300px;
-        padding: 16px 20px;
-        border-radius: 8px;
-        background: white;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        animation: toastIn 0.3s ease;
-    }
-
-    body.dark-mode .toast {
-        background: #2a2a2a;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-    }
-
-    @keyframes toastIn {
-        from { opacity: 0; transform: translateX(100px); }
-        to { opacity: 1; transform: translateX(0); }
-    }
-
-    .toast.success {
-        border-left: 4px solid #4caf50;
-    }
-
-    .toast.error {
-        border-left: 4px solid #f44336;
-    }
-
-    .toast.info {
-        border-left: 4px solid #2196f3;
-    }
-
-    .toast .material-icons {
-        font-size: 24px;
-    }
-
-    .toast.success .material-icons {
-        color: #4caf50;
-    }
-
-    .toast.error .material-icons {
-        color: #f44336;
-    }
-
-    .toast.info .material-icons {
-        color: #2196f3;
-    }
-
-    .toast-message {
-        flex: 1;
-        color: var(--text-light);
-    }
-
-    body.dark-mode .toast-message {
-        color: var(--text-dark);
-    }
-
-    .toast-close {
-        background: none;
-        border: none;
-        color: #757575;
-        cursor: pointer;
-        padding: 0;
-        display: flex;
-    }
-
-    .toast-close .material-icons {
-        font-size: 20px;
-    }
-
-    .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 0.7rem;
-        font-weight: 500;
-    }
-
-    .badge.disponible {
-        background: rgba(76, 175, 80, 0.15);
-        color: #4caf50;
-    }
-
-    .badge.complet {
-        background: rgba(158, 158, 158, 0.15);
-        color: #9e9e9e;
-    }
-
-    .badge.urgent {
-        background: rgba(244, 67, 54, 0.15);
-        color: #f44336;
-    }
-
-    .loading-spinner {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 60px;
-    }
-
-    .spinner {
-        width: 48px;
-        height: 48px;
-        border: 4px solid rgba(63, 81, 181, 0.1);
-        border-top-color: var(--primary);
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-        to { transform: rotate(360deg); }
-    }
-
-    /* ========== COLLAPSIBLE EMPLOYEE PANEL ========== */
-    .panel-toggle-icon {
-        display: none;
-    }
-
-    .employee-panel.collapsed .employee-actions,
-    .employee-panel.collapsed .employee-list {
-        display: none !important;
-    }
-
-    .employee-panel.collapsed .panel-toggle-icon {
-        transform: rotate(180deg);
-    }
-
-    /* ========== RESPONSIVE ========== */
-    /* ========== FAB MOBILE ========== */
-    .fab-create {
-        display: none;
-        position: fixed;
-        bottom: 24px;
-        right: 24px;
-        z-index: 900;
-        width: 56px;
-        height: 56px;
-        border-radius: 50%;
-        background: var(--primary);
-        color: white;
-        border: none;
-        box-shadow: 0 4px 12px rgba(63, 81, 181, 0.4);
-        cursor: pointer;
-        align-items: center;
-        justify-content: center;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .fab-create:hover {
-        transform: scale(1.1);
-        box-shadow: 0 6px 20px rgba(63, 81, 181, 0.5);
-    }
-
-    .fab-create .material-icons {
-        font-size: 28px;
-    }
-
-    /* Bottom sheet overlay */
-    .mobile-form-overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        z-index: 1000;
-        background: rgba(0,0,0,0.5);
-        animation: fadeIn 0.2s ease;
-    }
-
-    .mobile-form-overlay.open {
-        display: block;
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-
-    .mobile-form-sheet {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: var(--card-light);
-        border-radius: 16px 16px 0 0;
-        padding: 0 16px 32px;
-        max-height: 80vh;
-        overflow-y: auto;
-        animation: slideUp 0.3s ease;
-        box-shadow: 0 -4px 24px rgba(0,0,0,0.2);
-    }
-
-    body.dark-mode .mobile-form-sheet {
-        background: var(--card-dark);
-    }
-
-    @keyframes slideUp {
-        from { transform: translateY(100%); }
-        to { transform: translateY(0); }
-    }
-
-    .mobile-form-sheet .sheet-header {
-        position: sticky;
-        top: 0;
-        background: var(--card-light);
-        z-index: 2;
-        padding: 12px 0 8px;
-        border-bottom: 1px solid var(--border-light);
-        margin-bottom: 12px;
-    }
-
-    body.dark-mode .mobile-form-sheet .sheet-header {
-        background: var(--card-dark);
-        border-bottom-color: var(--border-dark);
-    }
-
-    .mobile-form-sheet .sheet-handle {
-        width: 40px;
-        height: 4px;
-        background: #ccc;
-        border-radius: 2px;
-        margin: 0 auto 8px;
-        cursor: pointer;
-    }
-
-    body.dark-mode .mobile-form-sheet .sheet-handle {
-        background: #555;
-    }
-
-    .sheet-header-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .sheet-close-btn {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        border: none;
-        background: rgba(0,0,0,0.08);
-        color: var(--text-light);
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: background 0.2s;
-    }
-
-    .sheet-close-btn:hover {
-        background: rgba(0,0,0,0.15);
-    }
-
-    body.dark-mode .sheet-close-btn {
-        background: rgba(255,255,255,0.1);
-        color: var(--text-dark);
-    }
-
-    body.dark-mode .sheet-close-btn:hover {
-        background: rgba(255,255,255,0.2);
-    }
-
-    .mobile-form-sheet .section-title {
-        margin-bottom: 0;
-        font-size: 1.1rem;
-    }
-
-    .mobile-form-sheet .quick-actions {
-        margin-bottom: 12px;
-    }
-
-    @media (max-width: 1400px) {
-        .calendar-layout {
-            grid-template-columns: 200px 1fr;
-        }
-
-        .calendar-layout .create-form {
-            display: none;
-        }
-
-        .fab-create {
-            display: flex;
-        }
-    }
-
-    @media (max-width: 1200px) {
-        .calendar-layout {
-            grid-template-columns: 1fr;
-        }
-
-        .panel-toggle-icon {
-            display: inline-block !important;
-        }
-
-        .employee-panel {
-            position: static;
-            max-height: none;
-        }
-
-        .employee-list {
-            flex-direction: row;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .employee-item {
-            padding: 6px 10px;
-            border: 1px solid var(--border-light);
-            border-radius: 20px;
-        }
-
-        body.dark-mode .employee-item {
-            border-color: var(--border-dark);
-        }
-
-        .main-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .create-form {
-            position: static;
-        }
-
-        .filters-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .stats-row {
-            grid-template-columns: repeat(2, 1fr);
-        }
-    }
-
-    @media (max-width: 768px) {
-        .planning-container {
-            padding: 0 4px;
-        }
-
-        .page-header {
-            flex-direction: column;
-            align-items: flex-start;
-            padding: 20px 16px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-        }
-
-        .page-header h1 {
-            font-size: 1.4rem;
-        }
-
-        .page-header h1 .material-icons {
-            font-size: 24px;
-        }
-
-        .view-toggle {
-            width: 100%;
-        }
-
-        .view-btn {
-            flex: 1;
-            justify-content: center;
-            padding: 8px 12px;
-            font-size: 13px;
-        }
-
-        .stats-row {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-
-        .filters-row {
-            grid-template-columns: 1fr;
-        }
-
-        /* Calendar card */
-        #fullcalendar {
-            padding: 8px;
-            border-radius: 8px;
-        }
-
-        .calendar-main {
-            min-height: 450px;
-        }
-
-        /* FullCalendar mobile overrides */
-        .fc .fc-toolbar {
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .fc .fc-toolbar-title {
-            font-size: 1rem !important;
-        }
-
-        .fc .fc-button {
-            padding: 4px 8px !important;
-            font-size: 0.8rem !important;
-        }
-
-        .fc .fc-col-header-cell-cushion {
-            font-size: 0.75rem;
-            padding: 4px 2px;
-        }
-
-        .fc .fc-timegrid-slot-label-cushion {
-            font-size: 0.7rem;
-        }
-
-        .fc-event-custom {
-            padding: 1px 2px;
-            line-height: 1.2;
-        }
-
-        .fc-event-title-custom {
-            font-size: 0.65rem;
-        }
-
-        .fc-event-employee {
-            display: none;
-        }
-
-        /* Employee panel compact */
-        .employee-panel {
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 12px;
-        }
-
-        .employee-item {
-            padding: 4px 8px;
-            font-size: 0.8rem;
-        }
-
-        .employee-color-dot {
-            width: 10px;
-            height: 10px;
-        }
-
-        .employee-count {
-            font-size: 0.65rem;
-            padding: 1px 4px;
-        }
-
-        /* Event popover mobile */
-        .event-popover {
-            position: fixed !important;
-            left: 8px !important;
-            right: 8px !important;
-            top: auto !important;
-            bottom: 16px !important;
-            width: auto !important;
-            max-width: none !important;
-            border-radius: 12px;
-            box-shadow: 0 -4px 24px rgba(0,0,0,0.3);
-        }
-
-        /* Create form in modal */
-        .create-form {
-            padding: 16px;
-            border-radius: 8px;
-        }
-
-        /* Timeline view */
-        .timeline-table-wrapper {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .timeline-table {
-            min-width: 600px;
-        }
-
-        .timeline-table th,
-        .timeline-table td {
-            padding: 8px 10px;
-            font-size: 0.8rem;
-        }
-
-        /* Search modal */
-        .bon-modal-content {
-            width: 95%;
-            margin: 16px auto;
-            max-height: 85vh;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .page-header {
-            padding: 16px 12px;
-        }
-
-        .page-header h1 {
-            font-size: 1.2rem;
-        }
-
-        .view-btn {
-            font-size: 12px;
-            padding: 6px 8px;
-        }
-
-        .view-btn .material-icons {
-            font-size: 18px;
-        }
-
-        .stats-row {
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-        }
-
-        .stat-card {
-            padding: 10px 8px;
-        }
-
-        .stat-value {
-            font-size: 1.2rem;
-        }
-
-        .stat-label {
-            font-size: 0.7rem;
-        }
-
-        .fc .fc-toolbar-title {
-            font-size: 0.9rem !important;
-        }
-
-        .fc .fc-button {
-            padding: 3px 6px !important;
-            font-size: 0.75rem !important;
-        }
-
-        .employee-panel {
-            padding: 10px;
-        }
-
-        .panel-header {
-            font-size: 0.875rem;
-        }
-    }
+/* ===== ROOT LAYOUT ===== */
+.planning-root {
+    display: grid;
+    grid-template-columns: 210px 1fr 400px;
+    grid-template-rows: auto 1fr;
+    gap: 16px;
+    height: calc(100vh - 110px);
+    max-width: 1900px;
+    margin: 0 auto;
+}
+
+.planning-header {
+    grid-column: 1 / -1;
+    padding: 18px 24px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    border-radius: 12px;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.planning-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+.planning-header .material-icons { font-size: 28px; }
+
+/* ===== SHARED CARD ===== */
+.p-card {
+    background: var(--card-light);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+body.dark-mode .p-card { background: var(--card-dark); box-shadow: 0 2px 12px rgba(0,0,0,0.25); }
+
+/* ===== LEFT: EMPLOYEE PANEL ===== */
+.emp-panel {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 4px;
+    overflow-y: auto;
+}
+.emp-panel-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #9e9e9e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.emp-panel-title .material-icons { font-size: 16px; color: var(--primary); }
+.emp-actions { display: flex; gap: 6px; margin-bottom: 8px; }
+.emp-actions button {
+    flex: 1;
+    padding: 5px 8px;
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    background: transparent;
+    font-size: 0.75rem;
+    cursor: pointer;
+    color: var(--text-light);
+    transition: all 0.15s;
+}
+body.dark-mode .emp-actions button { border-color: var(--border-dark); color: var(--text-dark); }
+.emp-actions button:hover { background: rgba(63,81,181,0.1); border-color: var(--primary); color: var(--primary); }
+
+.emp-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 0.9rem;
+    user-select: none;
+}
+.emp-item:hover { background: rgba(0,0,0,0.04); }
+body.dark-mode .emp-item:hover { background: rgba(255,255,255,0.05); }
+.emp-item.inactive .emp-avatar { opacity: 0.25; }
+.emp-item.inactive .emp-name { opacity: 0.35; text-decoration: line-through; }
+.emp-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+    transition: opacity 0.2s;
+}
+.emp-name { flex: 1; font-weight: 500; color: var(--text-light); }
+body.dark-mode .emp-name { color: var(--text-dark); }
+.emp-day-count {
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: rgba(0,0,0,0.07);
+    border-radius: 10px;
+    padding: 2px 7px;
+    color: #666;
+    min-width: 20px;
+    text-align: center;
+}
+body.dark-mode .emp-day-count { background: rgba(255,255,255,0.1); color: #aaa; }
+
+/* ===== CENTER: CALENDAR ===== */
+.cal-main {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+#fullcalendar { flex: 1; min-height: 0; }
+
+/* ===== RIGHT: WIZARD ===== */
+.wizard-panel {
+    display: flex;
+    flex-direction: column;
+}
+.wizard-header {
+    padding: 14px 20px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.wizard-body { flex: 1; overflow-y: auto; }
+
+/* Steps */
+.w-step { border-bottom: 1px solid var(--border-light); }
+body.dark-mode .w-step { border-bottom-color: var(--border-dark); }
+.step-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 20px;
+}
+.step-num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    color: #9e9e9e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    transition: all 0.25s;
+}
+.w-step.active .step-num, .w-step.done .step-num { background: var(--primary); color: white; }
+.step-lbl {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #bdbdbd;
+    transition: color 0.25s;
+    flex: 1;
+}
+.w-step.active .step-lbl, .w-step.done .step-lbl { color: var(--text-light); }
+body.dark-mode .w-step.active .step-lbl,
+body.dark-mode .w-step.done .step-lbl { color: var(--text-dark); }
+.step-done-badge {
+    display: none;
+    font-size: 0.78rem;
+    color: #4caf50;
+    font-weight: 600;
+    align-items: center;
+    gap: 3px;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.step-done-badge .material-icons { font-size: 15px; flex-shrink: 0; }
+.w-step.done .step-done-badge { display: flex; }
+
+.step-content {
+    padding: 0 20px 16px;
+    display: none;
+}
+.w-step.active .step-content { display: block; }
+
+/* Step 1 – search */
+.search-wrap { position: relative; margin-bottom: 10px; }
+.search-wrap .material-icons { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #9e9e9e; font-size: 20px; pointer-events: none; }
+#wizSearch {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 11px 12px 11px 38px;
+    border: 2px solid var(--border-light);
+    border-radius: 10px;
+    font-size: 1rem;
+    background: var(--card-light);
+    color: var(--text-light);
+    transition: border-color 0.2s;
+}
+body.dark-mode #wizSearch { background: var(--card-dark); border-color: var(--border-dark); color: var(--text-dark); }
+#wizSearch:focus { outline: none; border-color: var(--primary); }
+
+.chips { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+.chip {
+    padding: 5px 11px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border-light);
+    background: transparent;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text-light);
+    font-weight: 500;
+}
+body.dark-mode .chip { border-color: var(--border-dark); color: var(--text-dark); }
+.chip.active { background: var(--primary); border-color: var(--primary); color: white; }
+
+.bon-list { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.bon-card {
+    padding: 11px 13px;
+    border: 2px solid var(--border-light);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+body.dark-mode .bon-card { border-color: var(--border-dark); }
+.bon-card:hover { border-color: var(--primary); background: rgba(63,81,181,0.04); }
+.bon-name { font-size: 1rem; font-weight: 700; color: var(--text-light); margin-bottom: 2px; }
+body.dark-mode .bon-name { color: var(--text-dark); }
+.bon-addr { font-size: 0.8rem; color: #888; margin-bottom: 5px; }
+.bon-meta { display: flex; gap: 5px; flex-wrap: wrap; }
+.b-badge { font-size: 0.72rem; padding: 2px 7px; border-radius: 10px; font-weight: 600; }
+.b-bc   { background: rgba(63,81,181,0.1); color: var(--primary); }
+.b-prog { background: #e8f5e9; color: #2e7d32; }
+.b-type { background: #f3e5f5; color: #7b1fa2; }
+.b-geo  { background: #e0f2f1; color: #00695c; }
+
+.sel-bon-box {
+    display: none;
+    padding: 11px 13px;
+    border: 2px solid #4caf50;
+    border-radius: 10px;
+    background: rgba(76,175,80,0.05);
+    margin-bottom: 10px;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+}
+.sel-bon-box .bon-name { color: #2e7d32; }
+.change-btn {
+    font-size: 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: none;
+    padding: 3px 8px;
+    cursor: pointer;
+    color: #757575;
+    flex-shrink: 0;
+    transition: all 0.15s;
+}
+.change-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+.search-msg { text-align: center; padding: 18px 0; color: #aaa; font-size: 0.9rem; }
+.search-msg .material-icons { font-size: 26px; display: block; margin-bottom: 4px; }
+
+/* Step 2 – employee */
+.emp-grid { display: flex; flex-direction: column; gap: 6px; }
+.emp-btn {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 13px;
+    border: 2px solid var(--border-light);
+    border-radius: 10px;
+    background: var(--card-light);
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: all 0.15s;
+}
+body.dark-mode .emp-btn { background: var(--card-dark); border-color: var(--border-dark); }
+.emp-btn:hover { border-color: var(--primary); background: rgba(63,81,181,0.04); }
+.emp-btn.selected { border-color: var(--primary); background: rgba(63,81,181,0.08); }
+.emp-btn-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+}
+.emp-btn-name { flex: 1; font-size: 0.95rem; font-weight: 600; color: var(--text-light); }
+body.dark-mode .emp-btn-name { color: var(--text-dark); }
+.emp-btn-load { font-size: 0.78rem; color: #9e9e9e; white-space: nowrap; }
+
+/* Clickable done steps */
+.w-step.done .step-head { cursor: pointer; }
+.w-step.done .step-head:hover { background: rgba(63,81,181,0.06); border-radius: 8px; }
+
+/* Bon details modal */
+.bon-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
+.bon-modal-overlay.open { display: flex; }
+.bon-modal {
+    background: white;
+    border-radius: 14px;
+    width: min(92vw, 960px);
+    height: 88vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+}
+body.dark-mode .bon-modal { background: var(--card-dark); }
+.bon-modal-hdr {
+    padding: 14px 20px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+.bon-modal-hdr button { background: none; border: none; color: white; font-size: 1.4rem; cursor: pointer; line-height: 1; padding: 2px 6px; border-radius: 6px; }
+.bon-modal-hdr button:hover { background: rgba(255,255,255,0.2); }
+#bonModalFrame { flex: 1; border: none; }
+
+/* Step 3 – date/time */
+.dt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.field-lbl { font-size: 0.75rem; font-weight: 700; color: #9e9e9e; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 4px; }
+.field-inp {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 11px;
+    border: 2px solid var(--border-light);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: var(--card-light);
+    color: var(--text-light);
+    transition: border-color 0.2s;
+}
+body.dark-mode .field-inp { background: var(--card-dark); border-color: var(--border-dark); color: var(--text-dark); }
+.field-inp:focus { outline: none; border-color: var(--primary); }
+.quick-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.quick-btn {
+    padding: 6px 13px;
+    border: 1.5px solid var(--border-light);
+    border-radius: 20px;
+    background: transparent;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--primary);
+    transition: all 0.15s;
+}
+body.dark-mode .quick-btn { border-color: var(--border-dark); }
+.quick-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+/* Footer */
+.wizard-footer {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border-light);
+    background: var(--card-light);
+    flex-shrink: 0;
+}
+body.dark-mode .wizard-footer { border-top-color: var(--border-dark); background: var(--card-dark); }
+
+.confirm-summary {
+    display: none;
+    background: rgba(63,81,181,0.05);
+    border-radius: 8px;
+    padding: 10px 13px;
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+    line-height: 1.8;
+    color: var(--text-light);
+}
+body.dark-mode .confirm-summary { color: var(--text-dark); }
+.confirm-summary.visible { display: block; }
+.c-row { display: flex; align-items: flex-start; gap: 6px; }
+.c-row .material-icons { font-size: 14px; color: var(--primary); margin-top: 3px; flex-shrink: 0; }
+
+.btn-create {
+    width: 100%;
+    padding: 14px 20px;
+    background: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+.btn-create:hover:not(:disabled) { background: #388e3c; box-shadow: 0 4px 14px rgba(76,175,80,0.4); transform: translateY(-1px); }
+.btn-create:disabled { background: #e0e0e0; color: #9e9e9e; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-create .material-icons { font-size: 20px; }
+
+/* Event popover */
+.ev-popover {
+    position: fixed;
+    background: var(--card-light);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    padding: 16px;
+    min-width: 240px;
+    max-width: 300px;
+    z-index: 1000;
+    display: none;
+}
+body.dark-mode .ev-popover { background: var(--card-dark); }
+.ev-popover.open { display: block; }
+.ev-pop-hdr { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border-light); }
+body.dark-mode .ev-pop-hdr { border-bottom-color: var(--border-dark); }
+.ev-pop-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.ev-pop-title { font-size: 0.95rem; font-weight: 700; color: var(--text-light); }
+body.dark-mode .ev-pop-title { color: var(--text-dark); }
+.ev-pop-row { display: flex; align-items: flex-start; gap: 7px; margin-bottom: 5px; font-size: 0.83rem; color: #666; }
+body.dark-mode .ev-pop-row { color: #aaa; }
+.ev-pop-row .material-icons { font-size: 15px; color: #bbb; flex-shrink: 0; margin-top: 1px; }
+.ev-pop-actions { display: flex; gap: 7px; margin-top: 11px; }
+.ev-pop-btn {
+    flex: 1;
+    padding: 7px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    text-decoration: none;
+    transition: all 0.15s;
+}
+.ev-pop-btn .material-icons { font-size: 14px; }
+.btn-view { background: var(--primary); color: white; }
+.btn-view:hover { background: var(--primary-dark); }
+.btn-del { background: #ffebee; color: #c62828; }
+.btn-del:hover { background: #ffcdd2; }
+.ev-pop-close { position: absolute; top: 9px; right: 9px; border: none; background: none; cursor: pointer; color: #bbb; padding: 3px; border-radius: 50%; line-height: 1; }
+.ev-pop-close:hover { background: rgba(0,0,0,0.08); color: #666; }
+
+/* Status badges */
+.s-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 10px; font-size: 0.73rem; font-weight: 600; }
+.s-a-programmer  { background: #fff3e0; color: #e65100; }
+.s-programme     { background: #e3f2fd; color: #1565c0; }
+.s-en-cours      { background: #fff8e1; color: #f57f17; }
+.s-termine       { background: #e8f5e9; color: #2e7d32; }
+.s-non-effectue  { background: #ffebee; color: #c62828; }
+
+/* Toast */
+.toasts { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast { padding: 12px 18px; border-radius: 8px; color: white; font-size: 0.88rem; font-weight: 500; box-shadow: 0 4px 16px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px; animation: toastIn 0.3s ease; }
+.toast .material-icons { font-size: 18px; }
+.t-success { background: #4caf50; }
+.t-error   { background: #f44336; }
+.t-info    { background: var(--primary); }
+@keyframes toastIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .planning-root { grid-template-columns: 1fr; height: auto; }
+    .cal-main { height: 500px; }
+    .wizard-panel { min-height: 500px; }
+}
 </style>
 
-<div class="planning-container">
+{# Flash messages #}
+{% for label, messages in app.flashes %}{% for msg in messages %}
+<script>document.addEventListener('DOMContentLoaded',()=>showToast('{{ label }}','{{ msg|e('js') }}'));</script>
+{% endfor %}{% endfor %}
 
-    <!-- Page Header -->
-    <div class="page-header">
-        <h1>
-            <i class="material-icons">calendar_today</i>
-            Planning des prestations
-        </h1>
-        <div class="view-toggle">
-            <button class="view-btn active" data-view="calendar" onclick="switchView('calendar')">
-                <i class="material-icons">calendar_view_week</i> Calendrier
-            </button>
-            <button class="view-btn" data-view="timeline" onclick="switchView('timeline')">
-                <i class="material-icons">view_list</i> Timeline
-            </button>
-        </div>
+<div class="planning-root">
+
+    <!-- HEADER -->
+    <div class="planning-header">
+        <h1><i class="material-icons">calendar_today</i> Planning des prestations</h1>
     </div>
 
-    <!-- ============================================= -->
-    <!-- CALENDAR VIEW -->
-    <!-- ============================================= -->
-    <div id="calendarViewSection" class="calendar-section active">
-        <div class="planning-container">
+    <!-- LEFT: EMPLOYEES -->
+    <aside class="p-card emp-panel">
+        <p class="emp-panel-title"><i class="material-icons">people</i>Techniciens</p>
+        <div class="emp-actions">
+            <button onclick="setAllEmp(true)">Tous</button>
+            <button onclick="setAllEmp(false)">Aucun</button>
+        </div>
+        <div id="empList"></div>
+    </aside>
 
-            <!-- SECTION RECHERCHE EN HAUT -->
-            <div class="search-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; color: var(--text-light);">
-                        <i class="material-icons" style="color: var(--primary);">search</i>
-                        Rechercher des bons de commande
-                    </h3>
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <input type="checkbox" id="multiSelectToggle" onchange="toggleMultiSelect()" style="cursor: pointer; accent-color: var(--primary);">
-                        <span style="font-size: 0.9rem; font-weight: 500;">Sélection multiple</span>
-                        <span id="selectionCounter" style="display: none; font-size: 0.75rem; background: var(--primary); color: white; padding: 3px 10px; border-radius: 12px; font-weight: 600; margin-left: 4px;"></span>
-                    </label>
+    <!-- CENTER: CALENDAR -->
+    <main class="p-card cal-main">
+        <div id="fullcalendar" style="height:100%;"></div>
+    </main>
+
+    <!-- RIGHT: WIZARD -->
+    <aside class="p-card wizard-panel">
+        <div class="wizard-header">
+            <i class="material-icons">add_circle</i>
+            Nouvelle intervention
+        </div>
+
+        <div class="wizard-body">
+
+            <!-- STEP 1: BON -->
+            <div class="w-step active" id="wStep1">
+                <div class="step-head" onclick="goToStep(1)">
+                    <div class="step-num">1</div>
+                    <span class="step-lbl">Bon de commande</span>
+                    <span class="step-done-badge" id="s1badge"><i class="material-icons">check_circle</i><span id="s1text"></span></span>
                 </div>
-
-                <!-- Barre de recherche + filtres -->
-                <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
-                    <input type="text"
-                           id="bonSearchInput"
-                           placeholder="Rechercher par client, numéro, adresse..."
-                           onkeyup="searchBons()"
-                           style="flex: 1; min-width: 250px; padding: 12px 16px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 0.95rem;">
-
-                    <div style="display: flex; gap: 8px;">
-                        <button class="mdl-button mdl-js-button mdl-button--raised" onclick="searchBons()" style="height: 44px;">
-                            <i class="material-icons" style="vertical-align: middle;">search</i>
-                            Rechercher
-                        </button>
-                        <button class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" id="createBatchBtn" onclick="openBatchPanel()" style="height: 44px; display: none;">
-                            <i class="material-icons" style="vertical-align: middle;">add_circle</i>
-                            Créer (<span id="batchCount">0</span>)
-                        </button>
+                <!-- Selected bon — toujours visible (hors step-content) -->
+                <div class="sel-bon-box" id="selBonBox" style="margin: 0 20px 12px;">
+                    <div style="flex:1; min-width:0;">
+                        <div class="bon-name" id="selBonName"></div>
+                        <div class="bon-addr" id="selBonAddr"></div>
+                        <div class="bon-meta" id="selBonMeta"></div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:5px; flex-shrink:0;">
+                        <button class="change-btn" onclick="resetBon()">Changer</button>
+                        <button class="change-btn" onclick="openBonFiche()" style="color:var(--primary); border-color:var(--primary);"><i class="material-icons" style="font-size:12px;vertical-align:middle;">open_in_new</i> Fiche</button>
                     </div>
                 </div>
-
-                <!-- Filtres onglets -->
-                <div class="search-filters">
-                    <div class="tab-group">
-                        <div class="tab-header">Statut</div>
-                        <div class="tabs">
-                            <button class="tab active" onclick="setStatutFilter('')">Tous</button>
-                            <button class="tab" onclick="setStatutFilter('disponible')">Disponible</button>
-                            <button class="tab" onclick="setStatutFilter('à programmer')">À programmer</button>
-                            <button class="tab" onclick="setStatutFilter('programmé')">Programmé</button>
-                            <button class="tab" onclick="setStatutFilter('terminé')">Terminé</button>
+                <div class="step-content">
+                    <!-- Search area -->
+                    <div id="searchArea">
+                        <div class="search-wrap">
+                            <i class="material-icons">search</i>
+                            <input type="text" id="wizSearch" placeholder="Client, adresse, numéro BC…" oninput="debSearch()">
                         </div>
-                    </div>
-
-                    <div class="tab-group">
-                        <div class="tab-header">Groupe géographique</div>
-                        <div class="tabs">
-                            <button class="tab active" onclick="setGroupeFilter('')">Tous</button>
-                            {% for groupe in groupesGeo %}
-                            <button class="tab" onclick="setGroupeFilter('{{ groupe.id }}')">
-                                <span class="tab-dot" style="background: {{ groupe.couleur }};"></span>
-                                {{ groupe.nom }}
-                            </button>
+                        <div class="chips" id="statutChips">
+                            <button class="chip active" data-s="" onclick="setStatut(this,'')">Tous</button>
+                            <button class="chip" data-s="à programmer" onclick="setStatut(this,'à programmer')">À programmer</button>
+                            <button class="chip" data-s="programmé" onclick="setStatut(this,'programmé')">Programmé</button>
+                            <button class="chip" data-s="terminé" onclick="setStatut(this,'terminé')">Terminé</button>
+                        </div>
+                        {% if groupesGeo|length > 0 %}
+                        <div class="chips" id="geoChips">
+                            <button class="chip active" data-g="" onclick="setGroupe(this,'')">Toutes zones</button>
+                            {% for g in groupesGeo %}
+                            <button class="chip" data-g="{{ g.id }}" onclick="setGroupe(this,'{{ g.id }}')" style="border-left:3px solid {{ g.couleur }};">{{ g.nom }}</button>
                             {% endfor %}
                         </div>
-                    </div>
-                </div>
-
-                <!-- TABLEAU DES RÉSULTATS -->
-                <div id="searchResults" style="margin-top: 20px;">
-                    <!-- Tableau inséré ici dynamiquement -->
-                </div>
-            </div>
-
-            <!-- SECTION CALENDRIER EN BAS -->
-            <div class="calendar-layout">
-                <!-- Employee Filter Panel (SANS bouton toggle) -->
-                <div class="employee-panel" id="employeePanel">
-                    <div class="panel-header">
-                        <i class="material-icons">people</i>
-                        <span>Employés</span>
-                    </div>
-                    <div class="employee-actions">
-                        <button onclick="toggleAllEmployees(true)">Tous</button>
-                        <button onclick="toggleAllEmployees(false)">Aucun</button>
-                    </div>
-                    <div id="employeeList" class="employee-list">
-                        <!-- Populated dynamically -->
-                    </div>
-                </div>
-
-                <!-- Calendar Container -->
-                <div class="calendar-main">
-                    <div id="fullcalendar"></div>
-                </div>
-            </div>
-
-            <!-- Modal création batch (si multi-select) -->
-            <div class="right-panel" id="rightPanel">
-                <div class="panel-header" style="justify-content: space-between;">
-                    <div class="mode-toggle">
-                        <button class="mode-btn active" data-mode="search" onclick="switchRightPanelMode('search')">
-                            <i class="material-icons">search</i> Recherche
-                        </button>
-                        <button class="mode-btn" data-mode="create" onclick="switchRightPanelMode('create')">
-                            <i class="material-icons">add_circle</i> Créer
-                        </button>
-                    </div>
-                    <button class="panel-toggle-btn" onclick="togglePanel('right')" title="Réduire/étendre">
-                        <i class="material-icons">chevron_right</i>
-                    </button>
-                </div>
-
-                <div class="panel-content">
-                    <!-- SEARCH MODE -->
-                    <div class="panel-mode active" id="searchMode">
-                        <div style="margin-bottom: 12px;">
-                            <input type="text"
-                                   id="bonSearchInput"
-                                   placeholder="Rechercher..."
-                                   onkeyup="searchBons()"
-                                   style="width: 100%; padding: 10px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 0.875rem;">
-                        </div>
-
-                        <!-- Multi-select toggle -->
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 8px; background: rgba(63, 81, 181, 0.05); border-radius: 6px;">
-                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.8rem; flex: 1;">
-                                <input type="checkbox" id="multiSelectToggle" onchange="toggleMultiSelect()" style="cursor: pointer; accent-color: var(--primary);">
-                                <span>Sélection multiple</span>
-                            </label>
-                            <span id="selectionCounter" style="display: none; font-size: 0.7rem; background: var(--primary); color: white; padding: 2px 8px; border-radius: 10px; font-weight: 500;"></span>
-                        </div>
-
-                        <!-- Filtres avec vrais onglets -->
-                        <div class="search-filters">
-                            <!-- Onglets Statut -->
-                            <div class="tab-group">
-                                <div class="tab-header">Statut</div>
-                                <div class="tabs">
-                                    <button class="tab active" data-filter="statut" data-value="" onclick="setStatutFilter('')">Tous</button>
-                                    <button class="tab" data-filter="statut" data-value="disponible" onclick="setStatutFilter('disponible')">Disponible</button>
-                                    <button class="tab" data-filter="statut" data-value="à programmer" onclick="setStatutFilter('à programmer')">À programmer</button>
-                                    <button class="tab" data-filter="statut" data-value="programmé" onclick="setStatutFilter('programmé')">Programmé</button>
-                                    <button class="tab" data-filter="statut" data-value="terminé" onclick="setStatutFilter('terminé')">Terminé</button>
-                                </div>
-                            </div>
-
-                            <!-- Onglets Groupe Géo -->
-                            <div class="tab-group">
-                                <div class="tab-header">Groupe</div>
-                                <div class="tabs">
-                                    <button class="tab active" data-filter="groupe" data-value="" onclick="setGroupeFilter('')">Tous</button>
-                                    {% for groupe in groupesGeo %}
-                                    <button class="tab" data-filter="groupe" data-value="{{ groupe.id }}" onclick="setGroupeFilter('{{ groupe.id }}')">
-                                        <span class="tab-dot" style="background: {{ groupe.couleur }};"></span>
-                                        {{ groupe.nom }}
-                                    </button>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Results -->
-                        <div id="searchResults" style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;">
-                            <div style="text-align: center; padding: 40px 20px; color: #999; font-size: 0.875rem;">
-                                <i class="material-icons" style="font-size: 48px; opacity: 0.3; display: block; margin: 0 auto 12px;">search</i>
-                                Utilisez la recherche pour trouver des bons
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- CREATE MODE -->
-                    <div class="panel-mode" id="createMode">
-                        <!-- Batch panel (shown when multi-select) -->
-                        <div id="batchCreatePanel" style="display: none;">
-                            <!-- Will be populated dynamically -->
-                        </div>
-
-                        <!-- Single creation form (default) -->
-                        <div id="singleCreateForm">
-                            <div class="quick-actions" style="display: flex; gap: 6px; margin-bottom: 12px;">
-                                <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('09:00')" style="flex: 1; min-width: 0;">
-                                    <i class="material-icons" style="font-size: 16px;">wb_sunny</i> 9h
-                                </button>
-                                <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('14:00')" style="flex: 1; min-width: 0;">
-                                    <i class="material-icons" style="font-size: 16px;">wb_twilight</i> 14h
-                                </button>
-                                <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setToday()" style="flex: 1; min-width: 0;">
-                                    <i class="material-icons" style="font-size: 16px;">today</i> Auj.
-                                </button>
-                            </div>
-
-                            <form method="post" action="{{ path('admin_planning_create_prestation') }}" onsubmit="return validateBeforeCreate(event)">
-                                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty" style="width: 100%;">
-                                    <input class="mdl-textfield__input" type="date" id="create_date" name="date" value="{{ selectedDate }}" required>
-                                    <label class="mdl-textfield__label" for="create_date">Date</label>
-                                </div>
-
-                                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty" style="width: 100%;">
-                                    <input class="mdl-textfield__input" type="time" id="heure" name="heure" value="09:00" required>
-                                    <label class="mdl-textfield__label" for="heure">Heure</label>
-                                </div>
-
-                                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ selectedEmployeId ? 'is-dirty' : '' }}" style="width: 100%;">
-                                    <select class="mdl-textfield__input" id="create_employe" name="employe" required>
-                                        <option value="">Sélectionner...</option>
-                                        {% for emp in employes %}
-                                            <option value="{{ emp.id }}" {{ selectedEmployeId == emp.id ? 'selected' : '' }}>
-                                                {{ emp.nom }}
-                                            </option>
-                                        {% endfor %}
-                                    </select>
-                                    <label class="mdl-textfield__label" for="create_employe">Employé</label>
-                                </div>
-
-                                <input type="hidden" id="selected_bon" name="bon" required>
-
-                                <div style="margin: 16px 0;">
-                                    <div style="font-size: 0.875rem; font-weight: 500; margin-bottom: 8px; color: var(--text-light);">Bon de commande :</div>
-
-                                    <div id="selectedBonDisplay" style="display: none; padding: 12px; background: rgba(63, 81, 181, 0.1); border-radius: 8px; border-left: 4px solid var(--primary);">
-                                        <div style="display: flex; justify-content: space-between; align-items: start; gap: 8px;">
-                                            <div style="flex: 1; min-width: 0;">
-                                                <div class="bon-client" id="selectedBonClient" style="font-weight: 500; font-size: 0.875rem; margin-bottom: 4px;"></div>
-                                                <div class="bon-info" id="selectedBonInfo" style="font-size: 0.75rem; color: #757575;"></div>
-                                            </div>
-                                            <button type="button"
-                                                    class="mdl-button mdl-js-button mdl-button--icon"
-                                                    onclick="clearBonSelection()"
-                                                    style="min-width: 0; width: 32px; height: 32px;"
-                                                    title="Effacer">
-                                                <i class="material-icons" style="font-size: 18px;">close</i>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div id="noBonSelected" style="padding: 12px; background: rgba(0, 0, 0, 0.05); border-radius: 8px; text-align: center; color: #999; font-size: 0.8rem;">
-                                        <i class="material-icons" style="vertical-align: middle; font-size: 16px;">info</i>
-                                        Passez en mode "Recherche" pour sélectionner un bon
-                                    </div>
-                                </div>
-
-                                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
-                                    <textarea class="mdl-textfield__input" id="create_description" name="description" rows="2"></textarea>
-                                    <label class="mdl-textfield__label" for="create_description">Note (optionnel)</label>
-                                </div>
-
-                                <button type="submit"
-                                        class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent"
-                                        style="width: 100%; height: 44px; margin-top: 8px;"
-                                        id="submit-btn"
-                                        disabled>
-                                    <i class="material-icons" style="vertical-align: middle; margin-right: 4px; font-size: 18px;">add</i>
-                                    Créer la prestation
-                                </button>
-                            </form>
+                        {% endif %}
+                        <div class="bon-list" id="bonList">
+                            <div class="search-msg"><i class="material-icons">hourglass_empty</i>Chargement…</div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- ============================================= -->
-    <!-- TIMELINE VIEW (existing) -->
-    <!-- ============================================= -->
-    <div id="timelineViewSection" class="timeline-section">
-        <!-- Filters -->
-        <div class="filters-card">
-            <form method="get" class="filters-grid">
-                <input type="hidden" name="view" value="timeline">
-                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ selectedDate ? 'is-dirty' : '' }}">
-                    <input class="mdl-textfield__input" type="date" id="tl_date" name="date" value="{{ selectedDate }}">
-                    <label class="mdl-textfield__label" for="tl_date">Date</label>
+            <!-- STEP 2: EMPLOYEE -->
+            <div class="w-step" id="wStep2">
+                <div class="step-head" onclick="goToStep(2)">
+                    <div class="step-num">2</div>
+                    <span class="step-lbl">Technicien</span>
+                    <span class="step-done-badge" id="s2badge"><i class="material-icons">check_circle</i><span id="s2text"></span></span>
                 </div>
-
-                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ selectedEmployeId ? 'is-dirty' : '' }}">
-                    <select class="mdl-textfield__input" id="tl_employe" name="employe">
-                        <option value="">Tous les employ&eacute;s</option>
+                <div class="step-content">
+                    <div class="emp-grid">
                         {% for emp in employes %}
-                            <option value="{{ emp.id }}" {{ selectedEmployeId == emp.id ? 'selected' : '' }}>
-                                {{ emp.nom }}
-                            </option>
+                        <button class="emp-btn" id="eb{{ emp.id }}" onclick="pickEmp({{ emp.id }},'{{ emp.nom|e('html_attr') }}')">
+                            <div class="emp-btn-avatar" data-empid="{{ emp.id }}">{{ emp.nom|first|upper }}</div>
+                            <span class="emp-btn-name">{{ emp.nom }}</span>
+                            <span class="emp-btn-load" id="eload{{ emp.id }}">–</span>
+                        </button>
                         {% endfor %}
-                    </select>
-                    <label class="mdl-textfield__label" for="tl_employe">Employ&eacute;</label>
+                    </div>
                 </div>
+            </div>
 
-                <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
-                    <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">search</i>
-                    Filtrer
+            <!-- STEP 3: DATE & TIME -->
+            <div class="w-step" id="wStep3">
+                <div class="step-head">
+                    <div class="step-num">3</div>
+                    <span class="step-lbl">Date et heure</span>
+                </div>
+                <div class="step-content">
+                    <div class="dt-grid">
+                        <div>
+                            <div class="field-lbl">Date</div>
+                            <input type="date" class="field-inp" id="dateInp" value="{{ selectedDate }}" onchange="onDateChange()">
+                        </div>
+                        <div>
+                            <div class="field-lbl">Heure</div>
+                            <input type="time" class="field-inp" id="timeInp" value="09:00" onchange="refreshSummary()">
+                        </div>
+                    </div>
+                    <div class="quick-btns">
+                        <button class="quick-btn" onclick="setTime('08:00')">8h00</button>
+                        <button class="quick-btn" onclick="setTime('09:00')">9h00</button>
+                        <button class="quick-btn" onclick="setTime('14:00')">14h00</button>
+                        <button class="quick-btn" onclick="setToday()">Aujourd'hui</button>
+                    </div>
+                    <div style="margin-top:12px;">
+                        <div class="field-lbl">Note pour le technicien</div>
+                        <textarea id="noteInp" class="field-inp" rows="3"
+                                  placeholder="Instructions, accès, code porte…"
+                                  style="resize:vertical; font-family:inherit;"
+                                  oninput="refreshSummary()"></textarea>
+                    </div>
+                </div>
+            </div>
+
+        </div>{# end wizard-body #}
+
+        <!-- FOOTER -->
+        <div class="wizard-footer">
+            <div class="confirm-summary" id="confirmBox"></div>
+            <form method="post" action="{{ path('admin_planning_create_prestation') }}" onsubmit="return onSubmit(event)">
+                <input type="hidden" name="bon"         id="fBon">
+                <input type="hidden" name="employe"     id="fEmp">
+                <input type="hidden" name="date"        id="fDate">
+                <input type="hidden" name="heure"       id="fHeure">
+                <input type="hidden" name="description" id="fNote">
+                <button type="submit" class="btn-create" id="btnCreate" disabled>
+                    <i class="material-icons">add_circle</i>
+                    Créer l'intervention
                 </button>
             </form>
         </div>
+    </aside>
 
-        <!-- Stats Cards -->
-        <div class="stats-row" id="statsRow"></div>
+</div>{# end planning-root #}
 
-        <!-- Main Grid -->
-        <div class="main-grid">
-            <!-- Prestations List -->
-            <div class="prestations-section">
-                <div class="section-title">
-                    <i class="material-icons">event_note</i>
-                    <span>Prestations du {{ selectedDate|date('d/m/Y') }} ({{ prestations|length }})</span>
-                </div>
-
-                {% if prestations is not empty %}
-                    <div class="timeline-view">
-                        <div class="timeline-line"></div>
-                        {% for prestation in prestations %}
-                            <div class="timeline-item">
-                                <div class="timeline-dot"></div>
-                                <div class="prestation-card">
-                                    <div class="prestation-time">
-                                        {{ prestation.datePrestation|date('H:i') }}
-                                    </div>
-
-                                    <div class="prestation-info">
-                                        <div class="prestation-client">
-                                            {{ prestation.bonDeCommande ? prestation.bonDeCommande.clientNom : '—' }}
-                                        </div>
-                                        <div class="prestation-details">
-                                            <span class="bon-info-item">
-                                                <i class="material-icons">person</i>
-                                                {{ prestation.employe ? prestation.employe.nom : 'Non assign&eacute;' }}
-                                            </span>
-                                            <span class="bon-info-item">
-                                                <i class="material-icons">location_on</i>
-                                                {{ prestation.bonDeCommande ? prestation.bonDeCommande.clientAdresse|slice(0, 40) ~ '...' : 'Adresse indisponible' }}
-                                            </span>
-                                            {% if prestation.bonDeCommande and prestation.bonDeCommande.clientAdresse matches '/\\b(\\d{5})\\b/' %}
-                                                {% set codePostal = prestation.bonDeCommande.clientAdresse|split(' ')|filter(v => v matches '/^\\d{5}$/')|first %}
-                                                {% if codePostal %}
-                                                    <span class="geo-badge" style="background: #9C27B0;">
-                                                        <i class="material-icons" style="font-size: 12px;">place</i>
-                                                        {{ codePostal }}
-                                                    </span>
-                                                {% endif %}
-                                            {% endif %}
-                                            <span class="prestation-badge badge-{{ prestation.statut.cssClass }}">
-                                                {{ prestation.statut.label }}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div class="prestation-actions">
-                                        <a href="{{ path('admin_prestation_show', {id: prestation.id}) }}"
-                                           class="mdl-button mdl-js-button mdl-button--icon btn-icon"
-                                           title="Voir"
-                                           style="color: #00897b;">
-                                            <i class="material-icons">visibility</i>
-                                        </a>
-                                        <form method="post"
-                                              action="{{ path('admin_planning_delete_prestation', {id: prestation.id}) }}"
-                                              style="display: inline;"
-                                              onsubmit="return confirm('Supprimer cette prestation ?');">
-                                            <button type="submit"
-                                                    class="mdl-button mdl-js-button mdl-button--icon btn-icon"
-                                                    title="Supprimer"
-                                                    style="color: #d32f2f;">
-                                                <i class="material-icons">delete</i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <div class="empty-state">
-                        <i class="material-icons">event_busy</i>
-                        <h3>Aucune prestation</h3>
-                        <p>Pas de prestation pr&eacute;vue pour cette date{{ selectedEmployeId ? ' et cet employ&eacute;' : '' }}</p>
-                    </div>
-                {% endif %}
-            </div>
-
-            <!-- Create Prestation Form (timeline) -->
-            <div>
-                <div class="create-form" id="timelineCreateForm">
-                    <div class="section-title" style="margin-bottom: 20px; padding-bottom: 12px;">
-                        <i class="material-icons">add_circle</i>
-                        <span>Cr&eacute;er une prestation</span>
-                    </div>
-
-                    <div class="quick-actions">
-                        <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('09:00')">
-                            <i class="material-icons" style="font-size: 18px;">wb_sunny</i> 9h00
-                        </button>
-                        <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('14:00')">
-                            <i class="material-icons" style="font-size: 18px;">wb_twilight</i> 14h00
-                        </button>
-                        <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setToday()">
-                            <i class="material-icons" style="font-size: 18px;">today</i> Auj.
-                        </button>
-                    </div>
-
-                    <form method="post" action="{{ path('admin_planning_create_prestation') }}">
-                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty">
-                            <input class="mdl-textfield__input" type="date" id="tl_create_date" name="date" value="{{ selectedDate }}" required>
-                            <label class="mdl-textfield__label" for="tl_create_date">Date</label>
-                        </div>
-
-                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty">
-                            <input class="mdl-textfield__input" type="time" id="tl_heure" name="heure" value="09:00" required>
-                            <label class="mdl-textfield__label" for="tl_heure">Heure</label>
-                        </div>
-
-                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label {{ selectedEmployeId ? 'is-dirty' : '' }}">
-                            <select class="mdl-textfield__input" id="tl_create_employe" name="employe" required>
-                                <option value="">S&eacute;lectionner...</option>
-                                {% for emp in employes %}
-                                    <option value="{{ emp.id }}" {{ selectedEmployeId == emp.id ? 'selected' : '' }}>
-                                        {{ emp.nom }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                            <label class="mdl-textfield__label" for="tl_create_employe">Employ&eacute;</label>
-                        </div>
-
-                        <input type="hidden" id="tl_selected_bon" name="bon" required>
-
-                        <div style="margin: 20px 0;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <strong style="color: var(--text-light);">Bon de commande :</strong>
-                                <button type="button"
-                                        class="mdl-button mdl-js-button mdl-button--raised"
-                                        onclick="openBonModal()"
-                                        style="height: 32px; line-height: 32px;">
-                                    <i class="material-icons" style="vertical-align: middle; margin-right: 4px; font-size: 18px;">search</i>
-                                    Rechercher
-                                </button>
-                            </div>
-
-                            <div id="tl_selectedBonDisplay" style="display: none; padding: 16px; background: rgba(63, 81, 181, 0.1); border-radius: 8px; border-left: 4px solid var(--primary);">
-                                <div style="display: flex; justify-content: space-between; align-items: start;">
-                                    <div>
-                                        <div class="bon-client" id="tl_selectedBonClient"></div>
-                                        <div class="bon-info" id="tl_selectedBonInfo"></div>
-                                    </div>
-                                    <button type="button"
-                                            class="mdl-button mdl-js-button mdl-button--icon"
-                                            onclick="clearBonSelection()"
-                                            title="Effacer">
-                                        <i class="material-icons">close</i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div id="tl_noBonSelected" style="padding: 16px; background: rgba(0, 0, 0, 0.05); border-radius: 8px; text-align: center; color: #757575;">
-                                <i class="material-icons" style="vertical-align: middle; font-size: 18px;">info</i>
-                                Aucun bon s&eacute;lectionn&eacute;
-                            </div>
-                        </div>
-
-                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
-                            <textarea class="mdl-textfield__input" id="tl_create_description" name="description" rows="3"></textarea>
-                            <label class="mdl-textfield__label" for="tl_create_description">Note pour l'employ&eacute; (optionnel)</label>
-                        </div>
-
-                        <button type="submit"
-                                class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent"
-                                style="width: 100%; height: 48px;"
-                                id="tl_submit-btn"
-                                disabled>
-                            <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">add</i>
-                            Cr&eacute;er la prestation
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
+<!-- Event popover -->
+<div class="ev-popover" id="evPop">
+    <button class="ev-pop-close" onclick="closePop()"><i class="material-icons" style="font-size:18px;">close</i></button>
+    <div class="ev-pop-hdr">
+        <div class="ev-pop-dot" id="popDot"></div>
+        <span class="ev-pop-title" id="popTitle"></span>
     </div>
-
+    <div id="popBody"></div>
+    <div class="ev-pop-actions" id="popActions"></div>
 </div>
 
-<!-- FAB Mobile: Créer une prestation -->
-<button class="fab-create" id="fabCreate" onclick="openMobileForm()" title="Créer une prestation">
-    <i class="material-icons">add</i>
-</button>
-
-<!-- Bottom Sheet Mobile: Formulaire de création -->
-<div class="mobile-form-overlay" id="mobileFormOverlay" onclick="closeMobileForm()">
-    <div class="mobile-form-sheet" onclick="event.stopPropagation()">
-        <div class="sheet-header">
-            <div class="sheet-handle" onclick="closeMobileForm()"></div>
-            <div class="sheet-header-row">
-                <div class="section-title">
-                    <i class="material-icons">add_circle</i>
-                    <span>Cr&eacute;er une prestation</span>
-                </div>
-                <button type="button" class="sheet-close-btn" onclick="closeMobileForm()" title="Fermer">
-                    <i class="material-icons">close</i>
-                </button>
-            </div>
+<!-- Bon de commande detail modal -->
+<div class="bon-modal-overlay" id="bonModal" onclick="closeBonFiche()">
+    <div class="bon-modal" onclick="event.stopPropagation()">
+        <div class="bon-modal-hdr">
+            <span><i class="material-icons" style="vertical-align:middle;font-size:18px;margin-right:6px;">description</i>Fiche bon de commande</span>
+            <button onclick="closeBonFiche()">✕</button>
         </div>
-
-        <div class="quick-actions">
-            <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('09:00')">
-                <i class="material-icons" style="font-size: 18px;">wb_sunny</i> 9h00
-            </button>
-            <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setTime('14:00')">
-                <i class="material-icons" style="font-size: 18px;">wb_twilight</i> 14h00
-            </button>
-            <button type="button" class="mdl-button mdl-js-button mdl-button--raised quick-action-btn" onclick="setToday()">
-                <i class="material-icons" style="font-size: 18px;">today</i> Auj.
-            </button>
-        </div>
-
-        <form method="post" action="{{ path('admin_planning_create_prestation') }}" id="mobileCreateForm">
-            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty" style="width: 100%;">
-                <input class="mdl-textfield__input" type="date" id="mobile_create_date" name="date" value="{{ selectedDate }}" required>
-                <label class="mdl-textfield__label" for="mobile_create_date">Date</label>
-            </div>
-
-            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label is-dirty" style="width: 100%;">
-                <input class="mdl-textfield__input" type="time" id="mobile_heure" name="heure" value="09:00" required>
-                <label class="mdl-textfield__label" for="mobile_heure">Heure</label>
-            </div>
-
-            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
-                <select class="mdl-textfield__input" id="mobile_create_employe" name="employe" required>
-                    <option value="">S&eacute;lectionner...</option>
-                    {% for emp in employes %}
-                        <option value="{{ emp.id }}">{{ emp.nom }}</option>
-                    {% endfor %}
-                </select>
-                <label class="mdl-textfield__label" for="mobile_create_employe">Employ&eacute;</label>
-            </div>
-
-            <input type="hidden" id="mobile_selected_bon" name="bon" required>
-
-            <div style="margin: 16px 0;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <strong style="color: var(--text-light);">Bon de commande :</strong>
-                    <button type="button"
-                            class="mdl-button mdl-js-button mdl-button--raised"
-                            onclick="openBonModal()"
-                            style="height: 32px; line-height: 32px;">
-                        <i class="material-icons" style="vertical-align: middle; margin-right: 4px; font-size: 18px;">search</i>
-                        Rechercher
-                    </button>
-                </div>
-
-                <div id="mobileSelectedBonDisplay" style="display: none; padding: 12px; background: rgba(63, 81, 181, 0.1); border-radius: 8px; border-left: 4px solid var(--primary);">
-                    <div style="display: flex; justify-content: space-between; align-items: start;">
-                        <div>
-                            <div class="bon-client" id="mobileSelectedBonClient"></div>
-                            <div class="bon-info" id="mobileSelectedBonInfo"></div>
-                        </div>
-                        <button type="button"
-                                class="mdl-button mdl-js-button mdl-button--icon"
-                                onclick="clearMobileBonSelection()"
-                                title="Effacer">
-                            <i class="material-icons">close</i>
-                        </button>
-                    </div>
-                </div>
-
-                <div id="mobileNoBonSelected" style="padding: 12px; background: rgba(0,0,0,0.05); border-radius: 8px; text-align: center; color: #757575; font-size: 0.875rem;">
-                    <i class="material-icons" style="vertical-align: middle; font-size: 18px;">info</i>
-                    Aucun bon s&eacute;lectionn&eacute;
-                </div>
-            </div>
-
-            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 100%;">
-                <textarea class="mdl-textfield__input" id="mobile_create_description" name="description" rows="2"></textarea>
-                <label class="mdl-textfield__label" for="mobile_create_description">Note pour l'employ&eacute; (optionnel)</label>
-            </div>
-
-            <button type="submit"
-                    class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent"
-                    style="width: 100%; height: 48px;"
-                    id="mobile-submit-btn"
-                    disabled>
-                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">add</i>
-                Cr&eacute;er la prestation
-            </button>
-        </form>
+        <iframe id="bonModalFrame" src=""></iframe>
     </div>
 </div>
 
-<!-- Toast Container -->
-<div class="toast-container" id="toastContainer"></div>
-
-<!-- Modal de details du bon -->
-<div class="modal-overlay" id="bonDetailsModalOverlay" onclick="closeBonDetailsModal()" style="z-index: 10000;"></div>
-<div class="modal-container" id="bonDetailsModal" style="z-index: 10001;">
-    <div class="modal-header">
-        <h3>
-            <i class="material-icons">receipt_long</i>
-            D&eacute;tails du bon de commande
-        </h3>
-        <button class="modal-close" onclick="closeBonDetailsModal()">
-            <i class="material-icons">close</i>
-        </button>
-    </div>
-    <div class="modal-body" id="bonDetailsContent"></div>
-</div>
+<div class="toasts" id="toasts"></div>
 
 <script>
-// ==================== GLOBALS ====================
-let calendar;
-let employeeData = [];
-let selectedEmployees = new Set();
-let currentView = 'calendar';
-let previewEvent = null;
-let multiSelectMode = false;
-let selectedBons = new Set();
-let currentSearchResults = [];
-let currentStatutFilter = '';
-let currentGroupeFilter = '';
-let rightPanelMode = 'search';
+// ====== CONFIG ======
+const EMPLOYES = [{% for e in employes %}{ id:{{ e.id }}, nom:{{ e.nom|json_encode|raw }} },{% endfor %}];
+const COLORS   = ['#e91e63','#9c27b0','#673ab7','#3f51b5','#2196f3','#009688','#4caf50','#ff9800','#ff5722','#795548','#607d8b','#00bcd4'];
+const empColor = id => COLORS[id % COLORS.length];
 
-// ==================== PANELS MANAGEMENT ====================
-function togglePanel(panel) {
-    const panelEl = document.getElementById(panel === 'employee' ? 'employeePanel' : 'rightPanel');
-    const layoutEl = document.querySelector('.calendar-layout');
+// Inject avatar colors
+const _cs = document.createElement('style');
+EMPLOYES.forEach(e => { _cs.textContent += `[data-empid="${e.id}"] { background: ${empColor(e.id)} !important; }`; });
+document.head.appendChild(_cs);
 
-    panelEl.classList.toggle('collapsed');
+// ====== STATE ======
+let selBon    = null;
+let selEmpId  = null;
+let selEmpNom = null;
+let activeEmps = new Set(EMPLOYES.map(e => e.id));
+let statut    = 'à programmer';
+let groupe    = '';
+let empLoads  = {};
+let calendar  = null;
+let searchTm  = null;
+let bonCache  = [];  // { id, ...data }
 
-    // Update grid layout classes
-    const employeeCollapsed = document.getElementById('employeePanel').classList.contains('collapsed');
-    const rightCollapsed = document.getElementById('rightPanel').classList.contains('collapsed');
-
-    layoutEl.classList.remove('employee-collapsed', 'right-collapsed', 'both-collapsed');
-
-    if (employeeCollapsed && rightCollapsed) {
-        layoutEl.classList.add('both-collapsed');
-    } else if (employeeCollapsed) {
-        layoutEl.classList.add('employee-collapsed');
-    } else if (rightCollapsed) {
-        layoutEl.classList.add('right-collapsed');
-    }
-
-    // Save state
-    localStorage.setItem(panel + 'PanelCollapsed', panelEl.classList.contains('collapsed'));
-
-    // Resize calendar
-    if (calendar) {
-        setTimeout(() => calendar.updateSize(), 300);
-    }
+// ====== UTILS ======
+function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+function showToast(type, msg) {
+    const t = document.createElement('div');
+    const cls = type === 'success' ? 't-success' : (type === 'danger' || type === 'error') ? 't-error' : 't-info';
+    const icon = type === 'success' ? 'check_circle' : 'info';
+    t.className = `toast ${cls}`;
+    t.innerHTML = `<i class="material-icons">${icon}</i>${esc(msg)}`;
+    document.getElementById('toasts').appendChild(t);
+    setTimeout(() => t.remove(), 4500);
 }
 
-function switchRightPanelMode(mode) {
-    rightPanelMode = mode;
-
-    // Update active button
-    document.querySelectorAll('.mode-btn').forEach(btn => {
-        if (btn.dataset.mode === mode) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-    });
-
-    // Show/hide panels
-    document.querySelectorAll('.panel-mode').forEach(panel => {
-        if (panel.id === mode + 'Mode') {
-            panel.classList.add('active');
-        } else {
-            panel.classList.remove('active');
-        }
-    });
+// ====== EMPLOYEE LEFT PANEL ======
+function renderEmpPanel() {
+    document.getElementById('empList').innerHTML = EMPLOYES.map(e => `
+        <div class="emp-item ${activeEmps.has(e.id) ? '' : 'inactive'}" onclick="toggleEmp(${e.id})">
+            <div class="emp-avatar" style="background:${empColor(e.id)};">${esc(e.nom[0].toUpperCase())}</div>
+            <span class="emp-name">${esc(e.nom)}</span>
+            <span class="emp-day-count" id="cnt${e.id}">${empLoads[e.id] ?? 0}</span>
+        </div>
+    `).join('');
+}
+function toggleEmp(id) {
+    if (activeEmps.has(id)) activeEmps.delete(id); else activeEmps.add(id);
+    renderEmpPanel();
+    calendar?.refetchEvents();
+}
+function setAllEmp(all) {
+    EMPLOYES.forEach(e => all ? activeEmps.add(e.id) : activeEmps.delete(e.id));
+    renderEmpPanel();
+    calendar?.refetchEvents();
 }
 
-function setStatutFilter(statut) {
-    currentStatutFilter = statut;
-
-    // Update active tab
-    document.querySelectorAll('.tab[data-filter="statut"]').forEach(tab => {
-        if (tab.dataset.value === statut) {
-            tab.classList.add('active');
-        } else {
-            tab.classList.remove('active');
-        }
-    });
-
-    searchBons();
-}
-
-function setGroupeFilter(groupeId) {
-    currentGroupeFilter = groupeId;
-
-    // Update active tab
-    document.querySelectorAll('.tab[data-filter="groupe"]').forEach(tab => {
-        if (tab.dataset.value === groupeId) {
-            tab.classList.add('active');
-        } else {
-            tab.classList.remove('active');
-        }
-    });
-
-    searchBons();
-}
-
-// ==================== ANTI-DOUBLON VALIDATION ====================
-async function checkDuplicate(bonId, employeId, date) {
-    try {
-        const response = await fetch('/admin/planning/check-duplicate', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({bonId, employeId, date})
-        });
-        return await response.json();
-    } catch (error) {
-        console.error('Erreur vérification doublon:', error);
-        return {valid: true}; // En cas d'erreur réseau, on laisse passer
-    }
-}
-
-async function validateBeforeCreate(event) {
-    event.preventDefault();
-
-    const bonId = document.getElementById('selected_bon').value;
-    const employeId = document.getElementById('create_employe').value;
-    const date = document.getElementById('create_date').value;
-
-    if (!bonId || !employeId || !date) {
-        return false;
-    }
-
-    const check = await checkDuplicate(bonId, employeId, date);
-
-    if (!check.valid) {
-        showToast('error', check.message || 'Ce bon est déjà assigné');
-        return false;
-    }
-
-    // Si validation OK, soumettre le formulaire
-    event.target.submit();
-    return true;
-}
-
-// ==================== INITIALIZATION ====================
-document.addEventListener('DOMContentLoaded', async function() {
-    // Auto-upgrade MDL
-    document.querySelectorAll('.mdl-textfield').forEach(field => {
-        const input = field.querySelector('input, select');
-        if (input && input.value) {
-            field.classList.add('is-dirty');
-        }
-    });
-
-    // Restore collapsed panel states
-    const employeeCollapsed = localStorage.getItem('employeePanelCollapsed') === 'true';
-    const rightCollapsed = localStorage.getItem('rightPanelCollapsed') === 'true';
-
-    if (employeeCollapsed) {
-        togglePanel('employee');
-    }
-    if (rightCollapsed) {
-        togglePanel('right');
-    }
-
-    // Load employees for calendar
-    try {
-        const empResponse = await fetch('/admin/planning/employes');
-        employeeData = await empResponse.json();
-        employeeData.forEach(e => selectedEmployees.add(e.id));
-        renderEmployeePanel();
-    } catch (error) {
-        console.error('Erreur chargement employes:', error);
-    }
-
-    // Initialize FullCalendar
-    initCalendar();
-
-    // Restore saved view (force calendar if bonId is in URL)
-    const urlBonId = new URLSearchParams(window.location.search).get('bonId');
-    const savedView = urlBonId ? 'calendar' : (localStorage.getItem('planningView') || 'calendar');
-    switchView(savedView);
-
-    // Auto-load bon if bonId is in URL
-    if (urlBonId) {
-        await autoLoadBon(urlBonId);
-    }
-
-    // Update preview when employee selection changes
-    const createEmployeSelect = document.getElementById('create_employe');
-    if (createEmployeSelect) {
-        createEmployeSelect.addEventListener('change', updatePreviewEmploye);
-    }
-
-    // Remove preview on form submit
-    const calendarForm = document.querySelector('#calendarCreateForm form');
-    if (calendarForm) {
-        calendarForm.addEventListener('submit', removePreviewEvent);
-    }
-
-    // Load timeline stats
-    loadStats();
-});
-
-// ==================== FULLCALENDAR ====================
-function initCalendar() {
-    const calendarEl = document.getElementById('fullcalendar');
-    if (!calendarEl) return;
-
-    calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'timeGridWeek',
-        locale: 'fr',
-        firstDay: 1,
-        headerToolbar: {
-            left: 'prev,today,next',
-            center: 'title',
-            right: 'timeGridDay,timeGridWeek,dayGridMonth'
-        },
-        buttonText: {
-            today: "Aujourd'hui",
-            day: 'Jour',
-            week: 'Semaine',
-            month: 'Mois'
-        },
-        slotMinTime: '07:00:00',
-        slotMaxTime: '20:00:00',
-        allDaySlot: false,
-        height: 'auto',
-        expandRows: true,
-        nowIndicator: true,
-        navLinks: true,
-        selectable: true,
-        selectMirror: true,
-        editable: false,
-        slotDuration: '00:30:00',
-        slotLabelInterval: '01:00:00',
-        slotLabelFormat: {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        },
-
-        events: function(info, successCallback, failureCallback) {
-            const params = new URLSearchParams({
-                start: info.startStr,
-                end: info.endStr
+// ====== STATS (load counts per employee for a date) ======
+function loadStats(date) {
+    fetch(`/admin/planning/stats?date=${date}`)
+        .then(r => r.json())
+        .then(data => {
+            empLoads = {};
+            (data.chargeEmployes || []).forEach(r => { empLoads[r.id] = +r.nombre_prestations; });
+            // Update left panel counts
+            EMPLOYES.forEach(e => {
+                const el = document.getElementById(`cnt${e.id}`);
+                if (el) el.textContent = empLoads[e.id] ?? 0;
+                const wl = document.getElementById(`eload${e.id}`);
+                if (wl) {
+                    const n = empLoads[e.id] ?? 0;
+                    wl.textContent = n ? `${n} ce jour` : 'Libre';
+                    wl.style.color = n > 3 ? '#ef5350' : n > 0 ? '#ff9800' : '#4caf50';
+                }
             });
-            selectedEmployees.forEach(id => params.append('employes[]', id));
-
-            fetch('/admin/planning/events?' + params.toString())
-                .then(response => response.json())
-                .then(data => successCallback(data))
-                .catch(error => {
-                    console.error('Erreur chargement events:', error);
-                    failureCallback(error);
-                });
-        },
-
-        eventContent: function(arg) {
-            if (arg.event.id === 'preview') {
-                return {
-                    html: '<div class="fc-preview-content">' +
-                        '<i class="material-icons">add_circle_outline</i> ' +
-                        '<span>' + arg.event.title + '</span>' +
-                    '</div>'
-                };
-            }
-            const props = arg.event.extendedProps;
-            return {
-                html: '<div class="fc-event-custom">' +
-                    '<div class="fc-event-title-custom">' + arg.event.title + '</div>' +
-                    '<div class="fc-event-employee">' + props.employeNom + '</div>' +
-                '</div>'
-            };
-        },
-
-        eventClassNames: function(arg) {
-            if (arg.event.id === 'preview') return ['fc-preview-event'];
-            return [];
-        },
-
-        eventClick: function(info) {
-            if (info.event.id === 'preview') return;
-            info.jsEvent.preventDefault();
-
-            // Batch mode: use clicked event's time and employee
-            if (multiSelectMode && selectedBons.size > 0) {
-                const employeId = info.event.extendedProps?.employeId;
-                fillBatchPanelFromCalendar(info.event.start, employeId);
-                closeBonModal();
-                return;
-            }
-
-            // Normal mode: show event details
-            showEventPopover(info.event, info.el);
-        },
-
-        select: function(info) {
-            prefillCreateForm(info.startStr);
-            addPreviewEvent(info.start, info.end);
-            calendar.unselect();
-        },
-
-        dateClick: function(info) {
-            // Batch mode: fill batch panel with clicked date/time
-            if (multiSelectMode && selectedBons.size > 0) {
-                // Try to detect employee from the click position
-                const employeId = detectEmployeeFromClick(info);
-                fillBatchPanelFromCalendar(info.dateStr, employeId);
-                closeBonModal();
-                return;
-            }
-
-            // Normal mode: prefill single creation form
-            prefillCreateForm(info.dateStr);
-            addPreviewEvent(info.date, new Date(info.date.getTime() + 30 * 60000));
-        },
-
-        // Navigate to initial date if specified in URL
-        initialDate: new URLSearchParams(window.location.search).get('date') || undefined
-    });
-
-    calendar.render();
+        })
+        .catch(() => {});
 }
 
-// ==================== VIEW TOGGLE ====================
-function switchView(view) {
-    currentView = view;
-    const calendarSection = document.getElementById('calendarViewSection');
-    const timelineSection = document.getElementById('timelineViewSection');
+// ====== SEARCH ======
+function debSearch() { clearTimeout(searchTm); searchTm = setTimeout(doSearch, 280); }
 
-    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-    document.querySelector('.view-btn[data-view="' + view + '"]').classList.add('active');
+function setStatut(btn, val) {
+    statut = val;
+    document.querySelectorAll('#statutChips .chip').forEach(b => b.classList.toggle('active', b.dataset.s === val));
+    doSearch();
+}
+function setGroupe(btn, val) {
+    groupe = val;
+    document.querySelectorAll('#geoChips .chip').forEach(b => b.classList.toggle('active', b.dataset.g === val));
+    doSearch();
+}
 
-    if (view === 'calendar') {
-        calendarSection.classList.add('active');
-        timelineSection.classList.remove('active');
-        if (calendar) {
-            setTimeout(() => calendar.updateSize(), 50);
-        }
-    } else {
-        calendarSection.classList.remove('active');
-        timelineSection.classList.add('active');
+function doSearch() {
+    const q = document.getElementById('wizSearch').value.trim();
+    const p = new URLSearchParams({ q, statut, groupe_geo: groupe });
+    document.getElementById('bonList').innerHTML = '<div class="search-msg"><i class="material-icons">hourglass_empty</i>Recherche…</div>';
+    fetch(`/admin/planning/search-bons?${p}`)
+        .then(r => r.json())
+        .then(bons => { bonCache = bons; showResults(bons); })
+        .catch(() => { document.getElementById('bonList').innerHTML = '<div class="search-msg">Erreur de chargement</div>'; });
+}
+
+function showResults(bons) {
+    const el = document.getElementById('bonList');
+    if (!bons.length) {
+        el.innerHTML = '<div class="search-msg"><i class="material-icons">search_off</i>Aucun résultat</div>';
+        return;
     }
-
-    localStorage.setItem('planningView', view);
-}
-
-// ==================== EMPLOYEE PANEL ====================
-function renderEmployeePanel() {
-    const container = document.getElementById('employeeList');
-    if (!container) return;
-
-    container.innerHTML = employeeData.map(emp => {
-        const checked = selectedEmployees.has(emp.id);
-        return '<div class="employee-item ' + (checked ? '' : 'unchecked') + '" ' +
-            'onclick="toggleEmployee(' + emp.id + ')" data-emp-id="' + emp.id + '">' +
-            '<div class="employee-color-dot" style="background: ' + emp.couleur + ';"></div>' +
-            '<input type="checkbox" ' + (checked ? 'checked' : '') + ' />' +
-            '<span>' + emp.nom + '</span>' +
-        '</div>';
+    el.innerHTML = bons.slice(0, 40).map(b => {
+        const progText = b.nombrePrestationsNecessaires > 0 ? `${b.nombrePrestations}/${b.nombrePrestationsNecessaires}` : '';
+        return `<div class="bon-card" onclick="pickBon(${b.id})">
+            <div class="bon-name">${esc(b.clientNom)}</div>
+            <div class="bon-addr"><i class="material-icons" style="font-size:11px;vertical-align:middle;">place</i> ${esc(b.clientAdresse)}</div>
+            <div class="bon-meta">
+                <span class="b-badge b-bc">BC #${esc(b.numeroCommande)}</span>
+                ${progText ? `<span class="b-badge b-prog">${progText} interv.</span>` : ''}
+                ${b.typePrestation ? `<span class="b-badge b-type">${esc(b.typePrestation.nom)}</span>` : ''}
+                ${b.groupeGeo ? `<span class="b-badge b-geo">${esc(b.groupeGeo.nom)}</span>` : ''}
+            </div>
+        </div>`;
     }).join('');
 }
 
-function toggleEmployee(empId) {
-    if (selectedEmployees.has(empId)) {
-        selectedEmployees.delete(empId);
-    } else {
-        selectedEmployees.add(empId);
-    }
-    renderEmployeePanel();
-    if (calendar) calendar.refetchEvents();
+// ====== WIZARD STEPS ======
+function pickBon(id) {
+    const b = bonCache.find(x => x.id === id);
+    if (!b) return;
+    selBon = b;
+
+    // Show selected card
+    document.getElementById('selBonName').textContent = b.clientNom;
+    document.getElementById('selBonAddr').textContent = b.clientAdresse;
+    const prog = b.nombrePrestationsNecessaires > 0 ? `${b.nombrePrestations}/${b.nombrePrestationsNecessaires}` : '';
+    document.getElementById('selBonMeta').innerHTML = `
+        <span class="b-badge b-bc">BC #${esc(b.numeroCommande)}</span>
+        ${prog ? `<span class="b-badge b-prog">${prog} interv.</span>` : ''}
+        ${b.typePrestation ? `<span class="b-badge b-type">${esc(b.typePrestation.nom)}</span>` : ''}`;
+    document.getElementById('selBonBox').style.display = 'flex';
+    document.getElementById('searchArea').style.display = 'none';
+
+    // Mark step 1 done, activate step 2
+    document.getElementById('s1text').textContent = b.clientNom;
+    document.getElementById('wStep1').classList.replace('active','done');
+    document.getElementById('wStep2').classList.add('active');
+    document.querySelector('.wizard-body').scrollTop = 0;
+    refreshSummary();
 }
 
-function toggleAllEmployees(selectAll) {
-    if (selectAll) {
-        employeeData.forEach(e => selectedEmployees.add(e.id));
-    } else {
-        selectedEmployees.clear();
-    }
-    renderEmployeePanel();
-    if (calendar) calendar.refetchEvents();
+function resetBon() {
+    selBon = null;
+    document.getElementById('selBonBox').style.display = 'none';
+    document.getElementById('searchArea').style.display = 'block';
+    document.getElementById('wStep1').classList.remove('done');
+    document.getElementById('wStep1').classList.add('active');
+    document.getElementById('wStep2').classList.remove('active','done');
+    document.getElementById('wStep3').classList.remove('active','done');
+    // Deselect employee button
+    if (selEmpId) { document.getElementById(`eb${selEmpId}`)?.classList.remove('selected'); }
+    selEmpId = null; selEmpNom = null;
+    document.getElementById('s2badge').style.display = 'none';
+    refreshSummary();
+    document.getElementById('wizSearch').focus();
 }
 
-// ==================== EVENT POPOVER ====================
-function showEventPopover(event, targetEl) {
-    // Remove existing popovers
-    document.querySelectorAll('.event-popover').forEach(el => el.remove());
-
-    const props = event.extendedProps;
-    const popover = document.createElement('div');
-    popover.className = 'event-popover';
-
-    let bodyHtml = '<div class="popover-row">' +
-        '<i class="material-icons">person</i>' +
-        '<span>' + props.employeNom + '</span>' +
-    '</div>' +
-    '<div class="popover-row">' +
-        '<i class="material-icons">schedule</i>' +
-        '<span>' + new Date(event.start).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) + '</span>' +
-    '</div>';
-
-    if (props.clientAdresse) {
-        bodyHtml += '<div class="popover-row">' +
-            '<i class="material-icons">location_on</i>' +
-            '<span>' + props.clientAdresse + '</span>' +
-        '</div>';
-    }
-
-    if (props.typePrestation) {
-        bodyHtml += '<div class="popover-row">' +
-            '<i class="material-icons">category</i>' +
-            '<span>' + props.typePrestation + '</span>' +
-        '</div>';
-    }
-
-    if (props.statutLabel) {
-        bodyHtml += '<div class="popover-row">' +
-            '<i class="material-icons">' + (props.statutIcon || 'info') + '</i>' +
-            '<span>' + props.statutLabel + '</span>' +
-        '</div>';
-    }
-
-    if (props.numeroCommande) {
-        bodyHtml += '<div class="popover-row">' +
-            '<i class="material-icons">receipt</i>' +
-            '<span>BC ' + props.numeroCommande + '</span>' +
-        '</div>';
-    }
-
-    popover.innerHTML = '<div class="popover-header" style="background: ' + event.backgroundColor + ';">' +
-        '<strong>' + event.title + '</strong>' +
-        '<button onclick="this.closest(\'.event-popover\').remove()" class="popover-close">' +
-            '<i class="material-icons">close</i>' +
-        '</button>' +
-    '</div>' +
-    '<div class="popover-body">' +
-        bodyHtml +
-        '<div class="popover-actions">' +
-            '<a href="/adm/prestation/' + props.prestationId + '" ' +
-               'class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" ' +
-               'style="font-size: 0.75rem; height: 32px;">' +
-                '<i class="material-icons" style="font-size: 16px; vertical-align: middle; margin-right: 4px;">visibility</i> Voir' +
-            '</a>' +
-        '</div>' +
-    '</div>';
-
-    document.body.appendChild(popover);
-
-    // Position near the clicked element
-    const rect = targetEl.getBoundingClientRect();
-    const popoverWidth = 300;
-    let left = rect.left + window.scrollX;
-    let top = rect.bottom + window.scrollY + 8;
-
-    // Keep within viewport
-    if (left + popoverWidth > window.innerWidth) {
-        left = window.innerWidth - popoverWidth - 16;
-    }
-    if (top + 300 > window.innerHeight + window.scrollY) {
-        top = rect.top + window.scrollY - 300 - 8;
-    }
-
-    popover.style.top = top + 'px';
-    popover.style.left = left + 'px';
-
-    // Close on click outside
-    setTimeout(() => {
-        document.addEventListener('click', function closePopover(e) {
-            if (!popover.contains(e.target) && !targetEl.contains(e.target)) {
-                popover.remove();
-                document.removeEventListener('click', closePopover);
-            }
-        });
-    }, 100);
+function pickEmp(id, nom) {
+    if (selEmpId) document.getElementById(`eb${selEmpId}`)?.classList.remove('selected');
+    selEmpId = id; selEmpNom = nom;
+    document.getElementById(`eb${id}`)?.classList.add('selected');
+    document.getElementById('s2text').textContent = nom;
+    document.getElementById('wStep2').classList.replace('active','done');
+    document.getElementById('wStep3').classList.add('active');
+    document.querySelector('.wizard-body').scrollTop = 999;
+    refreshSummary();
 }
 
-// ==================== PREVIEW EVENT ====================
-function addPreviewEvent(start, end) {
-    removePreviewEvent();
-
-    // Default to 1 hour if no end or same as start
-    if (!end || end.getTime() === start.getTime()) {
-        end = new Date(start.getTime() + 60 * 60 * 1000);
-    }
-
-    // Get selected employee name
-    const employeSelect = document.getElementById('create_employe');
-    const employeName = employeSelect && employeSelect.value
-        ? employeSelect.options[employeSelect.selectedIndex].text.trim()
-        : '';
-
-    const title = employeName ? 'Nouveau - ' + employeName : 'Nouveau cr\u00e9neau';
-
-    previewEvent = calendar.addEvent({
-        id: 'preview',
-        title: title,
-        start: start,
-        end: end,
-        display: 'auto',
-        backgroundColor: 'transparent',
-        borderColor: 'transparent',
-        textColor: 'var(--primary)',
-        editable: false,
-    });
+function onDateChange() {
+    const d = document.getElementById('dateInp').value;
+    if (d) { loadStats(d); calendar?.gotoDate(d); }
+    refreshSummary();
 }
-
-function removePreviewEvent() {
-    if (previewEvent) {
-        previewEvent.remove();
-        previewEvent = null;
-    }
-    // Also try by ID in case reference is stale
-    if (calendar) {
-        const existing = calendar.getEventById('preview');
-        if (existing) existing.remove();
-    }
-}
-
-function updatePreviewEmploye() {
-    if (!previewEvent || !calendar) return;
-    const existing = calendar.getEventById('preview');
-    if (!existing) return;
-
-    const employeSelect = document.getElementById('create_employe');
-    const employeName = employeSelect && employeSelect.value
-        ? employeSelect.options[employeSelect.selectedIndex].text.trim()
-        : '';
-
-    existing.setProp('title', employeName ? 'Nouveau - ' + employeName : 'Nouveau cr\u00e9neau');
-}
-
-// ==================== PREFILL CREATE FORM ====================
-function prefillCreateForm(dateTimeStr) {
-    const dt = new Date(dateTimeStr);
-    const dateStr = dt.toISOString().split('T')[0];
-    const timeStr = dt.toTimeString().slice(0, 5);
-
-    // Fill desktop form
-    const dateInput = document.getElementById('create_date');
-    const timeInput = document.getElementById('heure');
-
-    if (dateInput) {
-        dateInput.value = dateStr;
-        dateInput.parentElement.classList.add('is-dirty');
-    }
-    if (timeInput) {
-        timeInput.value = timeStr;
-        timeInput.parentElement.classList.add('is-dirty');
-    }
-
-    // On small screens: fill mobile form and open it
-    if (window.innerWidth <= 1400) {
-        const mobileDate = document.getElementById('mobile_create_date');
-        const mobileTime = document.getElementById('mobile_heure');
-        if (mobileDate) mobileDate.value = dateStr;
-        if (mobileTime) mobileTime.value = timeStr;
-        openMobileForm();
-        return;
-    }
-
-    // On large screens: scroll to create form
-    const form = document.getElementById('calendarCreateForm');
-    if (form) {
-        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        form.style.boxShadow = '0 0 0 3px var(--primary), 0 2px 8px rgba(0,0,0,0.1)';
-        setTimeout(() => {
-            form.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-        }, 2000);
-    }
-}
-
-// ==================== QUICK ACTIONS ====================
-function setTime(time) {
-    const heureEl = document.getElementById('heure');
-    const tlHeureEl = document.getElementById('tl_heure');
-    if (heureEl) {
-        heureEl.value = time;
-        heureEl.parentElement.classList.add('is-dirty');
-    }
-    if (tlHeureEl) {
-        tlHeureEl.value = time;
-        tlHeureEl.parentElement.classList.add('is-dirty');
-    }
-}
-
+function setTime(t) { document.getElementById('timeInp').value = t; refreshSummary(); }
 function setToday() {
-    const today = new Date().toISOString().split('T')[0];
-    const dateEl = document.getElementById('create_date');
-    const tlDateEl = document.getElementById('tl_create_date');
-    if (dateEl) {
-        dateEl.value = today;
-        dateEl.parentElement.classList.add('is-dirty');
-    }
-    if (tlDateEl) {
-        tlDateEl.value = today;
-        tlDateEl.parentElement.classList.add('is-dirty');
-    }
+    const t = new Date().toISOString().slice(0,10);
+    document.getElementById('dateInp').value = t;
+    onDateChange();
 }
 
-// ==================== STATS LOADING ====================
-async function loadStats() {
-    const statsRow = document.getElementById('statsRow');
-    if (!statsRow) return;
+function refreshSummary() {
+    const date  = document.getElementById('dateInp').value;
+    const heure = document.getElementById('timeInp').value;
+    document.getElementById('fBon').value   = selBon?.id ?? '';
+    document.getElementById('fEmp').value   = selEmpId ?? '';
+    document.getElementById('fDate').value  = date;
+    document.getElementById('fHeure').value = heure;
+    document.getElementById('fNote').value  = document.getElementById('noteInp')?.value ?? '';
 
-    const dateEl = document.getElementById('tl_date');
-    const selectedDate = dateEl ? dateEl.value : new Date().toISOString().split('T')[0];
+    const ready = selBon && selEmpId && date && heure;
+    document.getElementById('btnCreate').disabled = !ready;
 
-    try {
-        const response = await fetch('/admin/planning/stats?date=' + selectedDate);
-        const data = await response.json();
-
-        statsRow.innerHTML =
-            '<div class="stat-card primary">' +
-                '<div class="stat-label">Total prestations</div>' +
-                '<div class="stat-value">' + (data.stats.total || 0) + '</div>' +
-            '</div>' +
-            '<div class="stat-card info">' +
-                '<div class="stat-label">Programm&eacute;es</div>' +
-                '<div class="stat-value">' + (data.stats.programme || 0) + '</div>' +
-            '</div>' +
-            '<div class="stat-card warning">' +
-                '<div class="stat-label">En cours</div>' +
-                '<div class="stat-value">' + (data.stats.en_cours || 0) + '</div>' +
-            '</div>' +
-            '<div class="stat-card success">' +
-                '<div class="stat-label">Termin&eacute;es</div>' +
-                '<div class="stat-value">' + (data.stats.termine || 0) + '</div>' +
-            '</div>';
-    } catch (error) {
-        console.error('Erreur chargement stats:', error);
+    const box = document.getElementById('confirmBox');
+    if (ready) {
+        const df = new Date(date + 'T12:00').toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+        box.className = 'confirm-summary visible';
+        box.innerHTML = `
+            <div class="c-row"><i class="material-icons">person</i><strong>${esc(selBon.clientNom)}</strong></div>
+            <div class="c-row"><i class="material-icons">place</i>${esc(selBon.clientAdresse)}</div>
+            <div class="c-row"><i class="material-icons">engineering</i><strong>${esc(selEmpNom)}</strong></div>
+            <div class="c-row"><i class="material-icons">schedule</i>${esc(df)} à <strong>${esc(heure)}</strong></div>`;
+    } else {
+        box.className = 'confirm-summary';
     }
 }
 
-// ==================== BON MODAL ====================
-function openBonModal() {
-    document.getElementById('bonCommandeModalOverlay').classList.add('open');
-    document.getElementById('bonCommandeModal').classList.add('open');
-    document.getElementById('bonSearchInput').focus();
-
-    document.getElementById('filterStatut').value = 'disponible';
-    document.getElementById('filterGroupe').value = '';
-    document.getElementById('filterSort').value = 'date_desc';
-
-    searchBons();
-}
-
-function closeBonModal() {
-    document.getElementById('bonCommandeModalOverlay').classList.remove('open');
-    document.getElementById('bonCommandeModal').classList.remove('open');
-    document.getElementById('bonSearchInput').value = '';
-}
-
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        if (document.getElementById('bonDetailsModal').classList.contains('open')) {
-            closeBonDetailsModal();
-        } else if (document.getElementById('bonCommandeModal').classList.contains('open')) {
-            closeBonModal();
-        }
+// ====== GO BACK IN STEPS ======
+function goToStep(n) {
+    const step = document.getElementById(`wStep${n}`);
+    if (!step.classList.contains('done')) return; // only act if already done
+    if (n === 1) { resetBon(); return; }
+    if (n === 2) {
+        if (selEmpId) document.getElementById(`eb${selEmpId}`)?.classList.remove('selected');
+        selEmpId = null; selEmpNom = null;
+        document.getElementById('wStep2').classList.remove('done');
+        document.getElementById('wStep2').classList.add('active');
+        document.getElementById('wStep3').classList.remove('active', 'done');
+        refreshSummary();
+        document.querySelector('.wizard-body').scrollTop = 100;
     }
+}
+
+// ====== BON FICHE MODAL ======
+function openBonFiche() {
+    if (!selBon) return;
+    document.getElementById('bonModalFrame').src = `/admin/bon-commande/${selBon.id}`;
+    document.getElementById('bonModal').classList.add('open');
+}
+function closeBonFiche() {
+    document.getElementById('bonModal').classList.remove('open');
+    document.getElementById('bonModalFrame').src = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBonFiche(); });
+
+function onSubmit(e) {
+    if (!selBon || !selEmpId) { e.preventDefault(); return false; }
+    document.getElementById('btnCreate').disabled = true;
+    document.getElementById('btnCreate').innerHTML = '<i class="material-icons">hourglass_empty</i> Création…';
+    return true;
+}
+
+// ====== FULLCALENDAR ======
+const STATUS_COLORS = {
+    'à programmer': '#e65100',
+    'programmé':    '#3f51b5',
+    'en cours':     '#ff9800',
+    'terminé':      '#2e7d32',
+    'non effectué': '#d32f2f',
+};
+
+function initCalendar() {
+    calendar = new FullCalendar.Calendar(document.getElementById('fullcalendar'), {
+        locale: 'fr',
+        initialView: 'timeGridWeek',
+        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' },
+        height: '100%',
+        nowIndicator: true,
+        slotMinTime: '07:00:00',
+        slotMaxTime: '20:00:00',
+        allDaySlot: false,
+        firstDay: 1,
+        buttonText: { today: "Aujourd'hui", month: 'Mois', week: 'Semaine', day: 'Jour' },
+
+        events: function(info, ok, fail) {
+            const params = Array.from(activeEmps).map(id => `employes[]=${id}`).join('&');
+            fetch(`/admin/planning/events?start=${info.startStr}&end=${info.endStr}&${params}`)
+                .then(r => r.json())
+                .then(evs => {
+                    evs.forEach(ev => {
+                        const sc = STATUS_COLORS[ev.extendedProps?.statut];
+                        if (sc) ev.color = sc;
+                    });
+                    ok(evs);
+                })
+                .catch(fail);
+        },
+
+        datesSet: function(info) {
+            loadStats(info.startStr.slice(0,10));
+        },
+
+        dateClick: function(info) {
+            const dateStr = info.dateStr.slice(0,10);
+            const timeStr = info.dateStr.includes('T') ? info.dateStr.slice(11,16) : '09:00';
+            document.getElementById('dateInp').value = dateStr;
+            document.getElementById('timeInp').value = timeStr;
+            loadStats(dateStr);
+            refreshSummary();
+            // Open step 1 if bon not yet selected
+            if (!selBon) {
+                document.getElementById('wizSearch').focus();
+                document.querySelector('.wizard-body').scrollTop = 0;
+            }
+        },
+
+        eventClick: function(info) {
+            showPop(info.event, info.el, info.jsEvent);
+            info.jsEvent.stopPropagation();
+        },
+    });
+    calendar.render();
+}
+
+// ====== POPOVER ======
+function showPop(event, el, jsEvent) {
+    const p = event.extendedProps;
+    document.getElementById('popDot').style.background = event.backgroundColor || '#999';
+    document.getElementById('popTitle').textContent = event.title;
+    const time = event.start?.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }) ?? '';
+    const sc = 's-' + (p.statut || '').replace(/ /g, '-');
+    document.getElementById('popBody').innerHTML = `
+        <div class="ev-pop-row"><i class="material-icons">engineering</i>${esc(p.employeNom)}</div>
+        <div class="ev-pop-row"><i class="material-icons">schedule</i>${esc(time)}</div>
+        ${p.clientAdresse ? `<div class="ev-pop-row"><i class="material-icons">place</i>${esc(p.clientAdresse)}</div>` : ''}
+        ${p.typePrestation ? `<div class="ev-pop-row"><i class="material-icons">category</i>${esc(p.typePrestation)}</div>` : ''}
+        <div class="ev-pop-row"><i class="material-icons">circle</i><span class="s-badge ${sc}">${esc(p.statutLabel || p.statut)}</span></div>`;
+    document.getElementById('popActions').innerHTML = `
+        <a href="/admin/bon-commande/${p.bonId}" class="ev-pop-btn btn-view"><i class="material-icons">open_in_new</i>Voir bon</a>
+        <button onclick="delPrestation(${p.prestationId})" class="ev-pop-btn btn-del"><i class="material-icons">delete</i>Supprimer</button>`;
+
+    const pop = document.getElementById('evPop');
+    pop.classList.add('open');
+    const rect = el.getBoundingClientRect();
+    let left = rect.right + 10, top = rect.top;
+    if (left + 310 > window.innerWidth) left = rect.left - 310;
+    if (top + 280 > window.innerHeight) top = window.innerHeight - 290;
+    pop.style.left = Math.max(4, left) + 'px';
+    pop.style.top  = Math.max(4, top)  + 'px';
+}
+function closePop() { document.getElementById('evPop').classList.remove('open'); }
+
+function delPrestation(id) {
+    if (!confirm('Supprimer cette intervention ?')) return;
+    const f = document.createElement('form');
+    f.method = 'post';
+    f.action = `/admin/planning/delete-prestation/${id}`;
+    document.body.appendChild(f);
+    f.submit();
+}
+
+document.addEventListener('click', e => {
+    const pop = document.getElementById('evPop');
+    if (pop.classList.contains('open') && !pop.contains(e.target)) closePop();
 });
 
-// ==================== BON DETAILS MODAL ====================
-async function viewBonDetails(bonId) {
-    const modal = document.getElementById('bonDetailsModal');
-    const overlay = document.getElementById('bonDetailsModalOverlay');
-    const content = document.getElementById('bonDetailsContent');
-
-    overlay.classList.add('open');
-    modal.classList.add('open');
-
-    content.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p style="margin-top: 16px;">Chargement...</p></div>';
-
-    try {
-        const response = await fetch('/admin/bon-commande/' + bonId);
-        const html = await response.text();
-
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        const mainContent = doc.querySelector('.page-content') || doc.querySelector('main') || doc.body;
-
-        content.innerHTML = mainContent.innerHTML;
-        if (typeof componentHandler !== 'undefined') componentHandler.upgradeAllRegistered();
-
-        const selectBtn = document.createElement('div');
-        selectBtn.style.cssText = 'position: sticky; bottom: 0; background: var(--card-light); padding: 16px; border-top: 2px solid var(--border-light); margin: 0 -24px -24px; display: flex; gap: 12px; justify-content: flex-end;';
-        selectBtn.innerHTML =
-            '<button onclick="closeBonDetailsModal()" class="mdl-button mdl-js-button mdl-button--raised">Fermer</button>' +
-            '<button onclick="selectBonFromDetails(' + bonId + ')" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">' +
-                '<i class="material-icons" style="vertical-align: middle; margin-right: 4px;">check</i> S&eacute;lectionner ce bon' +
-            '</button>';
-        content.appendChild(selectBtn);
-        if (typeof componentHandler !== 'undefined') componentHandler.upgradeAllRegistered();
-
-    } catch (error) {
-        console.error('Erreur:', error);
-        content.innerHTML = '<div class="empty-state" style="padding: 60px; color: #d32f2f;"><i class="material-icons" style="font-size: 64px;">error</i><p>Erreur lors du chargement</p></div>';
-    }
-}
-
-function closeBonDetailsModal() {
-    document.getElementById('bonDetailsModalOverlay').classList.remove('open');
-    document.getElementById('bonDetailsModal').classList.remove('open');
-}
-
-function selectBonFromDetails(bonId) {
-    closeBonDetailsModal();
-    selectBonFromModal(bonId);
-}
-
-// ==================== BON SEARCH ====================
-let searchTimeout;
-
-async function searchBons() {
-    clearTimeout(searchTimeout);
-
-    const query = document.getElementById('bonSearchInput').value.trim();
-    const statut = currentStatutFilter;
-    const groupeGeo = currentGroupeFilter;
-    const sort = 'date_desc'; // Default sort
-    const resultsContainer = document.getElementById('searchResults');
-
-    resultsContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p style="margin-top: 12px; font-size: 0.875rem;">Recherche...</p></div>';
-
-    searchTimeout = setTimeout(async () => {
-        try {
-            const params = new URLSearchParams({ q: query, statut: statut, groupe_geo: groupeGeo, sort: sort });
-            const response = await fetch('/admin/planning/search-bons?' + params);
-            const bons = await response.json();
-            displaySearchResults(bons);
-        } catch (error) {
-            console.error('Erreur recherche:', error);
-            resultsContainer.innerHTML = '<div class="empty-state" style="padding: 40px; color: #d32f2f; text-align: center;"><i class="material-icons" style="font-size: 48px;">error</i><p style="margin-top: 8px; font-size: 0.875rem;">Erreur</p></div>';
-        }
-    }, 300);
-}
-
-function displaySearchResults(bons) {
-    const resultsContainer = document.getElementById('searchResults');
-    currentSearchResults = bons;
-
-    if (bons.length === 0) {
-        resultsContainer.innerHTML = '<div style="padding: 40px; text-align: center; color: #999;"><i class="material-icons" style="font-size: 48px; opacity: 0.3;">search_off</i><p style="margin-top: 12px;">Aucun résultat - Tapez pour rechercher</p></div>';
-        return;
-    }
-
-    // NOUVEAU : Affichage sous forme de TABLEAU
-    let tableHTML = '<table class="results-table"><thead><tr>';
-
-    if (multiSelectMode) {
-        tableHTML += '<th style="width: 50px;"></th>';
-    }
-
-    tableHTML += '<th>Client</th><th>Adresse</th><th>N° BC</th><th>Statut</th><th>Prestations</th><th>Actions</th></tr></thead><tbody>';
-
-    bons.forEach(bon => {
-        const isComplete = bon.nombrePrestations >= bon.nombrePrestationsNecessaires && bon.nombrePrestationsNecessaires > 0;
-        const badgeClass = isComplete ? 'complet' : 'disponible';
-        const badgeText = isComplete ? 'Complet' : (bon.nombrePrestationsNecessaires - bon.nombrePrestations) + ' restantes';
-        const rowClass = selectedBons.has(bon.id) ? 'selected' : '';
-
-        tableHTML += '<tr class="' + rowClass + '" data-bon-id="' + bon.id + '">';
-
-        // Checkbox si multi-select
-        if (multiSelectMode) {
-            tableHTML += '<td><input type="checkbox" ' + (selectedBons.has(bon.id) ? 'checked' : '') + ' onchange="toggleBonSelection(' + bon.id + ')"></td>';
-        }
-
-        // Client
-        tableHTML += '<td class="table-client">' + bon.clientNom + '</td>';
-
-        // Adresse
-        tableHTML += '<td>' + (bon.clientAdresse || 'N/A') + '</td>';
-
-        // Numéro BC
-        tableHTML += '<td>' + (bon.numeroCommande || '#' + bon.id) + '</td>';
-
-        // Statut
-        tableHTML += '<td><span class="table-badge ' + badgeClass + '">' + badgeText + '</span></td>';
-
-        // Prestations
-        tableHTML += '<td>' + bon.nombrePrestations + ' / ' + bon.nombrePrestationsNecessaires + '</td>';
-
-        // Actions
-        tableHTML += '<td class="table-actions">';
-        if (!multiSelectMode) {
-            tableHTML += '<button class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" onclick="selectBonFromSearch(' + bon.id + ')" style="height: 32px; line-height: 32px;"><i class="material-icons" style="font-size: 18px; vertical-align: middle;">add</i> Sélectionner</button>';
-        }
-        tableHTML += '<button class="mdl-button mdl-js-button mdl-button--icon" onclick="viewBonDetails(' + bon.id + ')" title="Voir détails"><i class="material-icons">visibility</i></button>';
-        tableHTML += '</td>';
-
-        tableHTML += '</tr>';
-    });
-
-    tableHTML += '</tbody></table>';
-
-    resultsContainer.innerHTML = tableHTML;
-
-    if (typeof componentHandler !== 'undefined') componentHandler.upgradeAllRegistered();
-    updateBatchPanel();
-}
-
-// ==================== BON SELECTION ====================
-async function selectBonFromSearch(bonId) {
-    try {
-        const response = await fetch('/admin/planning/bon/' + bonId);
-        const bon = await response.json();
-
-        // Update calendar, timeline, and mobile forms
-        updateBonSelection(bon, bonId, 'selected_bon', 'selectedBonClient', 'selectedBonInfo', 'selectedBonDisplay', 'noBonSelected', 'submit-btn');
-        updateBonSelection(bon, bonId, 'tl_selected_bon', 'tl_selectedBonClient', 'tl_selectedBonInfo', 'tl_selectedBonDisplay', 'tl_noBonSelected', 'tl_submit-btn');
-        updateBonSelection(bon, bonId, 'mobile_selected_bon', 'mobileSelectedBonClient', 'mobileSelectedBonInfo', 'mobileSelectedBonDisplay', 'mobileNoBonSelected', 'mobile-submit-btn');
-
-        showToast('success', 'Bon sélectionné : ' + bon.clientNom);
-
-        // Scroll to calendar
-        document.getElementById('fullcalendar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } catch (error) {
-        console.error('Erreur selection:', error);
-        showToast('error', 'Erreur lors de la sélection');
-    }
-}
-
-// Legacy function kept for mobile compatibility
-async function selectBonFromModal(bonId) {
-    return selectBonFromSearch(bonId);
-}
-
-function updateBonSelection(bon, bonId, hiddenId, clientId, infoId, displayId, noSelId, btnId) {
-    const hidden = document.getElementById(hiddenId);
-    const client = document.getElementById(clientId);
-    const info = document.getElementById(infoId);
-    const display = document.getElementById(displayId);
-    const noSel = document.getElementById(noSelId);
-    const btn = document.getElementById(btnId);
-
-    if (!hidden) return;
-
-    hidden.value = bonId;
-    if (btn) btn.disabled = false;
-
-    if (client) client.textContent = bon.clientNom;
-    if (info) {
-        info.innerHTML =
-            '<span class="bon-info-item"><i class="material-icons">receipt</i> BC ' + (bon.numeroCommande || '#' + bon.id) + '</span>' +
-            '<span class="bon-info-item"><i class="material-icons">check_circle</i> ' + bon.nombrePrestations + '/' + bon.nombrePrestationsNecessaires + ' prestations</span>' +
-            '<span class="bon-info-item"><i class="material-icons">location_on</i> ' + (bon.clientAdresse || 'N/A') + '</span>';
-    }
-
-    if (display) display.style.display = 'block';
-    if (noSel) noSel.style.display = 'none';
-}
-
-async function autoLoadBon(bonId) {
-    try {
-        const response = await fetch('/admin/planning/bon/' + bonId);
-        const bon = await response.json();
-
-        // Update all forms (calendar, timeline, mobile)
-        updateBonSelection(bon, bonId, 'selected_bon', 'selectedBonClient', 'selectedBonInfo', 'selectedBonDisplay', 'noBonSelected', 'submit-btn');
-        updateBonSelection(bon, bonId, 'tl_selected_bon', 'tl_selectedBonClient', 'tl_selectedBonInfo', 'tl_selectedBonDisplay', 'tl_noBonSelected', 'tl_submit-btn');
-        updateBonSelection(bon, bonId, 'mobile_selected_bon', 'mobileSelectedBonClient', 'mobileSelectedBonInfo', 'mobileSelectedBonDisplay', 'mobileNoBonSelected', 'mobile-submit-btn');
-
-        // On small screens, open mobile form; on large screens, highlight the create form
-        const isMobile = window.innerWidth <= 1400;
-        if (isMobile) {
-            setTimeout(() => openMobileForm(), 500);
-        } else {
-            const form = document.getElementById('calendarCreateForm');
-            if (form) {
-                setTimeout(() => {
-                    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    form.style.boxShadow = '0 0 0 3px var(--primary), 0 2px 8px rgba(0,0,0,0.1)';
-                    setTimeout(() => {
-                        form.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-                    }, 2500);
-                }, 500);
-            }
-        }
-    } catch (error) {
-        console.error('Erreur auto-load bon:', error);
-    }
-}
-
-function clearBonSelection() {
-    ['selected_bon', 'tl_selected_bon', 'mobile_selected_bon'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-    });
-    ['submit-btn', 'tl_submit-btn', 'mobile-submit-btn'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.disabled = true;
-    });
-    ['selectedBonDisplay', 'tl_selectedBonDisplay', 'mobileSelectedBonDisplay'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = 'none';
-    });
-    ['noBonSelected', 'tl_noBonSelected', 'mobileNoBonSelected'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = 'block';
-    });
-}
-
-function clearMobileBonSelection() {
-    const el = document.getElementById('mobile_selected_bon');
-    if (el) el.value = '';
-    const btn = document.getElementById('mobile-submit-btn');
-    if (btn) btn.disabled = true;
-    const display = document.getElementById('mobileSelectedBonDisplay');
-    if (display) display.style.display = 'none';
-    const noSel = document.getElementById('mobileNoBonSelected');
-    if (noSel) noSel.style.display = 'block';
-}
-
-// ==================== MULTI-SELECT MODE ====================
-function toggleMultiSelect() {
-    multiSelectMode = document.getElementById('multiSelectToggle').checked;
-
-    if (!multiSelectMode) {
-        selectedBons.clear();
-    }
-
-    // Re-render results with checkboxes
-    displaySearchResults(currentSearchResults);
-    updateSelectionCounter();
-}
-
-function toggleBonSelection(bonId) {
-    if (selectedBons.has(bonId)) {
-        selectedBons.delete(bonId);
-    } else {
-        selectedBons.add(bonId);
-    }
-
-    // Update checkbox state and item selection
-    const checkbox = document.querySelector(`.bon-item-checkbox[data-bon-id="${bonId}"]`);
-    if (checkbox) {
-        checkbox.checked = selectedBons.has(bonId);
-    }
-
-    const bonItem = checkbox?.closest('.bon-item');
-    if (bonItem) {
-        if (selectedBons.has(bonId)) {
-            bonItem.classList.add('selected');
-        } else {
-            bonItem.classList.remove('selected');
-        }
-    }
-
-    updateSelectionCounter();
-    updateBatchPanel();
-}
-
-function selectAllVisibleBons() {
-    if (!multiSelectMode) {
-        document.getElementById('multiSelectToggle').checked = true;
-        toggleMultiSelect();
-    }
-
-    currentSearchResults.forEach(bon => {
-        selectedBons.add(bon.id);
-    });
-
-    // Update all checkboxes
-    document.querySelectorAll('.bon-item-checkbox').forEach(cb => {
-        cb.checked = true;
-        cb.closest('.bon-item')?.classList.add('selected');
-    });
-
-    updateSelectionCounter();
-    updateBatchPanel();
-
-    // Close modal and show instructions if we have selections
-    if (selectedBons.size > 0) {
-        setTimeout(() => {
-            closeBonModal();
-            showToast('info', 'Cliquez sur le calendrier pour définir la date, l\'heure et l\'employé');
-        }, 500);
-    }
-}
-
-function clearSelection() {
-    selectedBons.clear();
-
-    // Update all checkboxes
-    document.querySelectorAll('.bon-item-checkbox').forEach(cb => {
-        cb.checked = false;
-        cb.closest('.bon-item')?.classList.remove('selected');
-    });
-
-    updateSelectionCounter();
-    updateBatchPanel();
-}
-
-function updateSelectionCounter() {
-    const counter = document.getElementById('selectionCounter');
-    if (selectedBons.size > 0) {
-        counter.textContent = selectedBons.size + ' sélectionné' + (selectedBons.size > 1 ? 's' : '');
-        counter.style.display = 'inline-block';
-    } else {
-        counter.style.display = 'none';
-    }
-}
-
-// ==================== BATCH CREATION PANEL ====================
-function updateBatchPanel() {
-    // Update both panels (modal and calendar)
-    const modalPanel = document.getElementById('batchCreatePanel');
-    const calendarPanel = document.getElementById('calendarBatchPanel');
-    const singleFormWrapper = document.getElementById('singleCreateFormWrapper');
-
-    if (!multiSelectMode || selectedBons.size === 0) {
-        if (modalPanel) modalPanel.style.display = 'none';
-        if (calendarPanel) {
-            calendarPanel.style.display = 'none';
-            if (singleFormWrapper) singleFormWrapper.style.display = 'block';
-        }
-        return;
-    }
-
-    const today = new Date().toISOString().split('T')[0];
-    const employes = employeeData.map(e =>
-        '<option value="' + e.id + '">' + e.nom + '</option>'
-    ).join('');
-
-    const panelHTML =
-        '<div class="batch-create-panel">' +
-            '<div class="batch-panel-header">' +
-                '<i class="material-icons">playlist_add_check</i>' +
-                '<span>' + selectedBons.size + ' bon' + (selectedBons.size > 1 ? 's' : '') + ' sélectionné' + (selectedBons.size > 1 ? 's' : '') + '</span>' +
-            '</div>' +
-            '<div style="padding: 12px; background: rgba(63, 81, 181, 0.05); border-radius: 6px; margin-bottom: 12px; font-size: 0.875rem; color: var(--text-light);">' +
-                '<i class="material-icons" style="font-size: 16px; vertical-align: middle; margin-right: 4px;">info</i>' +
-                'Cliquez sur un créneau du calendrier pour définir la date, l\'heure et l\'employé' +
-            '</div>' +
-            '<div class="batch-form-row">' +
-                '<div class="batch-form-group">' +
-                    '<label>Date</label>' +
-                    '<input type="date" id="batch_date" value="' + today + '" required>' +
-                '</div>' +
-                '<div class="batch-form-group">' +
-                    '<label>Heure</label>' +
-                    '<input type="time" id="batch_heure" value="09:00" required>' +
-                '</div>' +
-                '<div class="batch-form-group">' +
-                    '<label>Employé</label>' +
-                    '<select id="batch_employe" required>' +
-                        '<option value="">Cliquez sur le calendrier...</option>' +
-                        employes +
-                    '</select>' +
-                '</div>' +
-            '</div>' +
-            '<button class="batch-create-btn" onclick="createBatchPrestations()" id="batchCreateBtn">' +
-                '<i class="material-icons">add_circle</i>' +
-                '<span>Créer ' + selectedBons.size + ' prestation' + (selectedBons.size > 1 ? 's' : '') + '</span>' +
-            '</button>' +
-            '<button onclick="cancelBatchMode()" style="width: 100%; margin-top: 8px; padding: 8px; border: 1px solid var(--border-light); border-radius: 6px; background: transparent; color: var(--text-light); cursor: pointer;">' +
-                '<i class="material-icons" style="font-size: 16px; vertical-align: middle; margin-right: 4px;">close</i> Annuler' +
-            '</button>' +
-        '</div>';
-
-    // Show in modal if modal is open
-    if (modalPanel) {
-        modalPanel.style.display = 'block';
-        modalPanel.innerHTML = panelHTML;
-    }
-
-    // Show next to calendar if we have selections
-    if (calendarPanel && selectedBons.size > 0) {
-        calendarPanel.style.display = 'block';
-        calendarPanel.innerHTML = panelHTML;
-        if (singleFormWrapper) singleFormWrapper.style.display = 'none';
-    }
-}
-
-function cancelBatchMode() {
-    selectedBons.clear();
-    multiSelectMode = false;
-    const toggle = document.getElementById('multiSelectToggle');
-    if (toggle) toggle.checked = false;
-    updateSelectionCounter();
-    updateBatchPanel();
-    showToast('info', 'Mode sélection multiple désactivé');
-}
-
-function detectEmployeeFromClick(info) {
-    // Try to find events at the same time to guess which employee column was clicked
-    if (!calendar) return null;
-
-    const clickedDate = info.date;
-    const events = calendar.getEvents();
-
-    // Find events at roughly the same time
-    for (const event of events) {
-        const eventStart = event.start;
-        if (eventStart && Math.abs(eventStart.getTime() - clickedDate.getTime()) < 3600000) { // Within 1 hour
-            const employeId = event.extendedProps?.employeId;
-            if (employeId) return employeId;
-        }
-    }
-
-    return null;
-}
-
-function fillBatchPanelFromCalendar(dateTime, employeId) {
-    const dateInput = document.getElementById('batch_date');
-    const heureInput = document.getElementById('batch_heure');
-    const employeSelect = document.getElementById('batch_employe');
-
-    if (dateTime) {
-        const date = new Date(dateTime);
-        if (dateInput) {
-            dateInput.value = date.toISOString().split('T')[0];
-        }
-        if (heureInput) {
-            const hours = date.getHours().toString().padStart(2, '0');
-            const minutes = date.getMinutes().toString().padStart(2, '0');
-            heureInput.value = hours + ':' + minutes;
-        }
-    }
-
-    if (employeId && employeSelect) {
-        employeSelect.value = employeId;
-        showToast('success', 'Date, heure et employé définis !');
-    } else {
-        showToast('success', 'Date et heure définies ! Sélectionnez un employé.');
-    }
-
-    // Visual feedback
-    const panel = document.getElementById('calendarBatchPanel');
-    if (panel) {
-        panel.style.boxShadow = '0 0 0 3px var(--primary), 0 2px 8px rgba(0,0,0,0.1)';
-        setTimeout(() => {
-            panel.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-        }, 1000);
-    }
-}
-
-async function createBatchPrestations() {
-    const date = document.getElementById('batch_date').value;
-    const heure = document.getElementById('batch_heure').value;
-    const employeId = document.getElementById('batch_employe').value;
-    const btn = document.getElementById('batchCreateBtn');
-
-    if (!date || !heure || !employeId) {
-        showToast('error', 'Veuillez remplir tous les champs');
-        return;
-    }
-
-    if (selectedBons.size === 0) {
-        showToast('error', 'Aucun bon sélectionné');
-        return;
-    }
-
-    btn.disabled = true;
-    btn.innerHTML = '<div class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></div><span>Vérification...</span>';
-
-    // Vérifier les doublons AVANT de créer
-    const bonIdsToCreate = [];
-    const duplicates = [];
-
-    try {
-        for (const bonId of selectedBons) {
-            const check = await checkDuplicate(bonId, employeId, date);
-            if (check.valid) {
-                bonIdsToCreate.push(bonId);
-            } else {
-                duplicates.push(check.message);
-            }
-        }
-
-        if (duplicates.length > 0) {
-            duplicates.forEach(msg => showToast('error', msg));
-        }
-
-        if (bonIdsToCreate.length === 0) {
-            showToast('error', 'Aucune prestation à créer (tous les bons sont déjà assignés)');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="material-icons">add_circle</i><span>Créer les prestations</span>';
-            return;
-        }
-
-        btn.innerHTML = '<div class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></div><span>Création...</span>';
-
-        const response = await fetch('/admin/planning/create-batch', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                bonIds: bonIdsToCreate,
-                employeId: employeId,
-                date: date,
-                heure: heure
-            })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            showToast('success', result.count + ' prestation' + (result.count > 1 ? 's' : '') + ' créée' + (result.count > 1 ? 's' : '') + ' avec succès');
-
-            if (result.errors && result.errors.length > 0) {
-                result.errors.forEach(error => showToast('error', error));
-            }
-
-            // Clear selection and refresh
-            selectedBons.clear();
-            updateSelectionCounter();
-            updateBatchPanel();
-            searchBons();
-
-            // Refresh calendar
-            if (calendar) calendar.refetchEvents();
-
-            // Switch back to search mode
-            switchRightPanelMode('search');
-        } else {
-            showToast('error', 'Erreur lors de la création');
-        }
-    } catch (error) {
-        console.error('Erreur:', error);
-        showToast('error', 'Erreur réseau');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="material-icons">add_circle</i><span>Créer les prestations</span>';
-    }
-}
-
-// ==================== TOAST NOTIFICATIONS ====================
-function showToast(type, message) {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    toast.className = 'toast ' + type;
-
-    const icon = type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info';
-
-    toast.innerHTML =
-        '<i class="material-icons">' + icon + '</i>' +
-        '<div class="toast-message">' + message + '</div>' +
-        '<button class="toast-close" onclick="this.closest(\'.toast\').remove()">' +
-            '<i class="material-icons">close</i>' +
-        '</button>';
-
-    container.appendChild(toast);
-
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 300);
-    }, 5000);
-}
-
-// ==================== EMPLOYEE PANEL TOGGLE ====================
-function toggleEmployeePanel() {
-    const panel = document.getElementById('employeePanel');
-    if (panel && window.innerWidth <= 1200) {
-        panel.classList.toggle('collapsed');
-    }
-}
-
-// Auto-collapse on small screens on load
-if (window.innerWidth <= 768) {
-    const panel = document.getElementById('employeePanel');
-    if (panel) panel.classList.add('collapsed');
-}
-
-// ==================== MOBILE FORM ====================
-function openMobileForm() {
-    document.getElementById('mobileFormOverlay').classList.add('open');
-    document.body.style.overflow = 'hidden';
-
-    // Sync date from calendar if available (only if not already set by prefillCreateForm)
-    const mobileDate = document.getElementById('mobile_create_date');
-    if (calendar && mobileDate && !mobileDate.value) {
-        const calDate = calendar.getDate();
-        const dateStr = calDate.toISOString().split('T')[0];
-        mobileDate.value = dateStr;
-    }
-}
-
-function closeMobileForm() {
-    document.getElementById('mobileFormOverlay').classList.remove('open');
-    document.body.style.overflow = '';
-}
-
-// Auto-submit timeline filters on change
-['tl_date', 'tl_employe'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-        el.addEventListener('change', function() {
-            this.form.submit();
-        });
-    }
+// ====== INIT ======
+document.addEventListener('DOMContentLoaded', () => {
+    renderEmpPanel();
+    initCalendar();
+    doSearch();
+    const today = document.getElementById('dateInp').value || new Date().toISOString().slice(0,10);
+    loadStats(today);
 });
 </script>
-
 {% endblock %}
