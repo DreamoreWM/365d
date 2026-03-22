@@ -238,6 +238,19 @@ body.dark-mode #wizSearch { background: var(--card-dark); border-color: var(--bo
 }
 body.dark-mode .chip { border-color: var(--border-dark); color: var(--text-dark); }
 .chip.active { background: var(--primary); border-color: var(--primary); color: white; }
+.chip-cnt {
+    display: inline-block;
+    background: rgba(0,0,0,0.13);
+    border-radius: 10px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0 5px;
+    margin-left: 3px;
+    min-width: 16px;
+    text-align: center;
+    vertical-align: middle;
+}
+.chip.active .chip-cnt { background: rgba(255,255,255,0.28); }
 
 .bon-list { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
 .bon-card {
@@ -789,7 +802,13 @@ function debSearch() { clearTimeout(searchTm); searchTm = setTimeout(doSearch, 2
 function setStatut(btn, val) {
     statut = val;
     document.querySelectorAll('#statutChips .chip').forEach(b => b.classList.toggle('active', b.dataset.s === val));
-    doSearch();
+    // Filtre client-side depuis le cache, pas de nouveau fetch
+    if (bonCache.length) {
+        const filtered = val ? bonCache.filter(b => b.statut === val) : bonCache;
+        showResults(filtered);
+    } else {
+        doSearch();
+    }
 }
 function setGroupe(btn, val) {
     groupe = val;
@@ -804,12 +823,31 @@ function setTypePrestation(btn, val) {
 
 function doSearch() {
     const q = document.getElementById('wizSearch').value.trim();
-    const p = new URLSearchParams({ q, statut, groupe_geo: groupe, type_prestation: typePrestation });
+    // Fetch sans filtre statut → compte par statut pour les badges, filtre côté client
+    const p = new URLSearchParams({ q, statut: '', groupe_geo: groupe, type_prestation: typePrestation });
     document.getElementById('bonList').innerHTML = '<div class="search-msg"><i class="material-icons">hourglass_empty</i>Recherche…</div>';
     fetch(`/admin/planning/search-bons?${p}`)
         .then(r => r.json())
-        .then(bons => { bonCache = bons; showResults(bons); })
+        .then(allBons => {
+            bonCache = allBons;
+            updateChipCounts(allBons);
+            const filtered = statut ? allBons.filter(b => b.statut === statut) : allBons;
+            showResults(filtered);
+        })
         .catch(() => { document.getElementById('bonList').innerHTML = '<div class="search-msg">Erreur de chargement</div>'; });
+}
+
+function updateChipCounts(bons) {
+    const counts = {};
+    bons.forEach(b => { counts[b.statut] = (counts[b.statut] || 0) + 1; });
+    document.querySelectorAll('#statutChips .chip').forEach(chip => {
+        const s = chip.dataset.s;
+        const n = s === '' ? bons.length : (counts[s] || 0);
+        let cnt = chip.querySelector('.chip-cnt');
+        if (!cnt) { cnt = document.createElement('span'); cnt.className = 'chip-cnt'; chip.appendChild(cnt); }
+        cnt.textContent = n > 99 ? '99+' : n;
+        cnt.style.display = n > 0 || s === '' ? '' : 'none';
+    });
 }
 
 function showResults(bons) {
