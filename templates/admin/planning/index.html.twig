@@ -802,52 +802,58 @@ function debSearch() { clearTimeout(searchTm); searchTm = setTimeout(doSearch, 2
 function setStatut(btn, val) {
     statut = val;
     document.querySelectorAll('#statutChips .chip').forEach(b => b.classList.toggle('active', b.dataset.s === val));
-    // Filtre client-side depuis le cache, pas de nouveau fetch
-    if (bonCache.length) {
-        const filtered = val ? bonCache.filter(b => b.statut === val) : bonCache;
-        showResults(filtered);
-    } else {
-        doSearch();
-    }
+    bonCache.length ? showFiltered() : doSearch();
 }
 function setGroupe(btn, val) {
     groupe = val;
     document.querySelectorAll('#geoChips .chip').forEach(b => b.classList.toggle('active', b.dataset.g === val));
-    doSearch();
+    bonCache.length ? showFiltered() : doSearch();
 }
 function setTypePrestation(btn, val) {
     typePrestation = val;
     document.querySelectorAll('#typeChips .chip').forEach(b => b.classList.toggle('active', b.dataset.t === val));
-    doSearch();
+    bonCache.length ? showFiltered() : doSearch();
 }
 
 function doSearch() {
     const q = document.getElementById('wizSearch').value.trim();
-    // Fetch sans filtre statut → compte par statut pour les badges, filtre côté client
-    const p = new URLSearchParams({ q, statut: '', groupe_geo: groupe, type_prestation: typePrestation });
+    // Fetch sans aucun filtre (sauf texte) → counts exacts sur toutes les dimensions, filtre client-side
+    const p = new URLSearchParams({ q, statut: '', groupe_geo: '', type_prestation: '' });
     document.getElementById('bonList').innerHTML = '<div class="search-msg"><i class="material-icons">hourglass_empty</i>Recherche…</div>';
     fetch(`/admin/planning/search-bons?${p}`)
         .then(r => r.json())
         .then(allBons => {
             bonCache = allBons;
             updateChipCounts(allBons);
-            const filtered = statut ? allBons.filter(b => b.statut === statut) : allBons;
-            showResults(filtered);
+            showFiltered();
         })
         .catch(() => { document.getElementById('bonList').innerHTML = '<div class="search-msg">Erreur de chargement</div>'; });
 }
 
+function showFiltered() {
+    let bons = bonCache;
+    if (statut)         bons = bons.filter(b => b.statut === statut);
+    if (groupe)         bons = bons.filter(b => String(b.groupeGeo?.id ?? '') === String(groupe));
+    if (typePrestation) bons = bons.filter(b => String(b.typePrestation?.id ?? '') === String(typePrestation));
+    showResults(bons);
+}
+
 function updateChipCounts(bons) {
-    const counts = {};
-    bons.forEach(b => { counts[b.statut] = (counts[b.statut] || 0) + 1; });
-    document.querySelectorAll('#statutChips .chip').forEach(chip => {
-        const s = chip.dataset.s;
-        const n = s === '' ? bons.length : (counts[s] || 0);
-        let cnt = chip.querySelector('.chip-cnt');
-        if (!cnt) { cnt = document.createElement('span'); cnt.className = 'chip-cnt'; chip.appendChild(cnt); }
-        cnt.textContent = n > 99 ? '99+' : n;
-        cnt.style.display = n > 0 || s === '' ? '' : 'none';
-    });
+    function setBadges(selector, keyFn) {
+        const counts = {};
+        bons.forEach(b => { const k = keyFn(b); if (k != null) counts[k] = (counts[k] || 0) + 1; });
+        document.querySelectorAll(selector + ' .chip').forEach(chip => {
+            const key = [...chip.attributes].find(a => a.name.startsWith('data-'))?.value ?? '';
+            const n = key === '' ? bons.length : (counts[key] || 0);
+            let cnt = chip.querySelector('.chip-cnt');
+            if (!cnt) { cnt = document.createElement('span'); cnt.className = 'chip-cnt'; chip.appendChild(cnt); }
+            cnt.textContent = n > 99 ? '99+' : n;
+            cnt.style.display = '';
+        });
+    }
+    setBadges('#statutChips',  b => b.statut);
+    setBadges('#geoChips',     b => b.groupeGeo ? String(b.groupeGeo.id) : null);
+    setBadges('#typeChips',    b => b.typePrestation ? String(b.typePrestation.id) : null);
 }
 
 function showResults(bons) {
