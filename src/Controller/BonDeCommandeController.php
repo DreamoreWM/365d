@@ -88,58 +88,34 @@ class BonDeCommandeController extends AbstractController
 
         $bonDeCommandes = $qb->getQuery()->getResult();
 
-        // Helper : applique le filtre de recherche à un query builder de comptage
-        $applySearch = function ($countQb, string $alias) use ($search) {
-            if ($search) {
-                $countQb->andWhere(
-                    "$alias.clientNom LIKE :searchCount
-                    OR $alias.clientEmail LIKE :searchCount
-                    OR $alias.clientTelephone LIKE :searchCount
-                    OR $alias.numeroCommande LIKE :searchCount"
-                )->setParameter('searchCount', '%' . $search . '%');
-            }
-            return $countQb;
-        };
+        // Compter les bons par statut en une seule requête GROUP BY
+        $rows = $this->repository->createQueryBuilder('bc')
+            ->select('bc.statut AS statut, COUNT(bc.id) AS cnt')
+            ->groupBy('bc.statut')
+            ->getQuery()
+            ->getResult();
 
-        // Compter les urgents pour le badge (seulement les bons "à programmer")
-        $urgentsQb = $this->repository->createQueryBuilder('b2')
-            ->select('COUNT(DISTINCT b2.id)')
-            ->leftJoin('b2.prestations', 'p2')
-            ->where('b2.statut = :aProgrammer2')
-            ->andWhere(
-                'p2.statut = :nonEffectue2 OR (b2.dateLimiteExecution IS NOT NULL AND b2.dateLimiteExecution <= :deadlineProche2)'
-            )
-            ->setParameter('nonEffectue2', StatutPrestation::NON_EFFECTUE)
-            ->setParameter('deadlineProche2', new \DateTimeImmutable('+7 days'))
-            ->setParameter('aProgrammer2', StatutBonDeCommande::A_PROGRAMMER);
-        $applySearch($urgentsQb, 'b2');
-        $urgentsCount = $urgentsQb->getQuery()->getSingleScalarResult();
+        $byStatut = [];
+        foreach ($rows as $row) {
+            $byStatut[$row['statut']] = (int) $row['cnt'];
+        }
 
-        // Compter les bons par onglet pour les badges (en respectant le filtre de recherche)
-        $tousQb = $this->repository->createQueryBuilder('bc')->select('COUNT(DISTINCT bc.id)');
-        $applySearch($tousQb, 'bc');
-        $tousCount = $tousQb->getQuery()->getSingleScalarResult();
+        $tousCount       = array_sum($byStatut);
+        $aProgrammerCount = $byStatut[StatutBonDeCommande::A_PROGRAMMER->value] ?? 0;
+        $enCoursCount    = ($byStatut[StatutBonDeCommande::PROGRAMME->value] ?? 0)
+                         + ($byStatut[StatutBonDeCommande::EN_COURS->value] ?? 0);
+        $terminesCount   = $byStatut[StatutBonDeCommande::TERMINE->value] ?? 0;
 
-        $aProgrammerQb = $this->repository->createQueryBuilder('bc')
-            ->select('COUNT(DISTINCT bc.id)')
-            ->where('bc.statut = :statut')
-            ->setParameter('statut', StatutBonDeCommande::A_PROGRAMMER);
-        $applySearch($aProgrammerQb, 'bc');
-        $aProgrammerCount = $aProgrammerQb->getQuery()->getSingleScalarResult();
-
-        $enCoursQb = $this->repository->createQueryBuilder('bc')
-            ->select('COUNT(DISTINCT bc.id)')
-            ->where('bc.statut IN (:statuts)')
-            ->setParameter('statuts', [StatutBonDeCommande::PROGRAMME, StatutBonDeCommande::EN_COURS]);
-        $applySearch($enCoursQb, 'bc');
-        $enCoursCount = $enCoursQb->getQuery()->getSingleScalarResult();
-
-        $terminesQb = $this->repository->createQueryBuilder('bc')
-            ->select('COUNT(DISTINCT bc.id)')
-            ->where('bc.statut = :statut')
-            ->setParameter('statut', StatutBonDeCommande::TERMINE);
-        $applySearch($terminesQb, 'bc');
-        $terminesCount = $terminesQb->getQuery()->getSingleScalarResult();
+        // Urgents = bons "à programmer" avec deadline dans les 7 prochains jours
+        $urgentsCount = (int) $this->repository->createQueryBuilder('b2')
+            ->select('COUNT(b2.id)')
+            ->where('b2.statut = :ap')
+            ->andWhere('b2.dateLimiteExecution IS NOT NULL')
+            ->andWhere('b2.dateLimiteExecution <= :deadline')
+            ->setParameter('ap', StatutBonDeCommande::A_PROGRAMMER)
+            ->setParameter('deadline', new \DateTimeImmutable('+7 days'))
+            ->getQuery()
+            ->getSingleScalarResult();
 
         return $this->render('admin/bon_commande/index.html.twig', [
             'bonDeCommandes' => $bonDeCommandes,
