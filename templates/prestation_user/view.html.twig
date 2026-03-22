@@ -186,6 +186,25 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
 
+    .prev-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 16px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        background: #f5f5f5;
+        color: #999;
+    }
+    .prev-chip .material-icons { font-size: 14px; }
+    .chip-green { background: #e8f5e9; color: #2e7d32; }
+    .chip-red { background: #ffebee; color: #c62828; }
+    .chip-orange { background: #fff3e0; color: #e65100; }
+    body.dark-mode .chip-green { background: rgba(46, 125, 50, 0.2); color: #81c784; }
+    body.dark-mode .chip-red { background: rgba(198, 40, 40, 0.2); color: #ef9a9a; }
+    body.dark-mode .chip-orange { background: rgba(230, 81, 0, 0.2); color: #ffb74d; }
+
     .info-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -766,26 +785,26 @@
                 </div>
                 <div style="display: flex; flex-wrap: wrap; gap: 6px;">
                     {% if autreInfos.presenceConstatee is defined %}
-                    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 500; background: {{ autreInfos.presenceConstatee == 'oui' ? '#e8f5e9; color: #2e7d32' : '#ffebee; color: #c62828' }};">
-                        <i class="material-icons" style="font-size: 14px;">{{ autreInfos.presenceConstatee == 'oui' ? 'person' : 'person_off' }}</i>
+                    <span class="prev-chip {{ autreInfos.presenceConstatee == 'oui' ? 'chip-green' : 'chip-red' }}">
+                        <i class="material-icons">{{ autreInfos.presenceConstatee == 'oui' ? 'person' : 'person_off' }}</i>
                         Présence: {{ autreInfos.presenceConstatee }}
                     </span>
                     {% endif %}
                     {% if autreInfos.niveauInfestation is defined %}
-                    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 500; background: {{ autreInfos.niveauInfestation == 'eleve' ? '#ffebee; color: #c62828' : (autreInfos.niveauInfestation == 'moyen' ? '#fff3e0; color: #e65100' : '#e8f5e9; color: #2e7d32') }};">
-                        <i class="material-icons" style="font-size: 14px;">bug_report</i>
+                    <span class="prev-chip {{ autreInfos.niveauInfestation == 'eleve' ? 'chip-red' : (autreInfos.niveauInfestation == 'moyen' ? 'chip-orange' : 'chip-green') }}">
+                        <i class="material-icons">bug_report</i>
                         Infestation: {{ autreInfos.niveauInfestation }}
                     </span>
                     {% endif %}
                     {% if autreInfos.logementPropre is defined %}
-                    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 500; background: {{ autreInfos.logementPropre == 'oui' ? '#e8f5e9; color: #2e7d32' : '#ffebee; color: #c62828' }};">
-                        <i class="material-icons" style="font-size: 14px;">cleaning_services</i>
+                    <span class="prev-chip {{ autreInfos.logementPropre == 'oui' ? 'chip-green' : 'chip-red' }}">
+                        <i class="material-icons">cleaning_services</i>
                         Propre: {{ autreInfos.logementPropre }}
                     </span>
                     {% endif %}
                     {% if autreInfos.logementEncombre is defined %}
-                    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 500; background: {{ autreInfos.logementEncombre == 'oui' ? '#ffebee; color: #c62828' : '#e8f5e9; color: #2e7d32' }};">
-                        <i class="material-icons" style="font-size: 14px;">inventory_2</i>
+                    <span class="prev-chip {{ autreInfos.logementEncombre == 'oui' ? 'chip-red' : 'chip-green' }}">
+                        <i class="material-icons">inventory_2</i>
                         Encombré: {{ autreInfos.logementEncombre }}
                     </span>
                     {% endif %}
@@ -802,8 +821,8 @@
                 </div>
                 <div style="display: flex; flex-wrap: wrap; gap: 6px;">
                     {% for v in autre.valeursChampsPersonnalises %}
-                        <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; font-weight: 500; background: {{ v.checked|default(false) ? '#e8f5e9; color: #2e7d32' : '#f5f5f5; color: #999' }};">
-                            <i class="material-icons" style="font-size: 14px;">{{ v.checked|default(false) ? 'check_box' : 'check_box_outline_blank' }}</i>
+                        <span class="prev-chip {{ v.checked|default(false) ? 'chip-green' : '' }}">
+                            <i class="material-icons">{{ v.checked|default(false) ? 'check_box' : 'check_box_outline_blank' }}</i>
                             {{ v.label }}
                             {% if v.value is defined and v.value is not null %}({{ v.value }}){% endif %}
                         </span>
