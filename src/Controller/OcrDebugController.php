@@ -79,12 +79,13 @@ h2{color:#4fc3f7;margin:0 0 16px}
 
         if ($request->isMethod('POST') && $file = $request->files->get('pdf')) {
             $ext     = strtolower($file->getClientOriginalExtension() ?: ($file->guessExtension() ?? ''));
-            $tmpPath = sys_get_temp_dir() . '/' . uniqid('ocrdebug_') . '.' . ($ext ?: 'bin');
+            $tmpPath  = sys_get_temp_dir() . '/' . uniqid('ocrdebug_') . '.' . ($ext ?: 'bin');
+            $fileSize = $file->getSize();
             $file->move(sys_get_temp_dir(), basename($tmpPath));
 
             $result .= "Fichier : " . htmlspecialchars($file->getClientOriginalName()) . "\n";
             $result .= "Extension : $ext\n";
-            $result .= "Taille : " . number_format($file->getSize() / 1024, 1) . " Ko\n\n";
+            $result .= "Taille : " . number_format($fileSize / 1024, 1) . " Ko\n\n";
 
             if ($ext === 'pdf') {
                 try {
