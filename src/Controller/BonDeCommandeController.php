@@ -97,7 +97,8 @@ class BonDeCommandeController extends AbstractController
 
         $byStatut = [];
         foreach ($rows as $row) {
-            $byStatut[$row['statut']] = (int) $row['cnt'];
+            $key = $row['statut'] instanceof \BackedEnum ? $row['statut']->value : (string) $row['statut'];
+            $byStatut[$key] = (int) $row['cnt'];
         }
 
         $tousCount       = array_sum($byStatut);
