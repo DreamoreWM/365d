@@ -2,7 +2,6 @@
 
 namespace App\Controller;
 
-use Smalot\PdfParser\Parser as PdfParser;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -88,13 +87,12 @@ h2{color:#4fc3f7;margin:0 0 16px}
             $result .= "Taille : " . number_format($fileSize / 1024, 1) . " Ko\n\n";
 
             if ($ext === 'pdf') {
-                try {
-                    $parser  = new PdfParser();
-                    $pdf     = $parser->parseFile($tmpPath);
-                    $rawText = $pdf->getText();
+                $rawPdf  = @file_get_contents($tmpPath);
+                $rawText = $rawPdf !== false ? $this->parsePdfText($rawPdf) : '';
+                if ($rawText) {
                     $result .= "=== TEXTE BRUT EXTRAIT DU PDF ===\n" . $rawText . "\n\n";
-                } catch (\Throwable $e) {
-                    $result .= "ERREUR PdfParser : " . $e->getMessage() . "\n\n";
+                } else {
+                    $result .= "Aucun texte extrait (PDF scanné ou vide ?)\n\n";
                 }
             } else {
                 $result .= "Ce fichier n'est pas un PDF (ext=$ext). Uploadez un .pdf\n\n";
@@ -196,5 +194,49 @@ a{color:#4fc3f7;text-decoration:none;padding:6px 12px;background:#333;border-rad
 . '</body></html>';
 
         return new Response($html, 200, ['Content-Type' => 'text/html; charset=UTF-8']);
+    }
+
+    private function parsePdfText(string $raw): string
+    {
+        $text = '';
+        preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $raw, $streams);
+        foreach ($streams[1] as $stream) {
+            $decompressed = @gzuncompress($stream);
+            if ($decompressed === false) {
+                $decompressed = @gzinflate($stream);
+            }
+            $content = ($decompressed !== false) ? $decompressed : $stream;
+
+            preg_match_all('/\(([^)\\\\]*(?:\\\\.[^)\\\\]*)*)\)\s*Tj/s', $content, $tj);
+            foreach ($tj[1] as $t) {
+                $text .= $this->decodePdfString($t) . ' ';
+            }
+            preg_match_all('/\[([^\]]*)\]\s*TJ/s', $content, $tjArr);
+            foreach ($tjArr[1] as $t) {
+                preg_match_all('/\(([^)\\\\]*(?:\\\\.[^)\\\\]*)*)\)/s', $t, $parts);
+                foreach ($parts[1] as $p) {
+                    $text .= $this->decodePdfString($p);
+                }
+                $text .= ' ';
+            }
+            preg_match_all('/\(([^)\\\\]*(?:\\\\.[^)\\\\]*)*)\)\s*\'/s', $content, $tick);
+            foreach ($tick[1] as $t) {
+                $text .= $this->decodePdfString($t) . "\n";
+            }
+            if (preg_match('/BT\b/', $content)) {
+                $text .= "\n";
+            }
+        }
+        $text = preg_replace('/[ \t]{2,}/', ' ', $text);
+        $text = preg_replace('/\n{3,}/', "\n\n", $text);
+        return trim($text);
+    }
+
+    private function decodePdfString(string $s): string
+    {
+        $s = str_replace(['\\n', '\\r', '\\t'], ["\n", "\r", "\t"], $s);
+        $s = preg_replace_callback('/\\\\([0-7]{1,3})/', fn($m) => chr(octdec($m[1])), $s);
+        $s = str_replace(['\\(', '\\)', '\\\\'], ['(', ')', '\\'], $s);
+        return $s;
     }
 }
