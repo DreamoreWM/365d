@@ -1170,11 +1170,16 @@ async function submitOcr() {
 
         const result = await response.json();
 
-        if (result.success && result.redirectUrl) {
-            setProgress(100, 'Terminé ! Redirection...');
-            window.location.href = result.redirectUrl;
+        if (result.redirectUrl) {
+            const method = result.method === 'gemini' ? 'Gemini AI' : 'Tesseract OCR';
+            if (result.success) {
+                setProgress(100, `Terminé via ${method} ! Redirection...`);
+            } else {
+                setProgress(100, `Extraction partielle via ${method}. Redirection...`);
+            }
+            setTimeout(() => { window.location.href = result.redirectUrl; }, 500);
         } else {
-            throw new Error(result.error || 'Erreur inconnue');
+            throw new Error(result.error || 'Aucune donnée extraite');
         }
 
     } catch (error) {

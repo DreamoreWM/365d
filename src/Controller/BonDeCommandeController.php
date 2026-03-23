@@ -273,177 +273,56 @@ class BonDeCommandeController extends AbstractController
             $tmpPath = sys_get_temp_dir() . '/' . uniqid('ocr_') . '.' . $file->guessExtension();
             $file->move(sys_get_temp_dir(), basename($tmpPath));
 
-            $geminiApiKey = $_ENV['GEMINI_API_KEY'] ?? '';
+            $geminiApiKey = $_ENV['GEMINI_API_KEY'] ?? getenv('GEMINI_API_KEY') ?: '';
             $logPath = $this->getParameter('kernel.project_dir') . '/var/ocr_debug.log';
 
+            $result = [];
+            $ocrMethod = 'none';
+
+            // === ESSAYER GEMINI EN PREMIER ===
             if ($geminiApiKey) {
-                // === CHEMIN GEMINI ===
                 $result = $this->extractWithGemini($tmpPath, $geminiApiKey, $logPath, $file->getClientOriginalName());
+                if (!empty($result) && !empty(array_filter($result))) {
+                    $ocrMethod = 'gemini';
+                }
+            }
+
+            // === FALLBACK TESSERACT si Gemini échoue ou résultat vide ===
+            if ($ocrMethod === 'none') {
+                $ext = strtolower(pathinfo($tmpPath, PATHINFO_EXTENSION));
+                if ($ext !== 'pdf') {
+                    $result = $this->extractWithTesseract($tmpPath, $logPath, $file->getClientOriginalName());
+                    $ocrMethod = 'tesseract';
+                }
+            }
+
+            // Nettoyer le fichier temporaire
+            if (file_exists($tmpPath)) {
                 unlink($tmpPath);
+            }
 
-                $numeroCommande = $result['numeroCommande'] ?? '';
-                $nomClient      = $result['clientNom'] ?? '';
-                $adresse        = $result['clientAdresse'] ?? '';
-                $telephone      = $result['clientTelephone'] ?? '';
-                $complement     = $result['clientComplementAdresse'] ?? '';
-                $dateLimite     = $result['dateLimiteExecution'] ?? '';
-                $codeGemini     = $result['typePrestation'] ?? '';
+            $numeroCommande = $result['numeroCommande'] ?? '';
+            $nomClient      = $result['clientNom'] ?? '';
+            $adresse        = $result['clientAdresse'] ?? '';
+            $telephone      = $result['clientTelephone'] ?? '';
+            $complement     = $result['clientComplementAdresse'] ?? '';
+            $dateLimite     = $result['dateLimiteExecution'] ?? '';
+            $codePrestation = $result['typePrestation'] ?? '';
 
-                // Recherche du type de prestation par code
-                $detectedTypeId = '';
+            // Recherche du type de prestation par code
+            $detectedTypeId = '';
+            if ($codePrestation) {
                 $typePrestations = $this->em->getRepository(TypePrestation::class)->findAll();
                 foreach ($typePrestations as $tp) {
                     $code = $tp->getCode();
-                    if ($code && stripos($codeGemini, $code) !== false) {
+                    if ($code && stripos($codePrestation, $code) !== false) {
                         $detectedTypeId = $tp->getId();
                         break;
                     }
                 }
-            } else {
-                // === CHEMIN TESSERACT (fallback) ===
-                $processedPath = $this->preprocessImageForOcr($tmpPath);
-
-                $ocr = new TesseractOCR($processedPath);
-                $text = $ocr->lang('fra', 'eng')->psm(3)->run();
-
-                unlink($tmpPath);
-                if ($processedPath !== $tmpPath) {
-                    unlink($processedPath);
-                }
-
-                $textBrut = $text;
-                $text = $this->fixOcrText($text);
-                $allLines = array_values(array_filter(array_map('trim', explode("\n", $text))));
-
-                $numeroCommande = '';
-                $complement = '';
-                $adresse = '';
-                $nomClient = '';
-                $telephone = '';
-                $codePostalVille = '';
-                $dateLimite = '';
-
-                foreach ($allLines as $line) {
-                    if (preg_match('/Travaux\s+.+\s+pour\s+le\s+(\d{2}\/\d{2}\/\d{4})/iu', $line, $m)) {
-                        $parts = explode('/', $m[1]);
-                        $dateLimite = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
-                        break;
-                    }
-                }
-
-                foreach ($allLines as $line) {
-                    if (preg_match('/Commande\s*n.?\s*([A-Z0-9]{4,})/iu', $line, $m)) {
-                        $numeroCommande = trim($m[1]);
-                        $firstChar = $numeroCommande[0] ?? '';
-                        if (ctype_digit($firstChar)) {
-                            $map = ['1' => 'I', '0' => 'O'];
-                            if (isset($map[$firstChar])) {
-                                $numeroCommande = $map[$firstChar] . substr($numeroCommande, 1);
-                            }
-                        }
-                        break;
-                    }
-                }
-
-                $startIndex = 0;
-                foreach ($allLines as $i => $line) {
-                    if (stripos($line, 'Prestation') !== false && stripos($line, 'Privatives') !== false) {
-                        $startIndex = $i + 1;
-                        break;
-                    }
-                }
-
-                $clientLines = array_slice($allLines, $startIndex);
-                foreach ($clientLines as $line) {
-                    if (!$adresse && preg_match('/[A-Z0-9]+\s+(RUE|R|AVENUE|AV|BOULEVARD|BLVD|BD|ALL[EÉ]E|IMPASSE|IMP|CHEMIN|CH|PLACE|PL|ROUTE|RTE|PASSAGE|VOIE)\b/i', $line)) {
-                        $adresse = trim($line);
-                    }
-                    if (!$complement && preg_match('/LOGEMENT\s*n.?\s*\d+/iu', $line)) {
-                        $complement = trim($line);
-                    }
-                    if (!$codePostalVille && preg_match('/^\d{5}\s+[A-ZÉÈÊÀÂ\s-]+$/u', $line)) {
-                        $codePostalVille = trim($line);
-                    }
-                    if (!$nomClient) {
-                        $nameExtracted = null;
-                        if (preg_match('/^M[.\s]+(MME\s+)?(.+?)\s*-\s*/i', $line, $m)) {
-                            $nameExtracted = trim($m[2]);
-                        } elseif (preg_match('/^MR\s+(ET\s+MME\s+)?(.+?)\s*-\s*/i', $line, $m)) {
-                            $nameExtracted = trim($m[2]);
-                        } elseif (preg_match('/Logement\s+Occup.+?\s*:\s*(MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)?(.+?)\s*-\s*/iu', $line, $m)) {
-                            $nameExtracted = trim($m[2]);
-                        } elseif (preg_match('/^:\s*(MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)(.+?)\s*-\s*/i', $line, $m)) {
-                            $nameExtracted = trim($m[2]);
-                        }
-                        if ($nameExtracted) {
-                            $nomClient = $nameExtracted;
-                        }
-                    }
-                    if (!$telephone && preg_match('/Portable\s*:\s*(\d+)/i', $line, $m)) {
-                        $telephone = trim($m[1]);
-                    }
-                    if (!$telephone && preg_match('/Téléphone\s*:\s*(\d+)/i', $line, $m)) {
-                        $telephone = trim($m[1]);
-                    }
-                }
-
-                if ($codePostalVille && $adresse) {
-                    $adresse = $adresse . "\n" . $codePostalVille;
-                } elseif ($codePostalVille && !$adresse) {
-                    $adresse = $codePostalVille;
-                }
-
-                $detectedTypeId = '';
-                $typePrestations = $this->em->getRepository(TypePrestation::class)->findAll();
-                foreach ($typePrestations as $tp) {
-                    $code = $tp->getCode();
-                    if ($code && stripos($text, $code) !== false) {
-                        $detectedTypeId = $tp->getId();
-                        break;
-                    }
-                }
-
-                // Log Tesseract
-                $log = "=== Tesseract OCR " . date('Y-m-d H:i:s') . " ===\n";
-                $log .= "Fichier: " . $file->getClientOriginalName() . "\n";
-                $log .= "\n--- TEXTE BRUT ---\n" . $textBrut . "\n";
-                $log .= "\n--- TEXTE CORRIGÉ ---\n" . $text . "\n";
-                $log .= "\n--- DONNÉES EXTRAITES ---\n";
-                $log .= "N° Commande: " . ($numeroCommande ?: 'NON TROUVÉ') . "\n";
-                $log .= "Nom client: " . ($nomClient ?: 'NON TROUVÉ') . "\n";
-                $log .= "Téléphone: " . ($telephone ?: 'NON TROUVÉ') . "\n";
-                $log .= "Adresse: " . ($adresse ?: 'NON TROUVÉ') . "\n";
-                $log .= "Complément: " . ($complement ?: 'NON TROUVÉ') . "\n";
-                $log .= "Date limite: " . ($dateLimite ?: 'NON TROUVÉ') . "\n\n";
-                file_put_contents($logPath, $log, FILE_APPEND);
             }
 
-            // Si requête AJAX, retourner du JSON
-            if ($request->isXmlHttpRequest() || $request->headers->get('Accept') === 'application/json') {
-                return new JsonResponse([
-                    'success' => true,
-                    'redirectUrl' => $this->generateUrl('admin_bon_commande_new', [
-                        'numeroCommande'         => $numeroCommande,
-                        'clientNom'              => $nomClient,
-                        'clientAdresse'          => $adresse,
-                        'clientTelephone'        => $telephone,
-                        'clientComplementAdresse'=> $complement,
-                        'dateLimiteExecution'    => $dateLimite,
-                        'typePrestation'         => $detectedTypeId,
-                    ]),
-                    'data' => [
-                        'numeroCommande'         => $numeroCommande,
-                        'clientNom'              => $nomClient,
-                        'clientAdresse'          => $adresse,
-                        'clientTelephone'        => $telephone,
-                        'clientComplementAdresse'=> $complement,
-                        'dateLimiteExecution'    => $dateLimite,
-                        'typePrestation'         => $detectedTypeId,
-                    ],
-                ]);
-            }
-
-            return $this->redirectToRoute('admin_bon_commande_new', [
+            $params = [
                 'numeroCommande'         => $numeroCommande,
                 'clientNom'              => $nomClient,
                 'clientAdresse'          => $adresse,
@@ -451,7 +330,21 @@ class BonDeCommandeController extends AbstractController
                 'clientComplementAdresse'=> $complement,
                 'dateLimiteExecution'    => $dateLimite,
                 'typePrestation'         => $detectedTypeId,
-            ]);
+            ];
+
+            // Si requête AJAX, retourner du JSON
+            if ($request->isXmlHttpRequest() || $request->headers->get('Accept') === 'application/json') {
+                $hasData = !empty(array_filter([$numeroCommande, $nomClient, $adresse, $telephone]));
+                return new JsonResponse([
+                    'success'     => $hasData,
+                    'method'      => $ocrMethod,
+                    'redirectUrl' => $this->generateUrl('admin_bon_commande_new', $params),
+                    'data'        => $params,
+                    'error'       => $hasData ? null : 'Aucune donnée n\'a pu être extraite du document. Vérifiez la qualité de l\'image.',
+                ]);
+            }
+
+            return $this->redirectToRoute('admin_bon_commande_new', $params);
         }
 
         if ($request->isXmlHttpRequest()) {
@@ -459,6 +352,133 @@ class BonDeCommandeController extends AbstractController
         }
         $this->addFlash('danger', 'Aucun fichier reçu');
         return $this->redirectToRoute('admin_bon_commande_index');
+    }
+
+    // =====================================================
+    // MÉTHODE PRIVÉE : EXTRACTION VIA TESSERACT (fallback)
+    // =====================================================
+    private function extractWithTesseract(string $tmpPath, string $logPath, string $originalName): array
+    {
+        $processedPath = $this->preprocessImageForOcr($tmpPath);
+
+        $ocr = new TesseractOCR($processedPath);
+        $text = $ocr->lang('fra', 'eng')->psm(3)->run();
+
+        if ($processedPath !== $tmpPath && file_exists($processedPath)) {
+            unlink($processedPath);
+        }
+
+        $textBrut = $text;
+        $text = $this->fixOcrText($text);
+        $allLines = array_values(array_filter(array_map('trim', explode("\n", $text))));
+
+        $numeroCommande = '';
+        $complement = '';
+        $adresse = '';
+        $nomClient = '';
+        $telephone = '';
+        $codePostalVille = '';
+        $dateLimite = '';
+        $codePrestation = '';
+
+        foreach ($allLines as $line) {
+            if (preg_match('/Travaux\s+.+\s+pour\s+le\s+(\d{2}\/\d{2}\/\d{4})/iu', $line, $m)) {
+                $parts = explode('/', $m[1]);
+                $dateLimite = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
+                break;
+            }
+        }
+
+        foreach ($allLines as $line) {
+            if (preg_match('/Commande\s*n.?\s*([A-Z0-9]{4,})/iu', $line, $m)) {
+                $numeroCommande = trim($m[1]);
+                $firstChar = $numeroCommande[0] ?? '';
+                if (ctype_digit($firstChar)) {
+                    $map = ['1' => 'I', '0' => 'O'];
+                    if (isset($map[$firstChar])) {
+                        $numeroCommande = $map[$firstChar] . substr($numeroCommande, 1);
+                    }
+                }
+                break;
+            }
+        }
+
+        $startIndex = 0;
+        foreach ($allLines as $i => $line) {
+            if (stripos($line, 'Prestation') !== false && stripos($line, 'Privatives') !== false) {
+                $startIndex = $i + 1;
+                break;
+            }
+        }
+
+        $clientLines = array_slice($allLines, $startIndex);
+        foreach ($clientLines as $line) {
+            if (!$adresse && preg_match('/[A-Z0-9]+\s+(RUE|R|AVENUE|AV|BOULEVARD|BLVD|BD|ALL[EÉ]E|IMPASSE|IMP|CHEMIN|CH|PLACE|PL|ROUTE|RTE|PASSAGE|VOIE)\b/i', $line)) {
+                $adresse = trim($line);
+            }
+            if (!$complement && preg_match('/LOGEMENT\s*n.?\s*\d+/iu', $line)) {
+                $complement = trim($line);
+            }
+            if (!$codePostalVille && preg_match('/^\d{5}\s+[A-ZÉÈÊÀÂ\s-]+$/u', $line)) {
+                $codePostalVille = trim($line);
+            }
+            if (!$nomClient) {
+                $nameExtracted = null;
+                if (preg_match('/Logement\s+Occup.+?\s*:\s*(MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)?(.+?)\s*-\s*/iu', $line, $m)) {
+                    $nameExtracted = trim($m[2]);
+                } elseif (preg_match('/^M[.\s]+(MME\s+)?(.+?)\s*-\s*/i', $line, $m)) {
+                    $nameExtracted = trim($m[2]);
+                } elseif (preg_match('/^MR\s+(ET\s+MME\s+)?(.+?)\s*-\s*/i', $line, $m)) {
+                    $nameExtracted = trim($m[2]);
+                } elseif (preg_match('/^:\s*(MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)(.+?)\s*-\s*/i', $line, $m)) {
+                    $nameExtracted = trim($m[2]);
+                }
+                if ($nameExtracted) {
+                    $nomClient = $nameExtracted;
+                }
+            }
+            if (!$telephone && preg_match('/Portable\s*:\s*(\d+)/i', $line, $m)) {
+                $telephone = trim($m[1]);
+            }
+            if (!$telephone && preg_match('/T[ée]l[ée]phone\s*:\s*(\d+)/i', $line, $m)) {
+                $telephone = trim($m[1]);
+            }
+        }
+
+        if ($codePostalVille && $adresse) {
+            $adresse = $adresse . "\n" . $codePostalVille;
+        } elseif ($codePostalVille && !$adresse) {
+            $adresse = $codePostalVille;
+        }
+
+        // Chercher le code prestation dans le texte (ex: CPA063, 13D16N)
+        if (preg_match('/\(([A-Z0-9]{3,10})\)/i', $text, $m)) {
+            $codePrestation = $m[1];
+        }
+
+        // Log Tesseract
+        $log = "=== Tesseract OCR " . date('Y-m-d H:i:s') . " ===\n";
+        $log .= "Fichier: " . $originalName . "\n";
+        $log .= "\n--- TEXTE BRUT ---\n" . $textBrut . "\n";
+        $log .= "\n--- TEXTE CORRIGÉ ---\n" . $text . "\n";
+        $log .= "\n--- DONNÉES EXTRAITES ---\n";
+        $log .= "N° Commande: " . ($numeroCommande ?: 'NON TROUVÉ') . "\n";
+        $log .= "Nom client: " . ($nomClient ?: 'NON TROUVÉ') . "\n";
+        $log .= "Téléphone: " . ($telephone ?: 'NON TROUVÉ') . "\n";
+        $log .= "Adresse: " . ($adresse ?: 'NON TROUVÉ') . "\n";
+        $log .= "Complément: " . ($complement ?: 'NON TROUVÉ') . "\n";
+        $log .= "Date limite: " . ($dateLimite ?: 'NON TROUVÉ') . "\n\n";
+        file_put_contents($logPath, $log, FILE_APPEND);
+
+        return [
+            'numeroCommande'         => $numeroCommande,
+            'clientNom'              => $nomClient,
+            'clientAdresse'          => $adresse,
+            'clientTelephone'        => $telephone,
+            'clientComplementAdresse'=> $complement,
+            'dateLimiteExecution'    => $dateLimite,
+            'typePrestation'         => $codePrestation,
+        ];
     }
 
     // =====================================================
@@ -536,7 +556,8 @@ PROMPT;
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
             CURLOPT_POSTFIELDS     => json_encode($payload),
-            CURLOPT_TIMEOUT        => 45,
+            CURLOPT_TIMEOUT        => 30,
+            CURLOPT_CONNECTTIMEOUT => 10,
         ]);
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
