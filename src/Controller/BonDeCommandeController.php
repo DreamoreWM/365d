@@ -271,8 +271,10 @@ class BonDeCommandeController extends AbstractController
     public function importViaOcr(Request $request): Response
     {
         if ($request->isMethod('POST') && $file = $request->files->get('photo')) {
-            $ext      = strtolower($file->getClientOriginalExtension() ?: ($file->guessExtension() ?? ''));
-            $tmpPath  = sys_get_temp_dir() . '/' . uniqid('ocr_') . '.' . ($ext ?: 'bin');
+            $ext          = strtolower($file->getClientOriginalExtension() ?: ($file->guessExtension() ?? ''));
+            $originalName = $file->getClientOriginalName();
+            $fileSize     = $file->getSize(); // avant move() car SplFileInfo::getSize() lève une exception après
+            $tmpPath      = sys_get_temp_dir() . '/' . uniqid('ocr_') . '.' . ($ext ?: 'bin');
             $file->move(sys_get_temp_dir(), basename($tmpPath));
 
             $logPath = $this->getParameter('kernel.project_dir') . '/var/ocr_debug.log';
@@ -280,9 +282,9 @@ class BonDeCommandeController extends AbstractController
             // Log immédiat pour confirmer la réception du fichier
             file_put_contents($logPath,
                 "=== UPLOAD REÇU " . date('Y-m-d H:i:s') . " ===\n" .
-                "Nom: " . $file->getClientOriginalName() . "\n" .
+                "Nom: " . $originalName . "\n" .
                 "Extension détectée: $ext\n" .
-                "Taille: " . $file->getSize() . " octets\n\n",
+                "Taille: " . $fileSize . " octets\n\n",
                 FILE_APPEND
             );
 
@@ -382,7 +384,7 @@ class BonDeCommandeController extends AbstractController
 
             // Log
             $log  = "=== $engine OCR " . date('Y-m-d H:i:s') . " ===\n";
-            $log .= "Fichier: " . $file->getClientOriginalName() . "\n";
+            $log .= "Fichier: " . $originalName . "\n";
             $log .= "\n--- TEXTE EXTRAIT ---\n" . $textBrut . "\n";
             $log .= "\n--- DONNÉES EXTRAITES ---\n";
             $log .= "N° Commande: " . ($numeroCommande ?: 'NON TROUVÉ') . "\n";
