@@ -649,6 +649,45 @@
         display: none;
     }
 
+    .ocr-progress {
+        margin-top: 16px;
+        padding: 16px;
+    }
+
+    .ocr-progress-bar {
+        width: 100%;
+        height: 6px;
+        background: #e0e0e0;
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 10px;
+    }
+
+    body.dark-mode .ocr-progress-bar {
+        background: #424242;
+    }
+
+    .ocr-progress-fill {
+        height: 100%;
+        background: var(--primary);
+        border-radius: 3px;
+        width: 0%;
+        transition: width 0.3s ease;
+        animation: ocr-pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes ocr-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+
+    .ocr-progress-text {
+        font-size: 0.875rem;
+        color: var(--primary);
+        text-align: center;
+        font-weight: 500;
+    }
+
     @media (max-width: 600px) {
         .modal-container {
             width: 95%;
@@ -968,12 +1007,20 @@
                 </button>
             </div>
 
+            <!-- Progress indicator -->
+            <div class="ocr-progress" id="ocr-progress" style="display: none;">
+                <div class="ocr-progress-bar">
+                    <div class="ocr-progress-fill" id="ocr-progress-fill"></div>
+                </div>
+                <div class="ocr-progress-text" id="ocr-progress-text">Compression de l'image...</div>
+            </div>
+
             <!-- Actions -->
-            <div class="modal-actions">
+            <div class="modal-actions" id="ocr-actions">
                 <button type="button" class="mdl-button mdl-js-button mdl-button--raised" id="cancel-ocr">
                     Annuler
                 </button>
-                <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" id="submit-ocr" disabled>
+                <button type="button" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" id="submit-ocr" disabled>
                     <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">search</i>
                     Analyser
                 </button>
@@ -995,6 +1042,12 @@ const fileUploadArea = document.getElementById('file-upload-area');
 const filePreview = document.getElementById('file-preview');
 const submitBtn = document.getElementById('submit-ocr');
 const removeFileBtn = document.getElementById('remove-file');
+const ocrProgress = document.getElementById('ocr-progress');
+const ocrProgressFill = document.getElementById('ocr-progress-fill');
+const ocrProgressText = document.getElementById('ocr-progress-text');
+const ocrActions = document.getElementById('ocr-actions');
+
+let isProcessing = false;
 
 function openOcrModal() {
     ocrOverlay.classList.add('open');
@@ -1003,13 +1056,134 @@ function openOcrModal() {
 }
 
 function closeOcrModal() {
+    if (isProcessing) return; // Ne pas fermer pendant le traitement
     ocrOverlay.classList.remove('open');
     ocrModal.classList.remove('open');
     document.body.style.overflow = '';
-    // Reset form
+    resetOcrForm();
+}
+
+function resetOcrForm() {
     fileInput.value = '';
     filePreview.classList.remove('show');
     submitBtn.disabled = true;
+    ocrProgress.style.display = 'none';
+    ocrActions.style.display = 'flex';
+    ocrProgressFill.style.width = '0%';
+}
+
+function setProgress(percent, text) {
+    ocrProgressFill.style.width = percent + '%';
+    if (text) ocrProgressText.textContent = text;
+}
+
+// Compression d'image côté client via Canvas
+function compressImage(file, maxWidth = 1600, quality = 0.75) {
+    return new Promise((resolve) => {
+        // Si c'est un PDF, pas de compression côté client
+        if (file.type === 'application/pdf') {
+            resolve(file);
+            return;
+        }
+
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+
+            let { width, height } = img;
+
+            // Redimensionner si trop grand
+            if (width > maxWidth) {
+                height = Math.round(height * (maxWidth / width));
+                width = maxWidth;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            canvas.toBlob((blob) => {
+                const compressed = new File([blob], file.name.replace(/\.\w+$/, '.jpg'), {
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                });
+                resolve(compressed);
+            }, 'image/jpeg', quality);
+        };
+
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            resolve(file); // En cas d'erreur, envoyer le fichier original
+        };
+
+        img.src = url;
+    });
+}
+
+// Soumission AJAX avec compression
+async function submitOcr() {
+    const file = fileInput.files[0];
+    if (!file || isProcessing) return;
+
+    isProcessing = true;
+    submitBtn.disabled = true;
+    ocrProgress.style.display = 'block';
+    ocrActions.style.display = 'none';
+
+    try {
+        // Étape 1 : Compression
+        setProgress(15, 'Compression de l\'image...');
+        const compressedFile = await compressImage(file);
+
+        const originalSize = formatFileSize(file.size);
+        const compressedSize = formatFileSize(compressedFile.size);
+        if (compressedFile !== file) {
+            setProgress(30, `Compressé : ${originalSize} → ${compressedSize}`);
+        } else {
+            setProgress(30, 'Envoi du fichier...');
+        }
+
+        // Étape 2 : Upload + analyse OCR
+        setProgress(40, 'Analyse OCR en cours...');
+
+        const formData = new FormData();
+        formData.append('photo', compressedFile);
+
+        const response = await fetch('{{ path("admin_bon_commande_import_ocr") }}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        });
+
+        setProgress(90, 'Traitement des résultats...');
+
+        if (!response.ok) {
+            throw new Error('Erreur serveur : ' + response.status);
+        }
+
+        const result = await response.json();
+
+        if (result.success && result.redirectUrl) {
+            setProgress(100, 'Terminé ! Redirection...');
+            window.location.href = result.redirectUrl;
+        } else {
+            throw new Error(result.error || 'Erreur inconnue');
+        }
+
+    } catch (error) {
+        isProcessing = false;
+        ocrProgress.style.display = 'none';
+        ocrActions.style.display = 'flex';
+        submitBtn.disabled = false;
+        alert('Erreur lors de l\'analyse OCR : ' + error.message);
+    }
 }
 
 // Open modal
@@ -1038,7 +1212,7 @@ fileUploadArea?.addEventListener('dragleave', () => {
 fileUploadArea?.addEventListener('drop', (e) => {
     e.preventDefault();
     fileUploadArea.classList.remove('drag-over');
-    
+
     const files = e.dataTransfer.files;
     if (files.length > 0) {
         fileInput.files = files;
@@ -1051,7 +1225,7 @@ fileInput?.addEventListener('change', handleFileSelect);
 
 function handleFileSelect() {
     const file = fileInput.files[0];
-    
+
     if (file) {
         // Check file size (10MB max)
         if (file.size > 10 * 1024 * 1024) {
@@ -1059,7 +1233,7 @@ function handleFileSelect() {
             fileInput.value = '';
             return;
         }
-        
+
         // Display preview
         document.getElementById('file-preview-name').textContent = file.name;
         document.getElementById('file-preview-size').textContent = formatFileSize(file.size);
@@ -1067,6 +1241,9 @@ function handleFileSelect() {
         submitBtn.disabled = false;
     }
 }
+
+// Submit OCR via AJAX
+submitBtn?.addEventListener('click', submitOcr);
 
 // Remove file
 removeFileBtn?.addEventListener('click', () => {
