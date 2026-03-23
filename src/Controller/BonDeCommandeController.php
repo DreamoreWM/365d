@@ -10,6 +10,7 @@ use App\Repository\BonDeCommandeRepository;
 use App\Service\PrestationManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -417,6 +418,31 @@ class BonDeCommandeController extends AbstractController
                 file_put_contents($logPath, $log, FILE_APPEND);
             }
 
+            // Si requête AJAX, retourner du JSON
+            if ($request->isXmlHttpRequest() || $request->headers->get('Accept') === 'application/json') {
+                return new JsonResponse([
+                    'success' => true,
+                    'redirectUrl' => $this->generateUrl('admin_bon_commande_new', [
+                        'numeroCommande'         => $numeroCommande,
+                        'clientNom'              => $nomClient,
+                        'clientAdresse'          => $adresse,
+                        'clientTelephone'        => $telephone,
+                        'clientComplementAdresse'=> $complement,
+                        'dateLimiteExecution'    => $dateLimite,
+                        'typePrestation'         => $detectedTypeId,
+                    ]),
+                    'data' => [
+                        'numeroCommande'         => $numeroCommande,
+                        'clientNom'              => $nomClient,
+                        'clientAdresse'          => $adresse,
+                        'clientTelephone'        => $telephone,
+                        'clientComplementAdresse'=> $complement,
+                        'dateLimiteExecution'    => $dateLimite,
+                        'typePrestation'         => $detectedTypeId,
+                    ],
+                ]);
+            }
+
             return $this->redirectToRoute('admin_bon_commande_new', [
                 'numeroCommande'         => $numeroCommande,
                 'clientNom'              => $nomClient,
@@ -428,6 +454,9 @@ class BonDeCommandeController extends AbstractController
             ]);
         }
 
+        if ($request->isXmlHttpRequest()) {
+            return new JsonResponse(['success' => false, 'error' => 'Aucun fichier reçu'], 400);
+        }
         $this->addFlash('danger', 'Aucun fichier reçu');
         return $this->redirectToRoute('admin_bon_commande_index');
     }
@@ -446,7 +475,18 @@ class BonDeCommandeController extends AbstractController
             default       => 'image/jpeg',
         };
 
-        $imageData = base64_encode(file_get_contents($imagePath));
+        // Optimisation : redimensionner les grandes images pour accélérer l'envoi à Gemini
+        $optimizedPath = $imagePath;
+        if ($mimeType !== 'application/pdf') {
+            $optimizedPath = $this->optimizeImageForGemini($imagePath, $mimeType);
+            if ($optimizedPath !== $imagePath) {
+                $mimeType = 'image/jpeg'; // L'image optimisée est toujours en JPEG
+            }
+        }
+        $imageData = base64_encode(file_get_contents($optimizedPath));
+        if ($optimizedPath !== $imagePath && file_exists($optimizedPath)) {
+            unlink($optimizedPath);
+        }
 
         $prompt = <<<'PROMPT'
 Tu analyses un bon de commande de désinfestation / désinsectisation émis par un bailleur social.
@@ -489,7 +529,7 @@ PROMPT;
             ],
         ];
 
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}";
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={$apiKey}";
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_POST           => true,
@@ -601,6 +641,62 @@ PROMPT;
         }, $text);
 
         return $text;
+    }
+
+    // =====================================================
+    // MÉTHODE PRIVÉE : OPTIMISATION IMAGE POUR GEMINI
+    // =====================================================
+    private function optimizeImageForGemini(string $imagePath, string $mimeType): string
+    {
+        $ext = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
+
+        $image = match ($ext) {
+            'png' => @imagecreatefrompng($imagePath),
+            'jpg', 'jpeg' => @imagecreatefromjpeg($imagePath),
+            'webp' => @imagecreatefromwebp($imagePath),
+            'bmp' => @imagecreatefrombmp($imagePath),
+            default => false,
+        };
+
+        if (!$image) {
+            return $imagePath;
+        }
+
+        // Corriger l'orientation EXIF
+        if (in_array($ext, ['jpg', 'jpeg'])) {
+            $exif = @exif_read_data($imagePath);
+            if ($exif && isset($exif['Orientation'])) {
+                $image = match ((int)$exif['Orientation']) {
+                    3 => imagerotate($image, 180, 0),
+                    6 => imagerotate($image, -90, 0),
+                    8 => imagerotate($image, 90, 0),
+                    default => $image,
+                };
+            }
+        }
+
+        $width = imagesx($image);
+        $height = imagesy($image);
+
+        // Redimensionner si l'image est trop grande (max 1600px de large)
+        // Gemini n'a pas besoin de plus pour lire du texte
+        $maxWidth = 1600;
+        if ($width > $maxWidth) {
+            $scale = $maxWidth / $width;
+            $newWidth = (int)($width * $scale);
+            $newHeight = (int)($height * $scale);
+            $resized = imagecreatetruecolor($newWidth, $newHeight);
+            imagecopyresampled($resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+            imagedestroy($image);
+            $image = $resized;
+        }
+
+        // Sauvegarder en JPEG compressé (qualité 80 = bon ratio taille/lisibilité)
+        $outputPath = sys_get_temp_dir() . '/' . uniqid('gemini_opt_') . '.jpg';
+        imagejpeg($image, $outputPath, 80);
+        imagedestroy($image);
+
+        return $outputPath;
     }
 
     // =====================================================
