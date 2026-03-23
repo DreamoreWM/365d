@@ -475,18 +475,8 @@ class BonDeCommandeController extends AbstractController
             default       => 'image/jpeg',
         };
 
-        // Optimisation : redimensionner les grandes images pour accélérer l'envoi à Gemini
-        $optimizedPath = $imagePath;
-        if ($mimeType !== 'application/pdf') {
-            $optimizedPath = $this->optimizeImageForGemini($imagePath, $mimeType);
-            if ($optimizedPath !== $imagePath) {
-                $mimeType = 'image/jpeg'; // L'image optimisée est toujours en JPEG
-            }
-        }
-        $imageData = base64_encode(file_get_contents($optimizedPath));
-        if ($optimizedPath !== $imagePath && file_exists($optimizedPath)) {
-            unlink($optimizedPath);
-        }
+        $log = "=== Gemini OCR " . date('Y-m-d H:i:s') . " ===\n";
+        $log .= "Fichier: $originalName (ext: $ext, mime: $mimeType)\n";
 
         $prompt = <<<'PROMPT'
 Tu analyses un bon de commande de désinfestation / désinsectisation émis par un bailleur social.
@@ -513,15 +503,33 @@ Retourne un JSON avec exactement ces champs (chaînes vides si non trouvé) :
 Réponds UNIQUEMENT avec le JSON brut, sans markdown, sans texte supplémentaire.
 PROMPT;
 
+        if ($mimeType === 'application/pdf') {
+            // Pour les PDFs : utiliser la File API Gemini (upload puis référence)
+            $filePart = $this->uploadPdfToGeminiFileApi($imagePath, $apiKey, $log);
+            if ($filePart === null) {
+                file_put_contents($logPath, $log, FILE_APPEND);
+                return [];
+            }
+            $parts = [['text' => $prompt], $filePart];
+        } else {
+            // Pour les images : optimiser puis envoyer en inline_data
+            $optimizedPath = $this->optimizeImageForGemini($imagePath, $mimeType);
+            if ($optimizedPath !== $imagePath) {
+                $mimeType = 'image/jpeg';
+            }
+            $imageData = base64_encode(file_get_contents($optimizedPath));
+            if ($optimizedPath !== $imagePath && file_exists($optimizedPath)) {
+                unlink($optimizedPath);
+            }
+            $parts = [
+                ['text' => $prompt],
+                ['inline_data' => ['mime_type' => $mimeType, 'data' => $imageData]],
+            ];
+        }
+
         $payload = [
             'contents' => [[
-                'parts' => [
-                    ['text' => $prompt],
-                    ['inline_data' => [
-                        'mime_type' => $mimeType,
-                        'data'      => $imageData,
-                    ]],
-                ],
+                'parts' => $parts,
             ]],
             'generationConfig' => [
                 'temperature'        => 0,
@@ -536,29 +544,109 @@ PROMPT;
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
             CURLOPT_POSTFIELDS     => json_encode($payload),
-            CURLOPT_TIMEOUT        => 45,
+            CURLOPT_TIMEOUT        => 60,
         ]);
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        $log = "=== Gemini OCR " . date('Y-m-d H:i:s') . " ===\n";
-        $log .= "Fichier: $originalName\n";
-
         if ($httpCode !== 200 || !$response) {
-            $log .= "ERREUR HTTP $httpCode\n$response\n\n";
+            $log .= "ERREUR HTTP $httpCode\n" . substr($response ?: '', 0, 500) . "\n\n";
             file_put_contents($logPath, $log, FILE_APPEND);
             return [];
         }
 
         $decoded  = json_decode($response, true);
-        $jsonText = $decoded['candidates'][0]['content']['parts'][0]['text'] ?? '{}';
-        $result   = json_decode($jsonText, true) ?? [];
+        $jsonText = $decoded['candidates'][0]['content']['parts'][0]['text'] ?? null;
+
+        if ($jsonText === null) {
+            $log .= "RÉPONSE INATTENDUE:\n" . substr($response, 0, 1000) . "\n\n";
+            file_put_contents($logPath, $log, FILE_APPEND);
+            return [];
+        }
+
+        $result = json_decode($jsonText, true) ?? [];
 
         $log .= "Résultat Gemini:\n" . json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
         file_put_contents($logPath, $log, FILE_APPEND);
 
         return $result;
+    }
+
+    // =====================================================
+    // MÉTHODE PRIVÉE : UPLOAD PDF VIA GEMINI FILE API
+    // =====================================================
+    private function uploadPdfToGeminiFileApi(string $pdfPath, string $apiKey, string &$log): ?array
+    {
+        $fileContent = file_get_contents($pdfPath);
+        if ($fileContent === false) {
+            $log .= "ERREUR: Impossible de lire le fichier PDF\n";
+            return null;
+        }
+
+        $fileSize = strlen($fileContent);
+        $log .= "Taille PDF: " . number_format($fileSize / 1024, 1) . " Ko\n";
+
+        // Étape 1 : Upload via File API
+        $uploadUrl = "https://generativelanguage.googleapis.com/upload/v1beta/files?key={$apiKey}";
+        $boundary  = uniqid('boundary_');
+
+        $body  = "--{$boundary}\r\n";
+        $body .= "Content-Type: application/json; charset=UTF-8\r\n\r\n";
+        $body .= json_encode(['file' => ['display_name' => basename($pdfPath)]]) . "\r\n";
+        $body .= "--{$boundary}\r\n";
+        $body .= "Content-Type: application/pdf\r\n\r\n";
+        $body .= $fileContent . "\r\n";
+        $body .= "--{$boundary}--\r\n";
+
+        $ch = curl_init($uploadUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: multipart/related; boundary=' . $boundary,
+                'X-Goog-Upload-Protocol: multipart',
+            ],
+            CURLOPT_POSTFIELDS     => $body,
+            CURLOPT_TIMEOUT        => 60,
+        ]);
+        $uploadResponse = curl_exec($ch);
+        $uploadCode     = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($uploadCode !== 200 || !$uploadResponse) {
+            $log .= "ERREUR upload File API HTTP $uploadCode\n" . substr($uploadResponse ?: '', 0, 500) . "\n";
+            return null;
+        }
+
+        $uploadDecoded = json_decode($uploadResponse, true);
+        $fileUri  = $uploadDecoded['file']['uri']      ?? null;
+        $fileName = $uploadDecoded['file']['name']     ?? null;
+
+        if (!$fileUri) {
+            $log .= "ERREUR: URI manquante dans la réponse upload\n" . substr($uploadResponse, 0, 500) . "\n";
+            return null;
+        }
+
+        $log .= "Fichier uploadé: $fileUri\n";
+
+        // Étape 2 : Construire la partie fileData pour generateContent
+        $filePart = ['fileData' => ['mime_type' => 'application/pdf', 'file_uri' => $fileUri]];
+
+        // Étape 3 : Supprimer le fichier après usage (nettoyage)
+        if ($fileName) {
+            $deleteUrl = "https://generativelanguage.googleapis.com/v1beta/{$fileName}?key={$apiKey}";
+            $chDel = curl_init($deleteUrl);
+            curl_setopt_array($chDel, [
+                CURLOPT_CUSTOMREQUEST  => 'DELETE',
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 15,
+            ]);
+            curl_exec($chDel);
+            curl_close($chDel);
+        }
+
+        return $filePart;
     }
 
     // =====================================================
