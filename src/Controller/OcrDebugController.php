@@ -88,11 +88,32 @@ h2{color:#4fc3f7;margin:0 0 16px}
 
             if ($ext === 'pdf') {
                 $rawPdf  = @file_get_contents($tmpPath);
-                $rawText = $rawPdf !== false ? $this->parsePdfText($rawPdf) : '';
+                $rawText = '';
+                if ($rawPdf !== false) {
+                    // DEBUG : analyse la structure du PDF
+                    preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $rawPdf, $streams);
+                    $result .= "=== DEBUG PDF ===\n";
+                    $result .= "Nombre de streams trouvés : " . count($streams[1]) . "\n";
+                    foreach ($streams[1] as $i => $stream) {
+                        $dec = @gzuncompress($stream);
+                        if ($dec === false) $dec = @gzinflate($stream);
+                        $content = $dec !== false ? $dec : $stream;
+                        $result .= "Stream $i (" . strlen($stream) . " octets" . ($dec !== false ? ", décompressé" : ", brut") . ") : " . substr(bin2hex($content), 0, 60) . "...\n";
+                        $result .= "  Aperçu texte : " . preg_replace('/[^\x20-\x7E\n]/', '.', substr($content, 0, 200)) . "\n";
+                    }
+                    // Chercher aussi du texte lisible directement dans le PDF brut
+                    preg_match_all('/\(([^\x00-\x1F\x7F-\xFF()\\\\]{3,})\)/s', $rawPdf, $rawStrings);
+                    $result .= "Chaînes PDF brutes trouvées : " . count($rawStrings[1]) . "\n";
+                    foreach (array_slice($rawStrings[1], 0, 20) as $s) {
+                        $result .= "  > " . $s . "\n";
+                    }
+                    $result .= "\n";
+                    $rawText = $this->parsePdfText($rawPdf);
+                }
                 if ($rawText) {
                     $result .= "=== TEXTE BRUT EXTRAIT DU PDF ===\n" . $rawText . "\n\n";
                 } else {
-                    $result .= "Aucun texte extrait (PDF scanné ou vide ?)\n\n";
+                    $result .= "Aucun texte extrait via parsePdfText\n\n";
                 }
             } else {
                 $result .= "Ce fichier n'est pas un PDF (ext=$ext). Uploadez un .pdf\n\n";
