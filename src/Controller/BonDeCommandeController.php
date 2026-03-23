@@ -14,6 +14,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Smalot\PdfParser\Parser as PdfParser;
 use thiagoalessio\TesseractOCR\TesseractOCR;
 
 #[Route('/admin/bon-commande')]
@@ -264,193 +265,167 @@ class BonDeCommandeController extends AbstractController
     }
 
     // =====================================================
-    // IMPORT OCR (Gemini Vision en priorité, Tesseract en fallback)
+    // IMPORT OCR (PDF Parser pour les PDFs, Tesseract pour les images)
     // =====================================================
     #[Route('/import-ocr', name: 'admin_bon_commande_import_ocr', methods: ['POST'])]
     public function importViaOcr(Request $request): Response
     {
         if ($request->isMethod('POST') && $file = $request->files->get('photo')) {
-            $tmpPath = sys_get_temp_dir() . '/' . uniqid('ocr_') . '.' . $file->guessExtension();
+            $ext      = strtolower($file->getClientOriginalExtension() ?: ($file->guessExtension() ?? ''));
+            $tmpPath  = sys_get_temp_dir() . '/' . uniqid('ocr_') . '.' . ($ext ?: 'bin');
             $file->move(sys_get_temp_dir(), basename($tmpPath));
 
-            $geminiApiKey = $_ENV['GEMINI_API_KEY'] ?? '';
             $logPath = $this->getParameter('kernel.project_dir') . '/var/ocr_debug.log';
 
-            if ($geminiApiKey) {
-                // === CHEMIN GEMINI ===
-                $result = $this->extractWithGemini($tmpPath, $geminiApiKey, $logPath, $file->getClientOriginalName());
-                unlink($tmpPath);
+            // Log immédiat pour confirmer la réception du fichier
+            file_put_contents($logPath,
+                "=== UPLOAD REÇU " . date('Y-m-d H:i:s') . " ===\n" .
+                "Nom: " . $file->getClientOriginalName() . "\n" .
+                "Extension détectée: $ext\n" .
+                "Taille: " . $file->getSize() . " octets\n\n",
+                FILE_APPEND
+            );
 
-                $numeroCommande = $result['numeroCommande'] ?? '';
-                $nomClient      = $result['clientNom'] ?? '';
-                $adresse        = $result['clientAdresse'] ?? '';
-                $telephone      = $result['clientTelephone'] ?? '';
-                $complement     = $result['clientComplementAdresse'] ?? '';
-                $dateLimite     = $result['dateLimiteExecution'] ?? '';
-                $codeGemini     = $result['typePrestation'] ?? '';
-
-                // Recherche du type de prestation par code
-                $detectedTypeId = '';
-                $typePrestations = $this->em->getRepository(TypePrestation::class)->findAll();
-                foreach ($typePrestations as $tp) {
-                    $code = $tp->getCode();
-                    if ($code && stripos($codeGemini, $code) !== false) {
-                        $detectedTypeId = $tp->getId();
-                        break;
-                    }
-                }
+            // === EXTRACTION DU TEXTE ===
+            if ($ext === 'pdf') {
+                $textBrut = $this->extractTextFromPdf($tmpPath);
+                $engine   = 'PDF Parser';
             } else {
-                // === CHEMIN TESSERACT (fallback) ===
                 $processedPath = $this->preprocessImageForOcr($tmpPath);
-
-                $ocr = new TesseractOCR($processedPath);
-                $text = $ocr->lang('fra', 'eng')->psm(3)->run();
-
-                unlink($tmpPath);
+                $textBrut = (new TesseractOCR($processedPath))->lang('fra', 'eng')->psm(3)->run();
                 if ($processedPath !== $tmpPath) {
                     unlink($processedPath);
                 }
+                $engine = 'Tesseract';
+            }
+            unlink($tmpPath);
 
-                $textBrut = $text;
-                $text = $this->fixOcrText($text);
-                $allLines = array_values(array_filter(array_map('trim', explode("\n", $text))));
+            // === PARSING REGEX COMMUN ===
+            $text     = $this->fixOcrText($textBrut);
+            $allLines = array_values(array_filter(array_map('trim', explode("\n", $text))));
 
-                $numeroCommande = '';
-                $complement = '';
-                $adresse = '';
-                $nomClient = '';
-                $telephone = '';
-                $codePostalVille = '';
-                $dateLimite = '';
+            $numeroCommande  = '';
+            $complement      = '';
+            $adresse         = '';
+            $nomClient       = '';
+            $telephone       = '';
+            $codePostalVille = '';
+            $dateLimite      = '';
 
-                foreach ($allLines as $line) {
-                    if (preg_match('/Travaux\s+.+\s+pour\s+le\s+(\d{2}\/\d{2}\/\d{4})/iu', $line, $m)) {
-                        $parts = explode('/', $m[1]);
-                        $dateLimite = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
-                        break;
-                    }
-                }
-
-                foreach ($allLines as $line) {
-                    if (preg_match('/Commande\s*n.?\s*([A-Z0-9]{4,})/iu', $line, $m)) {
-                        $numeroCommande = trim($m[1]);
-                        $firstChar = $numeroCommande[0] ?? '';
-                        if (ctype_digit($firstChar)) {
-                            $map = ['1' => 'I', '0' => 'O'];
-                            if (isset($map[$firstChar])) {
-                                $numeroCommande = $map[$firstChar] . substr($numeroCommande, 1);
-                            }
-                        }
-                        break;
-                    }
-                }
-
-                $startIndex = 0;
-                foreach ($allLines as $i => $line) {
-                    if (stripos($line, 'Prestation') !== false && stripos($line, 'Privatives') !== false) {
-                        $startIndex = $i + 1;
-                        break;
-                    }
-                }
-
-                $clientLines = array_slice($allLines, $startIndex);
-                foreach ($clientLines as $line) {
-                    if (!$adresse && preg_match('/[A-Z0-9]+\s+(RUE|R|AVENUE|AV|BOULEVARD|BLVD|BD|ALL[EÉ]E|IMPASSE|IMP|CHEMIN|CH|PLACE|PL|ROUTE|RTE|PASSAGE|VOIE)\b/i', $line)) {
-                        $adresse = trim($line);
-                    }
-                    if (!$complement && preg_match('/LOGEMENT\s*n.?\s*\d+/iu', $line)) {
-                        $complement = trim($line);
-                    }
-                    if (!$codePostalVille && preg_match('/^\d{5}\s+[A-ZÉÈÊÀÂ\s-]+$/u', $line)) {
-                        $codePostalVille = trim($line);
-                    }
-                    if (!$nomClient) {
-                        $nameExtracted = null;
-                        if (preg_match('/^M[.\s]+(MME\s+)?(.+?)\s*-\s*/i', $line, $m)) {
-                            $nameExtracted = trim($m[2]);
-                        } elseif (preg_match('/^MR\s+(ET\s+MME\s+)?(.+?)\s*-\s*/i', $line, $m)) {
-                            $nameExtracted = trim($m[2]);
-                        } elseif (preg_match('/Logement\s+Occup.+?\s*:\s*(MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)?(.+?)\s*-\s*/iu', $line, $m)) {
-                            $nameExtracted = trim($m[2]);
-                        } elseif (preg_match('/^:\s*(MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)(.+?)\s*-\s*/i', $line, $m)) {
-                            $nameExtracted = trim($m[2]);
-                        }
-                        if ($nameExtracted) {
-                            $nomClient = $nameExtracted;
-                        }
-                    }
-                    if (!$telephone && preg_match('/Portable\s*:\s*(\d+)/i', $line, $m)) {
-                        $telephone = trim($m[1]);
-                    }
-                    if (!$telephone && preg_match('/Téléphone\s*:\s*(\d+)/i', $line, $m)) {
-                        $telephone = trim($m[1]);
-                    }
-                }
-
-                if ($codePostalVille && $adresse) {
-                    $adresse = $adresse . "\n" . $codePostalVille;
-                } elseif ($codePostalVille && !$adresse) {
-                    $adresse = $codePostalVille;
-                }
-
-                $detectedTypeId = '';
-                $typePrestations = $this->em->getRepository(TypePrestation::class)->findAll();
-                foreach ($typePrestations as $tp) {
-                    $code = $tp->getCode();
-                    if ($code && stripos($text, $code) !== false) {
-                        $detectedTypeId = $tp->getId();
-                        break;
-                    }
-                }
-
-                // Log Tesseract
-                $log = "=== Tesseract OCR " . date('Y-m-d H:i:s') . " ===\n";
-                $log .= "Fichier: " . $file->getClientOriginalName() . "\n";
-                $log .= "\n--- TEXTE BRUT ---\n" . $textBrut . "\n";
-                $log .= "\n--- TEXTE CORRIGÉ ---\n" . $text . "\n";
-                $log .= "\n--- DONNÉES EXTRAITES ---\n";
-                $log .= "N° Commande: " . ($numeroCommande ?: 'NON TROUVÉ') . "\n";
-                $log .= "Nom client: " . ($nomClient ?: 'NON TROUVÉ') . "\n";
-                $log .= "Téléphone: " . ($telephone ?: 'NON TROUVÉ') . "\n";
-                $log .= "Adresse: " . ($adresse ?: 'NON TROUVÉ') . "\n";
-                $log .= "Complément: " . ($complement ?: 'NON TROUVÉ') . "\n";
-                $log .= "Date limite: " . ($dateLimite ?: 'NON TROUVÉ') . "\n\n";
-                file_put_contents($logPath, $log, FILE_APPEND);
+            // Recherche dans le texte complet (fonctionne même si tout est sur une ligne)
+            if (preg_match('/Travaux\s+.+?pour\s+le\s+(\d{2}\/\d{2}\/\d{4})/isu', $text, $m)) {
+                $parts      = explode('/', $m[1]);
+                $dateLimite = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
             }
 
-            // Si requête AJAX, retourner du JSON
+            if (preg_match('/Commande\s*n.?\s*([A-Z0-9]{4,})/iu', $text, $m)) {
+                $numeroCommande = trim($m[1]);
+                $firstChar      = $numeroCommande[0] ?? '';
+                if (ctype_digit($firstChar)) {
+                    $map = ['1' => 'I', '0' => 'O'];
+                    if (isset($map[$firstChar])) {
+                        $numeroCommande = $map[$firstChar] . substr($numeroCommande, 1);
+                    }
+                }
+            }
+
+            // Logement Occupé — cherche dans le texte complet
+            if (preg_match('/Logement\s+Occup.+?\s*:\s*(?:MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)?(.+?)\s*-\s*(?:Portable|T[eé]l)/isu', $text, $m)) {
+                $nomClient = trim($m[1]);
+            }
+            // Prendre le portable sur la même ligne que "Logement Occupé" (= locataire, pas bailleur)
+            if (preg_match('/Logement\s+Occup.+?(?:Portable|T[eé]l[eé]phone)\s*:\s*(\d[\d\s]{8,})/isu', $text, $m)) {
+                $telephone = preg_replace('/\s+/', '', trim($m[1]));
+            }
+            // Fallback : dernier portable dans le texte (le locataire est toujours après le bailleur)
+            if (!$telephone && preg_match_all('/Portable\s*:\s*(\d[\d\s]{8,})/iu', $text, $allMatches)) {
+                $telephone = preg_replace('/\s+/', '', trim(end($allMatches[1])));
+            }
+
+            // Recherche après "Prestation Parties Privatives" pour adresse et complément
+            $startIndex = 0;
+            foreach ($allLines as $i => $line) {
+                if (stripos($line, 'Prestation') !== false && stripos($line, 'Privatives') !== false) {
+                    $startIndex = $i + 1;
+                    break;
+                }
+            }
+
+            $clientLines = array_slice($allLines, $startIndex);
+            foreach ($clientLines as $line) {
+                if (!$adresse && preg_match('/\d+\s+(RUE|AVENUE|AV|BOULEVARD|BD|ALL[EÉ]E|IMPASSE|CHEMIN|PLACE|ROUTE|PASSAGE|VOIE)\b/i', $line)) {
+                    $adresse = trim($line);
+                }
+                if (!$complement && preg_match('/LOGEMENT\s*n.?\s*\d+/iu', $line)) {
+                    $complement = trim($line);
+                }
+                if (!$codePostalVille && preg_match('/^\d{5}\s+[A-ZÉÈÊÀÂ\s-]+$/u', $line)) {
+                    $codePostalVille = trim($line);
+                }
+            }
+
+            if ($codePostalVille && $adresse) {
+                $adresse = $adresse . "\n" . $codePostalVille;
+            } elseif ($codePostalVille && !$adresse) {
+                $adresse = $codePostalVille;
+            }
+
+            $detectedTypeId  = '';
+            $typePrestations = $this->em->getRepository(TypePrestation::class)->findAll();
+            foreach ($typePrestations as $tp) {
+                $code = $tp->getCode();
+                if ($code && stripos($text, $code) !== false) {
+                    $detectedTypeId = $tp->getId();
+                    break;
+                }
+            }
+
+            // Log
+            $log  = "=== $engine OCR " . date('Y-m-d H:i:s') . " ===\n";
+            $log .= "Fichier: " . $file->getClientOriginalName() . "\n";
+            $log .= "\n--- TEXTE EXTRAIT ---\n" . $textBrut . "\n";
+            $log .= "\n--- DONNÉES EXTRAITES ---\n";
+            $log .= "N° Commande: " . ($numeroCommande ?: 'NON TROUVÉ') . "\n";
+            $log .= "Nom client: "  . ($nomClient      ?: 'NON TROUVÉ') . "\n";
+            $log .= "Téléphone: "   . ($telephone      ?: 'NON TROUVÉ') . "\n";
+            $log .= "Adresse: "     . ($adresse        ?: 'NON TROUVÉ') . "\n";
+            $log .= "Complément: "  . ($complement     ?: 'NON TROUVÉ') . "\n";
+            $log .= "Date limite: " . ($dateLimite     ?: 'NON TROUVÉ') . "\n\n";
+            file_put_contents($logPath, $log, FILE_APPEND);
+
+            // === RÉPONSE ===
             if ($request->isXmlHttpRequest() || $request->headers->get('Accept') === 'application/json') {
                 return new JsonResponse([
                     'success' => true,
                     'redirectUrl' => $this->generateUrl('admin_bon_commande_new', [
-                        'numeroCommande'         => $numeroCommande,
-                        'clientNom'              => $nomClient,
-                        'clientAdresse'          => $adresse,
-                        'clientTelephone'        => $telephone,
-                        'clientComplementAdresse'=> $complement,
-                        'dateLimiteExecution'    => $dateLimite,
-                        'typePrestation'         => $detectedTypeId,
+                        'numeroCommande'          => $numeroCommande,
+                        'clientNom'               => $nomClient,
+                        'clientAdresse'           => $adresse,
+                        'clientTelephone'         => $telephone,
+                        'clientComplementAdresse' => $complement,
+                        'dateLimiteExecution'     => $dateLimite,
+                        'typePrestation'          => $detectedTypeId,
                     ]),
                     'data' => [
-                        'numeroCommande'         => $numeroCommande,
-                        'clientNom'              => $nomClient,
-                        'clientAdresse'          => $adresse,
-                        'clientTelephone'        => $telephone,
-                        'clientComplementAdresse'=> $complement,
-                        'dateLimiteExecution'    => $dateLimite,
-                        'typePrestation'         => $detectedTypeId,
+                        'numeroCommande'          => $numeroCommande,
+                        'clientNom'               => $nomClient,
+                        'clientAdresse'           => $adresse,
+                        'clientTelephone'         => $telephone,
+                        'clientComplementAdresse' => $complement,
+                        'dateLimiteExecution'     => $dateLimite,
+                        'typePrestation'          => $detectedTypeId,
                     ],
                 ]);
             }
 
             return $this->redirectToRoute('admin_bon_commande_new', [
-                'numeroCommande'         => $numeroCommande,
-                'clientNom'              => $nomClient,
-                'clientAdresse'          => $adresse,
-                'clientTelephone'        => $telephone,
-                'clientComplementAdresse'=> $complement,
-                'dateLimiteExecution'    => $dateLimite,
-                'typePrestation'         => $detectedTypeId,
+                'numeroCommande'          => $numeroCommande,
+                'clientNom'               => $nomClient,
+                'clientAdresse'           => $adresse,
+                'clientTelephone'         => $telephone,
+                'clientComplementAdresse' => $complement,
+                'dateLimiteExecution'     => $dateLimite,
+                'typePrestation'          => $detectedTypeId,
             ]);
         }
 
@@ -462,191 +437,17 @@ class BonDeCommandeController extends AbstractController
     }
 
     // =====================================================
-    // MÉTHODE PRIVÉE : EXTRACTION VIA GEMINI VISION
+    // MÉTHODE PRIVÉE : EXTRACTION TEXTE DEPUIS UN PDF
     // =====================================================
-    private function extractWithGemini(string $imagePath, string $apiKey, string $logPath, string $originalName): array
+    private function extractTextFromPdf(string $pdfPath): string
     {
-        $ext = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
-        $mimeType = match ($ext) {
-            'jpg', 'jpeg' => 'image/jpeg',
-            'png'         => 'image/png',
-            'webp'        => 'image/webp',
-            'pdf'         => 'application/pdf',
-            default       => 'image/jpeg',
-        };
-
-        $log = "=== Gemini OCR " . date('Y-m-d H:i:s') . " ===\n";
-        $log .= "Fichier: $originalName (ext: $ext, mime: $mimeType)\n";
-
-        $prompt = <<<'PROMPT'
-Tu analyses un bon de commande de désinfestation / désinsectisation émis par un bailleur social.
-
-Ce document contient DEUX types de contacts à ne SURTOUT PAS confondre :
-
-1. Le BAILLEUR (donneur d'ordre, propriétaire) : affiché en haut à gauche dans un encadré (ex : Vilogia, Partenord, ICF, etc.). Ce sont ses coordonnées à lui. NE PAS utiliser ces informations.
-
-2. Le LOCATAIRE (occupant actuel du logement à traiter) : affiché dans la section "Prestation Parties Privatives", identifié par "Occupant actuel", "Logement Occupé" ou similaire. C'est LUI le client à renseigner.
-
-Tu dois extraire UNIQUEMENT les informations du LOCATAIRE (occupant du logement), pas du bailleur, pas du prestataire.
-
-Retourne un JSON avec exactement ces champs (chaînes vides si non trouvé) :
-{
-  "numeroCommande": "numéro de marché ou commande, sans espace (ex: 009910)",
-  "clientNom": "civilité + nom complet du locataire (ex: MME DECAMBRAY Ilona)",
-  "clientAdresse": "numéro + rue + nom de résidence éventuel, puis saut de ligne, puis code postal + ville (ex: 101 AVENUE DE LA LIBERTE RESIDENCE JACQUES BREL\n59130 LAMBERSART)",
-  "clientTelephone": "numéro de téléphone du locataire uniquement (domicile ou portable), chiffres seulement sans espaces",
-  "clientComplementAdresse": "complément d'adresse : logement n°, porte n°, étage, type... (ex: Logement n° 203355, porte n°4-03, 4° étage, Type 4)",
-  "dateLimiteExecution": "date limite d'exécution au format YYYY-MM-DD",
-  "typePrestation": "code alphanumérique de la prestation entre parenthèses (ex: 13D16N)"
-}
-
-Réponds UNIQUEMENT avec le JSON brut, sans markdown, sans texte supplémentaire.
-PROMPT;
-
-        if ($mimeType === 'application/pdf') {
-            // Pour les PDFs : utiliser la File API Gemini (upload puis référence)
-            $filePart = $this->uploadPdfToGeminiFileApi($imagePath, $apiKey, $log);
-            if ($filePart === null) {
-                file_put_contents($logPath, $log, FILE_APPEND);
-                return [];
-            }
-            $parts = [['text' => $prompt], $filePart];
-        } else {
-            // Pour les images : optimiser puis envoyer en inline_data
-            $optimizedPath = $this->optimizeImageForGemini($imagePath, $mimeType);
-            if ($optimizedPath !== $imagePath) {
-                $mimeType = 'image/jpeg';
-            }
-            $imageData = base64_encode(file_get_contents($optimizedPath));
-            if ($optimizedPath !== $imagePath && file_exists($optimizedPath)) {
-                unlink($optimizedPath);
-            }
-            $parts = [
-                ['text' => $prompt],
-                ['inline_data' => ['mime_type' => $mimeType, 'data' => $imageData]],
-            ];
+        try {
+            $parser   = new PdfParser();
+            $pdf      = $parser->parseFile($pdfPath);
+            return $pdf->getText();
+        } catch (\Throwable) {
+            return '';
         }
-
-        $payload = [
-            'contents' => [[
-                'parts' => $parts,
-            ]],
-            'generationConfig' => [
-                'temperature'        => 0,
-                'response_mime_type' => 'application/json',
-            ],
-        ];
-
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={$apiKey}";
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_POST           => true,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-            CURLOPT_POSTFIELDS     => json_encode($payload),
-            CURLOPT_TIMEOUT        => 60,
-        ]);
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200 || !$response) {
-            $log .= "ERREUR HTTP $httpCode\n" . substr($response ?: '', 0, 500) . "\n\n";
-            file_put_contents($logPath, $log, FILE_APPEND);
-            return [];
-        }
-
-        $decoded  = json_decode($response, true);
-        $jsonText = $decoded['candidates'][0]['content']['parts'][0]['text'] ?? null;
-
-        if ($jsonText === null) {
-            $log .= "RÉPONSE INATTENDUE:\n" . substr($response, 0, 1000) . "\n\n";
-            file_put_contents($logPath, $log, FILE_APPEND);
-            return [];
-        }
-
-        $result = json_decode($jsonText, true) ?? [];
-
-        $log .= "Résultat Gemini:\n" . json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
-        file_put_contents($logPath, $log, FILE_APPEND);
-
-        return $result;
-    }
-
-    // =====================================================
-    // MÉTHODE PRIVÉE : UPLOAD PDF VIA GEMINI FILE API
-    // =====================================================
-    private function uploadPdfToGeminiFileApi(string $pdfPath, string $apiKey, string &$log): ?array
-    {
-        $fileContent = file_get_contents($pdfPath);
-        if ($fileContent === false) {
-            $log .= "ERREUR: Impossible de lire le fichier PDF\n";
-            return null;
-        }
-
-        $fileSize = strlen($fileContent);
-        $log .= "Taille PDF: " . number_format($fileSize / 1024, 1) . " Ko\n";
-
-        // Étape 1 : Upload via File API
-        $uploadUrl = "https://generativelanguage.googleapis.com/upload/v1beta/files?key={$apiKey}";
-        $boundary  = uniqid('boundary_');
-
-        $body  = "--{$boundary}\r\n";
-        $body .= "Content-Type: application/json; charset=UTF-8\r\n\r\n";
-        $body .= json_encode(['file' => ['display_name' => basename($pdfPath)]]) . "\r\n";
-        $body .= "--{$boundary}\r\n";
-        $body .= "Content-Type: application/pdf\r\n\r\n";
-        $body .= $fileContent . "\r\n";
-        $body .= "--{$boundary}--\r\n";
-
-        $ch = curl_init($uploadUrl);
-        curl_setopt_array($ch, [
-            CURLOPT_POST           => true,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER     => [
-                'Content-Type: multipart/related; boundary=' . $boundary,
-                'X-Goog-Upload-Protocol: multipart',
-            ],
-            CURLOPT_POSTFIELDS     => $body,
-            CURLOPT_TIMEOUT        => 60,
-        ]);
-        $uploadResponse = curl_exec($ch);
-        $uploadCode     = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($uploadCode !== 200 || !$uploadResponse) {
-            $log .= "ERREUR upload File API HTTP $uploadCode\n" . substr($uploadResponse ?: '', 0, 500) . "\n";
-            return null;
-        }
-
-        $uploadDecoded = json_decode($uploadResponse, true);
-        $fileUri  = $uploadDecoded['file']['uri']      ?? null;
-        $fileName = $uploadDecoded['file']['name']     ?? null;
-
-        if (!$fileUri) {
-            $log .= "ERREUR: URI manquante dans la réponse upload\n" . substr($uploadResponse, 0, 500) . "\n";
-            return null;
-        }
-
-        $log .= "Fichier uploadé: $fileUri\n";
-
-        // Étape 2 : Construire la partie fileData pour generateContent
-        $filePart = ['fileData' => ['mime_type' => 'application/pdf', 'file_uri' => $fileUri]];
-
-        // Étape 3 : Supprimer le fichier après usage (nettoyage)
-        if ($fileName) {
-            $deleteUrl = "https://generativelanguage.googleapis.com/v1beta/{$fileName}?key={$apiKey}";
-            $chDel = curl_init($deleteUrl);
-            curl_setopt_array($chDel, [
-                CURLOPT_CUSTOMREQUEST  => 'DELETE',
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT        => 15,
-            ]);
-            curl_exec($chDel);
-            curl_close($chDel);
-        }
-
-        return $filePart;
     }
 
     // =====================================================
@@ -729,62 +530,6 @@ PROMPT;
         }, $text);
 
         return $text;
-    }
-
-    // =====================================================
-    // MÉTHODE PRIVÉE : OPTIMISATION IMAGE POUR GEMINI
-    // =====================================================
-    private function optimizeImageForGemini(string $imagePath, string $mimeType): string
-    {
-        $ext = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
-
-        $image = match ($ext) {
-            'png' => @imagecreatefrompng($imagePath),
-            'jpg', 'jpeg' => @imagecreatefromjpeg($imagePath),
-            'webp' => @imagecreatefromwebp($imagePath),
-            'bmp' => @imagecreatefrombmp($imagePath),
-            default => false,
-        };
-
-        if (!$image) {
-            return $imagePath;
-        }
-
-        // Corriger l'orientation EXIF
-        if (in_array($ext, ['jpg', 'jpeg'])) {
-            $exif = @exif_read_data($imagePath);
-            if ($exif && isset($exif['Orientation'])) {
-                $image = match ((int)$exif['Orientation']) {
-                    3 => imagerotate($image, 180, 0),
-                    6 => imagerotate($image, -90, 0),
-                    8 => imagerotate($image, 90, 0),
-                    default => $image,
-                };
-            }
-        }
-
-        $width = imagesx($image);
-        $height = imagesy($image);
-
-        // Redimensionner si l'image est trop grande (max 1600px de large)
-        // Gemini n'a pas besoin de plus pour lire du texte
-        $maxWidth = 1600;
-        if ($width > $maxWidth) {
-            $scale = $maxWidth / $width;
-            $newWidth = (int)($width * $scale);
-            $newHeight = (int)($height * $scale);
-            $resized = imagecreatetruecolor($newWidth, $newHeight);
-            imagecopyresampled($resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
-            imagedestroy($image);
-            $image = $resized;
-        }
-
-        // Sauvegarder en JPEG compressé (qualité 80 = bon ratio taille/lisibilité)
-        $outputPath = sys_get_temp_dir() . '/' . uniqid('gemini_opt_') . '.jpg';
-        imagejpeg($image, $outputPath, 80);
-        imagedestroy($image);
-
-        return $outputPath;
     }
 
     // =====================================================
