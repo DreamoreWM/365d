@@ -438,75 +438,23 @@ class BonDeCommandeController extends AbstractController
     }
 
     // =====================================================
-    // MÉTHODE PRIVÉE : EXTRACTION TEXTE DEPUIS UN PDF (pur PHP, sans library)
+    // MÉTHODE PRIVÉE : EXTRACTION TEXTE DEPUIS UN PDF (via pdftotext)
     // =====================================================
     private function extractTextFromPdf(string $pdfPath): string
     {
-        $raw = @file_get_contents($pdfPath);
-        if ($raw === false) {
+        $pdftotext = trim((string) shell_exec('which pdftotext 2>/dev/null'));
+        if (!$pdftotext) {
             return '';
         }
-        return $this->parsePdfText($raw);
-    }
-
-    private function parsePdfText(string $raw): string
-    {
-        $text = '';
-
-        // Extraire tous les content streams (compressés ou non)
-        preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $raw, $streams);
-
-        foreach ($streams[1] as $stream) {
-            // Tenter décompression zlib (FlateDecode)
-            $decompressed = @gzuncompress($stream);
-            if ($decompressed === false) {
-                $decompressed = @gzinflate($stream);
-            }
-            $content = ($decompressed !== false) ? $decompressed : $stream;
-
-            // Extraire le texte des opérateurs PDF (Tj, TJ, ')
-            // Opérateur Tj : (texte)Tj
-            preg_match_all('/\(([^)\\\\]*(?:\\\\.[^)\\\\]*)*)\)\s*Tj/s', $content, $tj);
-            foreach ($tj[1] as $t) {
-                $text .= $this->decodePdfString($t) . ' ';
-            }
-
-            // Opérateur TJ : [(texte) offset (texte)] TJ
-            preg_match_all('/\[([^\]]*)\]\s*TJ/s', $content, $tjArr);
-            foreach ($tjArr[1] as $t) {
-                preg_match_all('/\(([^)\\\\]*(?:\\\\.[^)\\\\]*)*)\)/s', $t, $parts);
-                foreach ($parts[1] as $p) {
-                    $text .= $this->decodePdfString($p);
-                }
-                $text .= ' ';
-            }
-
-            // Opérateur ' (idem Tj avec saut de ligne)
-            preg_match_all('/\(([^)\\\\]*(?:\\\\.[^)\\\\]*)*)\)\s*\'/s', $content, $tick);
-            foreach ($tick[1] as $t) {
-                $text .= $this->decodePdfString($t) . "\n";
-            }
-
-            // Opérateur ET (BT...ET blocs de texte) — ajouter saut de ligne entre blocs
-            if (preg_match('/BT\b/', $content)) {
-                $text .= "\n";
-            }
+        $outPath = $pdfPath . '.txt';
+        $cmd     = escapeshellcmd($pdftotext) . ' -layout -enc UTF-8 ' . escapeshellarg($pdfPath) . ' ' . escapeshellarg($outPath) . ' 2>/dev/null';
+        exec($cmd, $output, $code);
+        if ($code !== 0 || !file_exists($outPath)) {
+            return '';
         }
-
-        // Nettoyer : espaces multiples, lignes vides
-        $text = preg_replace('/[ \t]{2,}/', ' ', $text);
-        $text = preg_replace('/\n{3,}/', "\n\n", $text);
-
-        return trim($text);
-    }
-
-    private function decodePdfString(string $s): string
-    {
-        // Décoder les séquences d'échappement PDF
-        $s = str_replace(['\\n', '\\r', '\\t'], ["\n", "\r", "\t"], $s);
-        $s = preg_replace_callback('/\\\\([0-7]{1,3})/', fn($m) => chr(octdec($m[1])), $s);
-        $s = str_replace(['\\(', '\\)', '\\\\'], ['(', ')', '\\'], $s);
-        return $s;
+        $text = (string) file_get_contents($outPath);
+        @unlink($outPath);
+        return $text;
     }
 
     // =====================================================

@@ -87,33 +87,24 @@ h2{color:#4fc3f7;margin:0 0 16px}
             $result .= "Taille : " . number_format($fileSize / 1024, 1) . " Ko\n\n";
 
             if ($ext === 'pdf') {
-                $rawPdf  = @file_get_contents($tmpPath);
-                $rawText = '';
-                if ($rawPdf !== false) {
-                    // DEBUG : analyse la structure du PDF
-                    preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $rawPdf, $streams);
-                    $result .= "=== DEBUG PDF ===\n";
-                    $result .= "Nombre de streams trouvés : " . count($streams[1]) . "\n";
-                    foreach ($streams[1] as $i => $stream) {
-                        $dec = @gzuncompress($stream);
-                        if ($dec === false) $dec = @gzinflate($stream);
-                        $content = $dec !== false ? $dec : $stream;
-                        $result .= "Stream $i (" . strlen($stream) . " octets" . ($dec !== false ? ", décompressé" : ", brut") . ") : " . substr(bin2hex($content), 0, 60) . "...\n";
-                        $result .= "  Aperçu texte : " . preg_replace('/[^\x20-\x7E\n]/', '.', substr($content, 0, 200)) . "\n";
+                $rawText    = '';
+                $pdftotext  = trim((string) shell_exec('which pdftotext 2>/dev/null'));
+                if ($pdftotext) {
+                    $outPath = $tmpPath . '.txt';
+                    $cmd     = escapeshellcmd($pdftotext) . ' -layout -enc UTF-8 ' . escapeshellarg($tmpPath) . ' ' . escapeshellarg($outPath) . ' 2>/dev/null';
+                    exec($cmd, $cmdOut, $code);
+                    $result .= "pdftotext exit code : $code\n";
+                    if ($code === 0 && file_exists($outPath)) {
+                        $rawText = (string) file_get_contents($outPath);
+                        @unlink($outPath);
                     }
-                    // Chercher aussi du texte lisible directement dans le PDF brut
-                    preg_match_all('/\(([^\x00-\x1F\x7F-\xFF()\\\\]{3,})\)/s', $rawPdf, $rawStrings);
-                    $result .= "Chaînes PDF brutes trouvées : " . count($rawStrings[1]) . "\n";
-                    foreach (array_slice($rawStrings[1], 0, 20) as $s) {
-                        $result .= "  > " . $s . "\n";
-                    }
-                    $result .= "\n";
-                    $rawText = $this->parsePdfText($rawPdf);
+                } else {
+                    $result .= "pdftotext non disponible sur ce serveur\n";
                 }
                 if ($rawText) {
                     $result .= "=== TEXTE BRUT EXTRAIT DU PDF ===\n" . $rawText . "\n\n";
                 } else {
-                    $result .= "Aucun texte extrait via parsePdfText\n\n";
+                    $result .= "Aucun texte extrait\n\n";
                 }
             } else {
                 $result .= "Ce fichier n'est pas un PDF (ext=$ext). Uploadez un .pdf\n\n";
@@ -217,47 +208,4 @@ a{color:#4fc3f7;text-decoration:none;padding:6px 12px;background:#333;border-rad
         return new Response($html, 200, ['Content-Type' => 'text/html; charset=UTF-8']);
     }
 
-    private function parsePdfText(string $raw): string
-    {
-        $text = '';
-        preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $raw, $streams);
-        foreach ($streams[1] as $stream) {
-            $decompressed = @gzuncompress($stream);
-            if ($decompressed === false) {
-                $decompressed = @gzinflate($stream);
-            }
-            $content = ($decompressed !== false) ? $decompressed : $stream;
-
-            preg_match_all('/\(([^)\\\\]*(?:\\\\.[^)\\\\]*)*)\)\s*Tj/s', $content, $tj);
-            foreach ($tj[1] as $t) {
-                $text .= $this->decodePdfString($t) . ' ';
-            }
-            preg_match_all('/\[([^\]]*)\]\s*TJ/s', $content, $tjArr);
-            foreach ($tjArr[1] as $t) {
-                preg_match_all('/\(([^)\\\\]*(?:\\\\.[^)\\\\]*)*)\)/s', $t, $parts);
-                foreach ($parts[1] as $p) {
-                    $text .= $this->decodePdfString($p);
-                }
-                $text .= ' ';
-            }
-            preg_match_all('/\(([^)\\\\]*(?:\\\\.[^)\\\\]*)*)\)\s*\'/s', $content, $tick);
-            foreach ($tick[1] as $t) {
-                $text .= $this->decodePdfString($t) . "\n";
-            }
-            if (preg_match('/BT\b/', $content)) {
-                $text .= "\n";
-            }
-        }
-        $text = preg_replace('/[ \t]{2,}/', ' ', $text);
-        $text = preg_replace('/\n{3,}/', "\n\n", $text);
-        return trim($text);
-    }
-
-    private function decodePdfString(string $s): string
-    {
-        $s = str_replace(['\\n', '\\r', '\\t'], ["\n", "\r", "\t"], $s);
-        $s = preg_replace_callback('/\\\\([0-7]{1,3})/', fn($m) => chr(octdec($m[1])), $s);
-        $s = str_replace(['\\(', '\\)', '\\\\'], ['(', ')', '\\'], $s);
-        return $s;
-    }
 }
