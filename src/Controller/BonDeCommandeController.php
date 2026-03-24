@@ -7,6 +7,9 @@ use App\Entity\TypePrestation;
 use App\Enum\StatutBonDeCommande;
 use App\Enum\StatutPrestation;
 use App\Repository\BonDeCommandeRepository;
+use App\Repository\PdfImportConfigRepository;
+use App\Service\PdfConfigExtractor;
+use App\Service\PdfTextExtractor;
 use App\Service\PrestationManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -22,7 +25,10 @@ class BonDeCommandeController extends AbstractController
     public function __construct(
         private EntityManagerInterface $em,
         private BonDeCommandeRepository $repository,
-        private PrestationManager $prestationManager
+        private PrestationManager $prestationManager,
+        private PdfTextExtractor $pdfTextExtractor,
+        private PdfConfigExtractor $pdfConfigExtractor,
+        private PdfImportConfigRepository $pdfConfigRepository,
     ) {}
 
     // =====================================================
@@ -289,7 +295,7 @@ class BonDeCommandeController extends AbstractController
 
             // === EXTRACTION DU TEXTE ===
             if ($ext === 'pdf') {
-                $textBrut = $this->extractTextFromPdf($tmpPath);
+                $textBrut = $this->pdfTextExtractor->extractRaw($tmpPath);
                 $engine   = 'PDF Parser';
             } else {
                 $processedPath = $this->preprocessImageForOcr($tmpPath);
@@ -302,7 +308,7 @@ class BonDeCommandeController extends AbstractController
             unlink($tmpPath);
 
             // === PARSING REGEX COMMUN ===
-            $text     = $this->fixOcrText($textBrut);
+            $text     = $this->pdfTextExtractor->fixOcrText($textBrut);
             $allLines = array_values(array_filter(array_map('trim', explode("\n", $text))));
 
             $numeroCommande  = '';
@@ -312,14 +318,33 @@ class BonDeCommandeController extends AbstractController
             $telephone       = '';
             $codePostalVille = '';
             $dateLimite      = '';
+            $detectedTypeId  = '';
 
-            // Recherche dans le texte complet (fonctionne même si tout est sur une ligne)
-            if (preg_match('/Travaux\s+.+?pour\s+le\s+(\d{2}\/\d{2}\/\d{4})/isu', $text, $m)) {
+            // === EXTRACTION PAR CONFIG BAILLEUR ===
+            if ($ext === 'pdf') {
+                $pdfConfigs = $this->pdfConfigRepository->findActifsByPriorite();
+                foreach ($pdfConfigs as $pdfConfig) {
+                    if ($pdfConfig->getIdentifiantTexte() && stripos($text, $pdfConfig->getIdentifiantTexte()) !== false) {
+                        $extracted = $this->pdfConfigExtractor->extract($allLines, $text, $pdfConfig);
+                        $numeroCommande  = $extracted['numeroCommande']      ?? $numeroCommande;
+                        $nomClient       = $extracted['clientNom']           ?? $nomClient;
+                        $telephone       = $extracted['clientTelephone']     ?? $telephone;
+                        $adresse         = $extracted['clientAdresse']       ?? $adresse;
+                        $complement      = $extracted['clientComplementAdresse'] ?? $complement;
+                        $dateLimite      = $extracted['dateLimiteExecution'] ?? $dateLimite;
+                        $detectedTypeId  = $extracted['typePrestation']      ?? $detectedTypeId;
+                        break; // première config qui correspond
+                    }
+                }
+            }
+
+            // Recherche regex (fallback si non rempli par config bailleur)
+            if (!$dateLimite && preg_match('/Travaux\s+.+?pour\s+le\s+(\d{2}\/\d{2}\/\d{4})/isu', $text, $m)) {
                 $parts      = explode('/', $m[1]);
                 $dateLimite = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
             }
 
-            if (preg_match('/Commande\s*n.?\s*([A-Z0-9]{4,})/iu', $text, $m)) {
+            if (!$numeroCommande && preg_match('/Commande\s*n.?\s*([A-Z0-9]{4,})/iu', $text, $m)) {
                 $numeroCommande = trim($m[1]);
                 $firstChar      = $numeroCommande[0] ?? '';
                 if (ctype_digit($firstChar)) {
@@ -331,11 +356,11 @@ class BonDeCommandeController extends AbstractController
             }
 
             // Logement Occupé — cherche dans le texte complet
-            if (preg_match('/Logement\s+Occup.+?\s*:\s*(?:MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)?(.+?)\s*-\s*(?:Portable|T[eé]l)/isu', $text, $m)) {
+            if (!$nomClient && preg_match('/Logement\s+Occup.+?\s*:\s*(?:MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)?(.+?)\s*-\s*(?:Portable|T[eé]l)/isu', $text, $m)) {
                 $nomClient = trim($m[1]);
             }
             // Prendre le portable sur la même ligne que "Logement Occupé" (= locataire, pas bailleur)
-            if (preg_match('/Logement\s+Occup.+?(?:Portable|T[eé]l[eé]phone)\s*:\s*(\d[\d\s]{8,})/isu', $text, $m)) {
+            if (!$telephone && preg_match('/Logement\s+Occup.+?(?:Portable|T[eé]l[eé]phone)\s*:\s*(\d[\d\s]{8,})/isu', $text, $m)) {
                 $telephone = preg_replace('/\s+/', '', trim($m[1]));
             }
             // Fallback : dernier portable dans le texte (le locataire est toujours après le bailleur)
@@ -343,41 +368,44 @@ class BonDeCommandeController extends AbstractController
                 $telephone = preg_replace('/\s+/', '', trim(end($allMatches[1])));
             }
 
-            // Recherche après "Prestation Parties Privatives" pour adresse et complément
-            $startIndex = 0;
-            foreach ($allLines as $i => $line) {
-                if (stripos($line, 'Prestation') !== false && stripos($line, 'Privatives') !== false) {
-                    $startIndex = $i + 1;
-                    break;
+            // Recherche après "Prestation Parties Privatives" pour adresse et complément (si pas déjà rempli)
+            if (!$adresse && !$complement) {
+                $startIndex = 0;
+                foreach ($allLines as $i => $line) {
+                    if (stripos($line, 'Prestation') !== false && stripos($line, 'Privatives') !== false) {
+                        $startIndex = $i + 1;
+                        break;
+                    }
+                }
+
+                $clientLines = array_slice($allLines, $startIndex);
+                foreach ($clientLines as $line) {
+                    if (!$adresse && preg_match('/\d+\s+(RUE|AVENUE|AV|BOULEVARD|BD|ALL[EÉ]E|IMPASSE|CHEMIN|PLACE|ROUTE|PASSAGE|VOIE)\b/i', $line)) {
+                        $adresse = trim($line);
+                    }
+                    if (!$complement && preg_match('/LOGEMENT\s*n.?\s*\d+/iu', $line)) {
+                        $complement = trim($line);
+                    }
+                    if (!$codePostalVille && preg_match('/^\d{5}\s+[A-ZÉÈÊÀÂ\s-]+$/u', $line)) {
+                        $codePostalVille = trim($line);
+                    }
+                }
+
+                if ($codePostalVille && $adresse) {
+                    $adresse = $adresse . "\n" . $codePostalVille;
+                } elseif ($codePostalVille && !$adresse) {
+                    $adresse = $codePostalVille;
                 }
             }
 
-            $clientLines = array_slice($allLines, $startIndex);
-            foreach ($clientLines as $line) {
-                if (!$adresse && preg_match('/\d+\s+(RUE|AVENUE|AV|BOULEVARD|BD|ALL[EÉ]E|IMPASSE|CHEMIN|PLACE|ROUTE|PASSAGE|VOIE)\b/i', $line)) {
-                    $adresse = trim($line);
-                }
-                if (!$complement && preg_match('/LOGEMENT\s*n.?\s*\d+/iu', $line)) {
-                    $complement = trim($line);
-                }
-                if (!$codePostalVille && preg_match('/^\d{5}\s+[A-ZÉÈÊÀÂ\s-]+$/u', $line)) {
-                    $codePostalVille = trim($line);
-                }
-            }
-
-            if ($codePostalVille && $adresse) {
-                $adresse = $adresse . "\n" . $codePostalVille;
-            } elseif ($codePostalVille && !$adresse) {
-                $adresse = $codePostalVille;
-            }
-
-            $detectedTypeId  = '';
-            $typePrestations = $this->em->getRepository(TypePrestation::class)->findAll();
-            foreach ($typePrestations as $tp) {
-                $code = $tp->getCode();
-                if ($code && stripos($text, $code) !== false) {
-                    $detectedTypeId = $tp->getId();
-                    break;
+            if (!$detectedTypeId) {
+                $typePrestations = $this->em->getRepository(TypePrestation::class)->findAll();
+                foreach ($typePrestations as $tp) {
+                    $code = $tp->getCode();
+                    if ($code && stripos($text, $code) !== false) {
+                        $detectedTypeId = $tp->getId();
+                        break;
+                    }
                 }
             }
 
@@ -438,20 +466,6 @@ class BonDeCommandeController extends AbstractController
     }
 
     // =====================================================
-    // MÉTHODE PRIVÉE : EXTRACTION TEXTE DEPUIS UN PDF (via pdftotext)
-    // =====================================================
-    private function extractTextFromPdf(string $pdfPath): string
-    {
-        try {
-            $parser = new \Smalot\PdfParser\Parser();
-            $pdf    = $parser->parseFile($pdfPath);
-            return $pdf->getText();
-        } catch (\Throwable $e) {
-            return '';
-        }
-    }
-
-    // =====================================================
     // MÉTHODE PRIVÉE : PREPROCESSING IMAGE POUR OCR
     // =====================================================
     private function preprocessImageForOcr(string $imagePath): string
@@ -507,30 +521,6 @@ class BonDeCommandeController extends AbstractController
         imagedestroy($image);
 
         return $outputPath;
-    }
-
-    // =====================================================
-    // MÉTHODE PRIVÉE : CORRECTIONS OCR
-    // =====================================================
-    private function fixOcrText(string $text): string
-    {
-        // [ ou ] confondu avec 1 en début de ligne/mot (ex: "[ RUE" → "1 RUE")
-        $text = preg_replace('/\[\s+(?=[A-ZÉÈÊÀÂ])/u', '1 ', $text);
-        $text = preg_replace('/\]\s+(?=[A-ZÉÈÊÀÂ])/u', '1 ', $text);
-
-        // [ ou ] collé à un mot (ex: "[RUE" → "1 RUE")
-        $text = preg_replace('/\[(?=[A-ZÉÈÊÀÂ])/u', '1', $text);
-        $text = preg_replace('/\](?=[A-ZÉÈÊÀÂ])/u', '1', $text);
-
-        // | confondu avec I (lettre) devant un nom de rue
-        $text = preg_replace('/\|\s+(?=RUE|AVENUE|BOULEVARD|BLVD|ALLEE|ALLÉE|IMPASSE|CHEMIN|PLACE|ROUTE|PASSAGE)\b/i', 'I ', $text);
-
-        // O confondu avec 0 dans les numéros de téléphone (séquences de chiffres)
-        $text = preg_replace_callback('/\b([\d]{2}[\s.]?){4}[\d]{2}\b/', function ($m) {
-            return str_replace(['O', 'o'], '0', $m[0]);
-        }, $text);
-
-        return $text;
     }
 
     // =====================================================

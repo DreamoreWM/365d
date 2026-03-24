@@ -1,0 +1,385 @@
+{% extends 'dashboard/layout.html.twig' %}
+{% block title %}{{ isNew ? 'Nouvelle config PDF' : 'Modifier ' ~ config.nom }}{% endblock %}
+
+{% block content %}
+<style>
+.form-card { background:var(--card-light); border-radius:12px; padding:24px; margin-bottom:20px; }
+body.dark-mode .form-card { background:var(--card-dark); }
+.field-label { font-size:.75rem; font-weight:700; color:#9e9e9e; text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
+.field-inp { width:100%; box-sizing:border-box; padding:10px 12px; border:2px solid var(--border-light); border-radius:8px; font-size:.95rem; background:var(--card-light); color:var(--text-light); }
+body.dark-mode .field-inp { background:var(--card-dark); border-color:var(--border-dark); color:var(--text-dark); }
+.field-inp:focus { outline:none; border-color:var(--primary); }
+
+/* PDF preview */
+.pdf-zone { border:2px dashed var(--border-light); border-radius:10px; padding:20px; text-align:center; cursor:pointer; transition:.2s; }
+body.dark-mode .pdf-zone { border-color:var(--border-dark); }
+.pdf-zone:hover { border-color:var(--primary); background:rgba(63,81,181,.04); }
+.pdf-lines { max-height:480px; overflow-y:auto; margin-top:14px; border:1px solid var(--border-light); border-radius:8px; }
+body.dark-mode .pdf-lines { border-color:var(--border-dark); }
+.pdf-line { display:flex; align-items:center; gap:8px; padding:6px 10px; border-bottom:1px solid var(--border-light); cursor:pointer; font-size:.85rem; font-family:monospace; transition:.15s; }
+body.dark-mode .pdf-line { border-color:var(--border-dark); color:var(--text-dark); }
+.pdf-line:hover { background:rgba(63,81,181,.06); }
+.pdf-line.assigned { background:#e8f5e9; }
+body.dark-mode .pdf-line.assigned { background:rgba(76,175,80,.15); }
+.line-num { font-size:.72rem; color:#9e9e9e; min-width:28px; text-align:right; flex-shrink:0; }
+.line-chip { font-size:.68rem; padding:2px 7px; border-radius:10px; background:var(--primary); color:white; font-weight:600; margin-left:auto; flex-shrink:0; }
+
+/* Mappings */
+.mapping-row { display:grid; grid-template-columns:1fr 1fr auto; gap:10px; align-items:start; background:rgba(63,81,181,.04); border-radius:8px; padding:10px 12px; margin-bottom:8px; border:1px solid rgba(63,81,181,.12); }
+body.dark-mode .mapping-row { background:rgba(63,81,181,.08); }
+.mapping-row select, .mapping-row input { padding:7px 10px; border:1.5px solid var(--border-light); border-radius:6px; font-size:.88rem; background:var(--card-light); color:var(--text-light); width:100%; box-sizing:border-box; }
+body.dark-mode .mapping-row select, body.dark-mode .mapping-row input { background:var(--card-dark); border-color:var(--border-dark); color:var(--text-dark); }
+.del-btn { background:none; border:none; cursor:pointer; color:#e53935; padding:4px; border-radius:4px; display:flex; align-items:center; }
+.del-btn:hover { background:rgba(229,57,53,.1); }
+
+/* Modal */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9999; align-items:center; justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal-box { background:var(--card-light); border-radius:12px; padding:24px; width:380px; max-width:95vw; box-shadow:0 8px 32px rgba(0,0,0,.25); }
+body.dark-mode .modal-box { background:var(--card-dark); }
+.modal-title { font-size:1rem; font-weight:600; margin-bottom:16px; color:var(--text-light); display:flex; align-items:center; gap:8px; }
+body.dark-mode .modal-title { color:var(--text-dark); }
+.modal-linetext { font-family:monospace; font-size:.82rem; background:rgba(0,0,0,.05); border-radius:6px; padding:8px 10px; margin-bottom:14px; color:#555; word-break:break-all; }
+body.dark-mode .modal-linetext { background:rgba(255,255,255,.07); color:#bbb; }
+.modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+</style>
+
+<div style="max-width:1300px;margin:0 auto;padding:24px 16px;">
+
+    <!-- Header -->
+    <div class="page-header" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;padding:24px;border-radius:12px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <h1 style="margin:0;font-size:1.6rem;font-weight:400;display:flex;align-items:center;gap:10px;">
+            <i class="material-icons">picture_as_pdf</i>
+            {{ isNew ? 'Nouvelle configuration PDF' : 'Modifier : ' ~ config.nom }}
+        </h1>
+        <a href="{{ path('admin_pdf_config_index') }}" class="mdl-button mdl-js-button" style="color:rgba(255,255,255,.85);">
+            <i class="material-icons" style="vertical-align:middle;">arrow_back</i> Retour
+        </a>
+    </div>
+
+    {% for label, msgs in app.flashes %}
+        {% for msg in msgs %}
+            <div style="padding:12px 16px;border-radius:8px;margin-bottom:16px;background:{{ label=='success'?'#e8f5e9':'#ffebee' }};color:{{ label=='success'?'#2e7d32':'#c62828' }};">
+                {{ msg }}
+            </div>
+        {% endfor %}
+    {% endfor %}
+
+    <form method="post" id="mainForm">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+            <!-- LEFT: PDF preview -->
+            <div>
+                <div class="form-card">
+                    <h3 style="margin:0 0 16px;font-size:1rem;font-weight:600;display:flex;align-items:center;gap:8px;">
+                        <i class="material-icons" style="color:var(--primary);">upload_file</i> PDF exemple
+                    </h3>
+                    <div class="pdf-zone" id="pdfZone" onclick="document.getElementById('pdfFile').click()">
+                        <i class="material-icons" style="font-size:40px;color:#9e9e9e;">picture_as_pdf</i>
+                        <p style="margin:8px 0 0;color:#9e9e9e;font-size:.9rem;">Cliquez pour charger un PDF exemple</p>
+                        <p style="margin:4px 0 0;color:#bbb;font-size:.78rem;">Le texte sera extrait et affiché ligne par ligne</p>
+                    </div>
+                    <input type="file" id="pdfFile" accept=".pdf" style="display:none;" onchange="loadPdf(this)">
+
+                    <div id="pdfLoading" style="display:none;text-align:center;padding:20px;color:#9e9e9e;">
+                        <i class="material-icons" style="font-size:32px;animation:spin 1s linear infinite;">refresh</i>
+                        <p style="margin:8px 0 0;">Extraction en cours…</p>
+                    </div>
+
+                    <div id="pdfLinesContainer" style="display:none;">
+                        <p style="margin:12px 0 6px;font-size:.82rem;color:#9e9e9e;">
+                            <i class="material-icons" style="font-size:14px;vertical-align:middle;">info</i>
+                            Cliquez sur une ligne pour l'assigner à un champ
+                        </p>
+                        <div class="pdf-lines" id="pdfLines"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Config form -->
+            <div>
+                <!-- Config info -->
+                <div class="form-card">
+                    <h3 style="margin:0 0 16px;font-size:1rem;font-weight:600;display:flex;align-items:center;gap:8px;">
+                        <i class="material-icons" style="color:var(--primary);">settings</i> Informations
+                    </h3>
+                    <div style="display:grid;gap:14px;">
+                        <div>
+                            <div class="field-label">Nom du bailleur *</div>
+                            <input class="field-inp" type="text" name="nom" value="{{ config.nom }}" placeholder="Ex: Paris Habitat" required>
+                        </div>
+                        <div>
+                            <div class="field-label">Texte identifiant *</div>
+                            <input class="field-inp" type="text" name="identifiantTexte" value="{{ config.identifiantTexte }}" placeholder="Ex: PARIS HABITAT (présent dans chaque PDF)">
+                            <p style="font-size:.75rem;color:#9e9e9e;margin:4px 0 0;">Ce texte doit être unique à ce bailleur et présent dans tous ses PDFs.</p>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div>
+                                <div class="field-label">Priorité</div>
+                                <input class="field-inp" type="number" name="priorite" value="{{ config.priorite }}" min="1" max="999">
+                            </div>
+                            <div style="display:flex;align-items:center;gap:10px;padding-top:18px;">
+                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                    <input type="checkbox" name="actif" value="1" {{ config.actif ? 'checked' : '' }} style="accent-color:var(--primary);width:18px;height:18px;">
+                                    <span style="font-weight:500;">Config active</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mappings -->
+                <div class="form-card">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                        <h3 style="margin:0;font-size:1rem;font-weight:600;display:flex;align-items:center;gap:8px;">
+                            <i class="material-icons" style="color:var(--primary);">tune</i> Mappings champs
+                        </h3>
+                        <button type="button" onclick="addMappingRow()" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" style="font-size:.8rem;height:32px;line-height:32px;">
+                            <i class="material-icons" style="font-size:16px;vertical-align:middle;">add</i> Ajouter
+                        </button>
+                    </div>
+
+                    <div id="mappingRows"></div>
+
+                    <input type="hidden" name="fieldMappings" id="fieldMappingsInput">
+
+                    <p style="font-size:.75rem;color:#9e9e9e;margin:10px 0 0;">
+                        <i class="material-icons" style="font-size:13px;vertical-align:middle;">lightbulb</i>
+                        Chargez un PDF exemple puis cliquez sur les lignes pour assigner automatiquement.
+                    </p>
+                </div>
+
+                <div style="text-align:right;">
+                    <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" style="padding:0 28px;height:44px;font-size:1rem;">
+                        <i class="material-icons" style="vertical-align:middle;">save</i>
+                        {{ isNew ? 'Créer la configuration' : 'Enregistrer' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Modal assignation -->
+<div class="modal-overlay" id="assignModal">
+    <div class="modal-box">
+        <div class="modal-title"><i class="material-icons" style="color:var(--primary);">link</i> Assigner cette ligne</div>
+        <div class="modal-linetext" id="modalLineText"></div>
+
+        <div style="margin-bottom:12px;">
+            <div class="field-label">Champ de la base de données</div>
+            <select id="modalField" class="field-inp">
+                <option value="">-- Choisir --</option>
+                <option value="numeroCommande">N° de commande</option>
+                <option value="clientNom">Nom du client / occupant</option>
+                <option value="clientAdresse">Adresse</option>
+                <option value="clientComplementAdresse">Complément d'adresse</option>
+                <option value="clientTelephone">Téléphone</option>
+                <option value="dateLimiteExecution">Date limite d'exécution</option>
+                <option value="typePrestation">Type de prestation (auto-détecté)</option>
+            </select>
+        </div>
+
+        <div id="regexSection" style="display:none;margin-bottom:12px;">
+            <div class="field-label">Regex d'extraction (optionnel)</div>
+            <input type="text" id="modalRegex" class="field-inp" placeholder="Ex: /(\d{2}\/\d{2}\/\d{4})/">
+            <p style="font-size:.72rem;color:#9e9e9e;margin:4px 0 0;">Laissez vide pour prendre toute la ligne. Groupe 1 sera extrait.</p>
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" onclick="closeModal()" class="mdl-button mdl-js-button">Annuler</button>
+            <button type="button" onclick="confirmAssign()" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">Assigner</button>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes spin { to { transform:rotate(360deg); } }
+</style>
+
+<script>
+const DB_FIELDS = {
+    'numeroCommande':          'N° commande',
+    'clientNom':               'Nom client',
+    'clientAdresse':           'Adresse',
+    'clientComplementAdresse': 'Complément adresse',
+    'clientTelephone':         'Téléphone',
+    'dateLimiteExecution':     'Date limite',
+    'typePrestation':          'Type prestation',
+};
+const DATE_FIELDS = ['dateLimiteExecution'];
+
+let currentLineIndex = -1;
+let currentLineText  = '';
+let mappings = {{ config.fieldMappings|json_encode|raw }};
+
+// Init existing mappings
+document.addEventListener('DOMContentLoaded', () => {
+    mappings.forEach(m => renderMappingRow(m));
+    syncHiddenInput();
+});
+
+// ====== PDF LOADING ======
+async function loadPdf(input) {
+    const file = input.files[0];
+    if (!file) return;
+    document.getElementById('pdfLoading').style.display = 'block';
+    document.getElementById('pdfLinesContainer').style.display = 'none';
+    document.getElementById('pdfZone').style.display = 'none';
+
+    const fd = new FormData();
+    fd.append('pdf', file);
+    const res = await fetch('{{ path('admin_pdf_config_preview') }}', { method:'POST', body:fd });
+    const data = await res.json();
+    document.getElementById('pdfLoading').style.display = 'none';
+
+    if (!data.success) { alert('Erreur lors de l\'extraction'); return; }
+
+    const container = document.getElementById('pdfLines');
+    container.innerHTML = data.lines.map(l => `
+        <div class="pdf-line" data-index="${l.index}" data-text="${escHtml(l.text)}" onclick="openModal(${l.index}, this.dataset.text)">
+            <span class="line-num">${l.index}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(l.text)}</span>
+        </div>
+    `).join('');
+    document.getElementById('pdfLinesContainer').style.display = 'block';
+    highlightAssigned();
+}
+
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ====== MODAL ======
+function openModal(lineIndex, lineText) {
+    currentLineIndex = lineIndex;
+    currentLineText  = lineText;
+    document.getElementById('modalLineText').textContent = lineText;
+    document.getElementById('modalField').value = '';
+    document.getElementById('modalRegex').value = '';
+    document.getElementById('regexSection').style.display = 'none';
+    document.getElementById('assignModal').classList.add('open');
+}
+document.getElementById('modalField').addEventListener('change', function() {
+    document.getElementById('regexSection').style.display = this.value ? 'block' : 'none';
+});
+function closeModal() {
+    document.getElementById('assignModal').classList.remove('open');
+}
+document.getElementById('assignModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('assignModal')) closeModal();
+});
+
+function confirmAssign() {
+    const field = document.getElementById('modalField').value;
+    if (!field) { alert('Choisissez un champ.'); return; }
+
+    const regex = document.getElementById('modalRegex').value.trim();
+    let strategy = 'line_index';
+    if (field === 'typePrestation') strategy = 'type_prestation_code';
+    else if (DATE_FIELDS.includes(field)) strategy = 'line_index_date';
+    else if (regex) strategy = 'line_index_regex';
+
+    const mapping = { dbField: field, label: DB_FIELDS[field], strategy, lineIndex: currentLineIndex };
+    if (regex) { mapping.regex = regex; mapping.regexGroup = 1; }
+
+    // Remove existing mapping for same field
+    mappings = mappings.filter(m => m.dbField !== field);
+    mappings.push(mapping);
+
+    renderAllMappings();
+    syncHiddenInput();
+    highlightAssigned();
+    closeModal();
+}
+
+// ====== MAPPINGS RENDER ======
+function renderAllMappings() {
+    document.getElementById('mappingRows').innerHTML = '';
+    mappings.forEach(m => renderMappingRow(m));
+}
+
+function renderMappingRow(m) {
+    const row = document.createElement('div');
+    row.className = 'mapping-row';
+    row.dataset.field = m.dbField;
+
+    const strategyLabel = {
+        'line_index': 'Ligne entière',
+        'line_index_regex': 'Regex sur ligne',
+        'line_index_date': 'Date sur ligne',
+        'type_prestation_code': 'Auto-détection',
+    }[m.strategy] ?? m.strategy;
+
+    const lineInfo = m.strategy !== 'type_prestation_code'
+        ? `Ligne <strong>${m.lineIndex}</strong>`
+        : 'Auto';
+
+    row.innerHTML = `
+        <div>
+            <div style="font-weight:600;font-size:.88rem;">${DB_FIELDS[m.dbField] ?? m.dbField}</div>
+            <div style="font-size:.75rem;color:#9e9e9e;margin-top:2px;">${strategyLabel} · ${lineInfo}</div>
+            ${m.regex ? `<div style="font-size:.72rem;color:#7b1fa2;margin-top:2px;font-family:monospace;">${m.regex}</div>` : ''}
+        </div>
+        <div>
+            <input type="number" min="0" value="${m.lineIndex ?? ''}" placeholder="N° ligne"
+                   oninput="updateMappingLine('${m.dbField}', this.value)"
+                   style="width:80px;" ${m.strategy === 'type_prestation_code' ? 'disabled' : ''}>
+        </div>
+        <button type="button" class="del-btn" onclick="removeMapping('${m.dbField}')">
+            <i class="material-icons">delete</i>
+        </button>
+    `;
+    document.getElementById('mappingRows').appendChild(row);
+}
+
+function addMappingRow() {
+    openModalManual();
+}
+
+function openModalManual() {
+    currentLineIndex = 0;
+    currentLineText  = '(saisie manuelle)';
+    document.getElementById('modalLineText').textContent = 'Assignation manuelle — entrez le numéro de ligne dans le mapping.';
+    document.getElementById('modalField').value = '';
+    document.getElementById('modalRegex').value = '';
+    document.getElementById('regexSection').style.display = 'none';
+    document.getElementById('assignModal').classList.add('open');
+}
+
+function removeMapping(field) {
+    mappings = mappings.filter(m => m.dbField !== field);
+    renderAllMappings();
+    syncHiddenInput();
+    highlightAssigned();
+}
+
+function updateMappingLine(field, val) {
+    const m = mappings.find(x => x.dbField === field);
+    if (m) { m.lineIndex = parseInt(val) || 0; syncHiddenInput(); }
+}
+
+function syncHiddenInput() {
+    document.getElementById('fieldMappingsInput').value = JSON.stringify(mappings);
+}
+
+function highlightAssigned() {
+    const assignedLines = new Set(mappings.filter(m => m.lineIndex != null).map(m => m.lineIndex));
+    const fieldByLine = {};
+    mappings.forEach(m => { if (m.lineIndex != null) fieldByLine[m.lineIndex] = m.dbField; });
+
+    document.querySelectorAll('.pdf-line').forEach(el => {
+        const idx = parseInt(el.dataset.index);
+        if (assignedLines.has(idx)) {
+            el.classList.add('assigned');
+            let chip = el.querySelector('.line-chip');
+            if (!chip) { chip = document.createElement('span'); chip.className = 'line-chip'; el.appendChild(chip); }
+            chip.textContent = DB_FIELDS[fieldByLine[idx]] ?? '';
+        } else {
+            el.classList.remove('assigned');
+            el.querySelector('.line-chip')?.remove();
+        }
+    });
+}
+</script>
+{% endblock %}

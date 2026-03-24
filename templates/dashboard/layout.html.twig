@@ -510,10 +510,14 @@
                 <i class="material-icons">map</i>
                 <span>Groupes Géographiques</span>
             </a>
+            <a href="{{ path('admin_pdf_config_index') }}" class="submenu-item {{ app.request.get('_route') starts with 'admin_pdf_config' ? 'active' : '' }}">
+                <i class="material-icons">picture_as_pdf</i>
+                <span>Configs PDF Bailleurs</span>
+            </a>
         </div>
-        
+
         <div class="menu-divider"></div>
-        
+
         <a href="{{ path('app_user_profil') }}" class="menu-item {{ app.request.get('_route') == 'app_user_profil' ? 'active' : '' }}">
             <i class="material-icons">account_circle</i>
             <span>Mon Compte</span>
@@ -595,10 +599,14 @@
                 <i class="material-icons">map</i>
                 <span>Groupes Géographiques</span>
             </a>
+            <a href="{{ path('admin_pdf_config_index') }}" class="submenu-item {{ app.request.get('_route') starts with 'admin_pdf_config' ? 'active' : '' }}">
+                <i class="material-icons">picture_as_pdf</i>
+                <span>Configs PDF Bailleurs</span>
+            </a>
         </div>
-        
+
         <div class="menu-divider"></div>
-        
+
         <a href="{{ path('app_user_profil') }}" class="menu-item {{ app.request.get('_route') == 'app_user_profil' ? 'active' : '' }}">
             <i class="material-icons">account_circle</i>
             <span>Mon Compte</span>
