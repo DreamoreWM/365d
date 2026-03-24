@@ -1,0 +1,770 @@
+{% extends 'dashboard/layout.html.twig' %}
+{% block title %}Révision import OCR{% endblock %}
+
+{% block content %}
+<style>
+/* ===== LAYOUT ===== */
+.review-page {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 64px);
+    overflow: hidden;
+}
+
+.review-topbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 20px;
+    background: var(--card-light);
+    border-bottom: 1px solid var(--border-light);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+body.dark-mode .review-topbar {
+    background: var(--card-dark);
+    border-bottom-color: var(--border-dark);
+}
+
+.review-topbar h2 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.review-counter {
+    font-size: .875rem;
+    color: #757575;
+    background: rgba(63,81,181,.08);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+body.dark-mode .review-counter { color: #bbb; }
+
+.review-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* ===== LEFT: FILE LIST ===== */
+.review-sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border-light);
+    overflow-y: auto;
+    background: var(--card-light);
+    padding: 8px 0;
+}
+body.dark-mode .review-sidebar {
+    background: var(--card-dark);
+    border-right-color: var(--border-dark);
+}
+
+.sidebar-file {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background .15s;
+    font-size: .85rem;
+    color: var(--text-light);
+}
+body.dark-mode .sidebar-file { color: var(--text-dark); }
+
+.sidebar-file:hover { background: rgba(63,81,181,.06); }
+
+.sidebar-file.active {
+    border-left-color: var(--primary);
+    background: rgba(63,81,181,.1);
+    font-weight: 500;
+}
+
+.sidebar-file .material-icons {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+.sidebar-file .file-status {
+    font-size: 16px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+.sidebar-file .filename {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+/* ===== CENTER: PDF VIEWER ===== */
+.review-viewer {
+    flex: 1;
+    min-width: 0;
+    background: #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+body.dark-mode .review-viewer { background: #1a1a1a; }
+
+.viewer-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(0,0,0,.08);
+    font-size: .8rem;
+    flex-shrink: 0;
+}
+body.dark-mode .viewer-toolbar { background: rgba(255,255,255,.05); }
+
+.viewer-toolbar span { color: #555; }
+body.dark-mode .viewer-toolbar span { color: #aaa; }
+
+.viewer-toolbar button {
+    background: none;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-size: .8rem;
+    color: #555;
+}
+body.dark-mode .viewer-toolbar button { border-color: #555; color: #aaa; }
+.viewer-toolbar button:hover { background: rgba(63,81,181,.12); }
+
+#pdf-canvas-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+#pdf-canvas-container canvas {
+    max-width: 100%;
+    box-shadow: 0 4px 16px rgba(0,0,0,.3);
+    border-radius: 4px;
+}
+
+#img-viewer {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    box-shadow: 0 4px 16px rgba(0,0,0,.3);
+    border-radius: 4px;
+}
+
+.viewer-placeholder {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+    flex-direction: column;
+    gap: 12px;
+}
+.viewer-placeholder .material-icons { font-size: 64px; color: #bbb; }
+
+/* ===== RIGHT: FORM PANEL ===== */
+.review-form-panel {
+    width: 360px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--border-light);
+    overflow-y: auto;
+    background: var(--card-light);
+    padding: 20px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+body.dark-mode .review-form-panel {
+    background: var(--card-dark);
+    border-left-color: var(--border-dark);
+}
+
+.form-panel-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.field-label {
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: #9e9e9e;
+}
+
+.field-inp {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1.5px solid var(--border-light);
+    border-radius: 6px;
+    font-size: .9rem;
+    background: var(--card-light);
+    color: var(--text-light);
+    transition: border-color .2s;
+}
+body.dark-mode .field-inp {
+    background: var(--card-dark);
+    border-color: var(--border-dark);
+    color: var(--text-dark);
+}
+.field-inp:focus { outline: none; border-color: var(--primary); }
+
+textarea.field-inp { resize: vertical; min-height: 60px; }
+
+.panel-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    flex-direction: column;
+}
+
+.btn-create {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: .95rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background .2s;
+}
+.btn-create:hover { background: var(--primary-dark); }
+.btn-create:disabled { background: #bdbdbd; cursor: not-allowed; }
+
+.btn-skip {
+    background: none;
+    color: #757575;
+    border: 1.5px solid var(--border-light);
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: .9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all .2s;
+}
+body.dark-mode .btn-skip { border-color: var(--border-dark); color: #aaa; }
+.btn-skip:hover { background: rgba(0,0,0,.04); border-color: #999; }
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: .8rem;
+    font-weight: 500;
+}
+.status-badge.created { background: #e8f5e9; color: #2e7d32; }
+.status-badge.skipped { background: #f5f5f5; color: #757575; }
+body.dark-mode .status-badge.created { background: #1b5e20; color: #a5d6a7; }
+body.dark-mode .status-badge.skipped { background: #333; color: #aaa; }
+
+.error-msg {
+    background: #ffebee;
+    color: #c62828;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: .85rem;
+    display: none;
+}
+body.dark-mode .error-msg { background: #4e1c1c; color: #ef9a9a; }
+
+.summary-panel {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 32px 0;
+    text-align: center;
+}
+.summary-panel .material-icons { font-size: 56px; color: #4caf50; }
+.summary-panel h3 { margin: 0; font-size: 1.2rem; }
+.summary-panel p { color: #757575; margin: 0; }
+
+/* ===== NAV BUTTONS ===== */
+.nav-arrows {
+    display: flex;
+    gap: 8px;
+}
+.nav-arrows button {
+    background: none;
+    border: 1.5px solid var(--border-light);
+    border-radius: 4px;
+    padding: 4px 10px;
+    cursor: pointer;
+    color: var(--text-light);
+    display: flex;
+    align-items: center;
+}
+body.dark-mode .nav-arrows button {
+    border-color: var(--border-dark);
+    color: var(--text-dark);
+}
+.nav-arrows button:hover { background: rgba(63,81,181,.08); border-color: var(--primary); }
+.nav-arrows button:disabled { opacity: .4; cursor: not-allowed; }
+
+@media (max-width: 900px) {
+    .review-sidebar { display: none; }
+    .review-form-panel { width: 100%; border-left: none; border-top: 1px solid var(--border-light); }
+    .review-body { flex-direction: column; }
+    .review-viewer { min-height: 300px; }
+}
+</style>
+
+<div class="review-page">
+
+    <!-- Top bar -->
+    <div class="review-topbar">
+        <a href="{{ path('admin_bon_commande_index') }}" class="mdl-button mdl-js-button" style="flex-shrink:0;">
+            <i class="material-icons" style="vertical-align:middle;">arrow_back</i>
+            Retour
+        </a>
+        <h2>
+            <i class="material-icons" style="color:var(--primary);">document_scanner</i>
+            Révision import OCR
+        </h2>
+        <span class="review-counter" id="review-counter">
+            Bon <span id="counter-current">1</span> / {{ results|length }}
+        </span>
+        <div class="nav-arrows">
+            <button id="btn-prev" disabled title="Précédent">
+                <i class="material-icons">chevron_left</i>
+            </button>
+            <button id="btn-next" title="Suivant">
+                <i class="material-icons">chevron_right</i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Body -->
+    <div class="review-body">
+
+        <!-- Sidebar file list -->
+        <div class="review-sidebar">
+            {% for i, result in results %}
+            <div class="sidebar-file {% if i == 0 %}active{% endif %}" data-index="{{ i }}" id="sidebar-item-{{ i }}">
+                <i class="material-icons">{{ result.ext == 'pdf' ? 'picture_as_pdf' : 'image' }}</i>
+                <span class="filename" title="{{ result.filename }}">{{ result.filename }}</span>
+                <span class="file-status" id="status-icon-{{ i }}"></span>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- PDF / Image viewer -->
+        <div class="review-viewer">
+            <div class="viewer-toolbar">
+                <span id="viewer-filename">—</span>
+                <span style="flex:1"></span>
+                <button id="btn-zoom-out" title="Dézoomer"><i class="material-icons" style="font-size:14px;">zoom_out</i></button>
+                <span id="zoom-level" style="min-width:36px;text-align:center;">100%</span>
+                <button id="btn-zoom-in" title="Zoomer"><i class="material-icons" style="font-size:14px;">zoom_in</i></button>
+            </div>
+            <div id="pdf-canvas-container">
+                <div class="viewer-placeholder">
+                    <i class="material-icons">insert_drive_file</i>
+                    <span>Chargement...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form panel -->
+        <div class="review-form-panel">
+
+            <div id="form-content">
+                <div class="form-panel-title">
+                    <i class="material-icons">edit</i>
+                    Données extraites
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">N° de commande</label>
+                    <input type="text" class="field-inp" id="f-numero" placeholder="Optionnel">
+                </div>
+                <div class="field-group">
+                    <label class="field-label">Nom du client <span style="color:#e53935">*</span></label>
+                    <input type="text" class="field-inp" id="f-nom" placeholder="Requis">
+                </div>
+                <div class="field-group">
+                    <label class="field-label">Téléphone <span style="color:#e53935">*</span></label>
+                    <input type="text" class="field-inp" id="f-tel" placeholder="Requis">
+                </div>
+                <div class="field-group">
+                    <label class="field-label">Adresse</label>
+                    <textarea class="field-inp" id="f-adresse" rows="2" placeholder=""></textarea>
+                </div>
+                <div class="field-group">
+                    <label class="field-label">Complément d'adresse</label>
+                    <input type="text" class="field-inp" id="f-complement" placeholder="">
+                </div>
+                <div class="field-group">
+                    <label class="field-label">Date limite d'exécution</label>
+                    <input type="date" class="field-inp" id="f-date">
+                </div>
+                <div class="field-group">
+                    <label class="field-label">Type de prestation</label>
+                    <select class="field-inp" id="f-type">
+                        <option value="">— Aucun —</option>
+                        {% for tp in typePrestations %}
+                        <option value="{{ tp.id }}">{{ tp.nom }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="error-msg" id="form-error"></div>
+
+                <div class="panel-actions">
+                    <button class="btn-create" id="btn-create">
+                        <i class="material-icons">add_circle</i>
+                        Créer ce bon
+                    </button>
+                    <button class="btn-skip" id="btn-skip">
+                        <i class="material-icons">skip_next</i>
+                        Ignorer ce fichier
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary shown when all done -->
+            <div class="summary-panel" id="summary-panel">
+                <i class="material-icons">check_circle</i>
+                <h3>Import terminé</h3>
+                <p id="summary-text"></p>
+                <a href="{{ path('admin_bon_commande_index') }}" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" style="margin-top:8px;">
+                    Retour à la liste
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ===== DATA =====
+const results = {{ results|json_encode|raw }};
+const previewBaseUrl = '{{ path('admin_bon_commande_preview_ocr', {'token': '__TOKEN__'}) }}';
+const createUrl = '{{ path('admin_bon_commande_create_from_ocr') }}';
+
+// Track state per file
+const fileStates = results.map(() => ({ status: 'pending' })); // pending | created | skipped
+let currentIndex = 0;
+let zoomScale = 1.0;
+let currentPdfDoc = null;
+
+// ===== DOM =====
+const counterEl     = document.getElementById('counter-current');
+const btnPrev       = document.getElementById('btn-prev');
+const btnNext       = document.getElementById('btn-next');
+const btnCreate     = document.getElementById('btn-create');
+const btnSkip       = document.getElementById('btn-skip');
+const viewerFilename= document.getElementById('viewer-filename');
+const canvasContainer = document.getElementById('pdf-canvas-container');
+const formError     = document.getElementById('form-error');
+const formContent   = document.getElementById('form-content');
+const summaryPanel  = document.getElementById('summary-panel');
+const summaryText   = document.getElementById('summary-text');
+const zoomLevelEl   = document.getElementById('zoom-level');
+
+// ===== NAVIGATION =====
+function goTo(index) {
+    currentIndex = index;
+    updateNav();
+    updateSidebar();
+    loadFile(index);
+    fillForm(index);
+}
+
+function updateNav() {
+    counterEl.textContent = currentIndex + 1;
+    btnPrev.disabled = currentIndex === 0;
+    btnNext.disabled = currentIndex === results.length - 1;
+}
+
+function updateSidebar() {
+    document.querySelectorAll('.sidebar-file').forEach(el => el.classList.remove('active'));
+    const active = document.getElementById('sidebar-item-' + currentIndex);
+    if (active) {
+        active.classList.add('active');
+        active.scrollIntoView({ block: 'nearest' });
+    }
+}
+
+function setStatusIcon(index, status) {
+    const el = document.getElementById('status-icon-' + index);
+    if (!el) return;
+    if (status === 'created') {
+        el.textContent = '✅';
+        el.title = 'Créé';
+    } else if (status === 'skipped') {
+        el.textContent = '⏭';
+        el.title = 'Ignoré';
+    } else {
+        el.textContent = '';
+    }
+}
+
+// ===== FORM FILL =====
+function fillForm(index) {
+    const d = results[index].data;
+    document.getElementById('f-numero').value    = d.numeroCommande          || '';
+    document.getElementById('f-nom').value       = d.clientNom               || '';
+    document.getElementById('f-tel').value       = d.clientTelephone         || '';
+    document.getElementById('f-adresse').value   = d.clientAdresse           || '';
+    document.getElementById('f-complement').value= d.clientComplementAdresse || '';
+    document.getElementById('f-date').value      = d.dateLimiteExecution     || '';
+    document.getElementById('f-type').value      = d.typePrestation          || '';
+    formError.style.display = 'none';
+
+    const state = fileStates[index];
+    if (state.status === 'created') {
+        btnCreate.disabled = true;
+        btnCreate.innerHTML = '<i class="material-icons">check</i> Bon créé';
+    } else if (state.status === 'skipped') {
+        btnCreate.disabled = false;
+        btnCreate.innerHTML = '<i class="material-icons">add_circle</i> Créer ce bon';
+    } else {
+        btnCreate.disabled = false;
+        btnCreate.innerHTML = '<i class="material-icons">add_circle</i> Créer ce bon';
+    }
+}
+
+// ===== FILE VIEWER =====
+async function loadFile(index) {
+    const result = results[index];
+    viewerFilename.textContent = result.filename;
+    canvasContainer.innerHTML = '<div class="viewer-placeholder"><i class="material-icons">hourglass_empty</i><span>Chargement...</span></div>';
+    currentPdfDoc = null;
+
+    const url = previewBaseUrl.replace('__TOKEN__', result.token);
+
+    if (result.ext === 'pdf') {
+        await loadPdf(url);
+    } else {
+        loadImage(url);
+    }
+}
+
+async function loadPdf(url) {
+    try {
+        const resp = await fetch(url);
+        const buf  = await resp.arrayBuffer();
+        const pdf  = await pdfjsLib.getDocument({ data: buf }).promise;
+        currentPdfDoc = pdf;
+        canvasContainer.innerHTML = '';
+        for (let p = 1; p <= pdf.numPages; p++) {
+            await renderPdfPage(pdf, p);
+        }
+    } catch (e) {
+        canvasContainer.innerHTML = '<div class="viewer-placeholder"><i class="material-icons">error_outline</i><span>Impossible de charger le PDF</span></div>';
+    }
+}
+
+async function renderPdfPage(pdf, pageNum) {
+    const page     = await pdf.getPage(pageNum);
+    const viewport = page.getViewport({ scale: zoomScale * 1.5 });
+    const canvas   = document.createElement('canvas');
+    canvas.width   = viewport.width;
+    canvas.height  = viewport.height;
+    const ctx      = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    canvasContainer.appendChild(canvas);
+}
+
+function loadImage(url) {
+    const img = document.createElement('img');
+    img.id = 'img-viewer';
+    img.src = url;
+    img.alt = 'Aperçu';
+    img.style.transform = `scale(${zoomScale})`;
+    img.style.transformOrigin = 'top center';
+    img.onerror = () => {
+        canvasContainer.innerHTML = '<div class="viewer-placeholder"><i class="material-icons">broken_image</i><span>Impossible de charger l\'image</span></div>';
+    };
+    canvasContainer.innerHTML = '';
+    canvasContainer.appendChild(img);
+}
+
+async function applyZoom() {
+    zoomLevelEl.textContent = Math.round(zoomScale * 100) + '%';
+    if (currentPdfDoc) {
+        canvasContainer.innerHTML = '';
+        for (let p = 1; p <= currentPdfDoc.numPages; p++) {
+            await renderPdfPage(currentPdfDoc, p);
+        }
+    } else {
+        const img = document.getElementById('img-viewer');
+        if (img) {
+            img.style.transform = `scale(${zoomScale})`;
+        }
+    }
+}
+
+document.getElementById('btn-zoom-in').addEventListener('click', () => {
+    zoomScale = Math.min(zoomScale + 0.25, 3.0);
+    applyZoom();
+});
+document.getElementById('btn-zoom-out').addEventListener('click', () => {
+    zoomScale = Math.max(zoomScale - 0.25, 0.5);
+    applyZoom();
+});
+
+// ===== CREATE BON =====
+btnCreate.addEventListener('click', async () => {
+    const nom = document.getElementById('f-nom').value.trim();
+    const tel = document.getElementById('f-tel').value.trim();
+    if (!nom || !tel) {
+        showError('Le nom et le téléphone sont obligatoires.');
+        return;
+    }
+
+    btnCreate.disabled = true;
+    btnCreate.innerHTML = '<i class="material-icons">hourglass_empty</i> Création...';
+
+    const payload = {
+        numeroCommande:          document.getElementById('f-numero').value.trim(),
+        clientNom:               nom,
+        clientTelephone:         tel,
+        clientAdresse:           document.getElementById('f-adresse').value.trim(),
+        clientComplementAdresse: document.getElementById('f-complement').value.trim(),
+        dateLimiteExecution:     document.getElementById('f-date').value,
+        typePrestation:          document.getElementById('f-type').value,
+    };
+
+    try {
+        const resp = await fetch(createUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify(payload),
+        });
+
+        const result = await resp.json();
+
+        if (result.success) {
+            fileStates[currentIndex].status = 'created';
+            setStatusIcon(currentIndex, 'created');
+            btnCreate.innerHTML = '<i class="material-icons">check</i> Bon créé';
+            formError.style.display = 'none';
+            advanceOrFinish();
+        } else if (resp.status === 409) {
+            showError(result.error + ' <a href="' + result.existingUrl + '" target="_blank">Voir le bon existant →</a>');
+            btnCreate.disabled = false;
+            btnCreate.innerHTML = '<i class="material-icons">add_circle</i> Créer ce bon';
+        } else {
+            showError(result.error || 'Erreur lors de la création');
+            btnCreate.disabled = false;
+            btnCreate.innerHTML = '<i class="material-icons">add_circle</i> Créer ce bon';
+        }
+    } catch (e) {
+        showError('Erreur réseau : ' + e.message);
+        btnCreate.disabled = false;
+        btnCreate.innerHTML = '<i class="material-icons">add_circle</i> Créer ce bon';
+    }
+});
+
+// ===== SKIP =====
+btnSkip.addEventListener('click', () => {
+    fileStates[currentIndex].status = 'skipped';
+    setStatusIcon(currentIndex, 'skipped');
+    advanceOrFinish();
+});
+
+function advanceOrFinish() {
+    // Check if all done
+    const allDone = fileStates.every(s => s.status !== 'pending');
+    if (allDone) {
+        showSummary();
+        return;
+    }
+    // Go to next pending
+    for (let i = currentIndex + 1; i < results.length; i++) {
+        if (fileStates[i].status === 'pending') {
+            goTo(i);
+            return;
+        }
+    }
+    // No more pending after current — wrap to first pending
+    for (let i = 0; i < currentIndex; i++) {
+        if (fileStates[i].status === 'pending') {
+            goTo(i);
+            return;
+        }
+    }
+    showSummary();
+}
+
+function showSummary() {
+    const created = fileStates.filter(s => s.status === 'created').length;
+    const skipped = fileStates.filter(s => s.status === 'skipped').length;
+    formContent.style.display = 'none';
+    summaryPanel.style.display = 'flex';
+    summaryText.textContent = `${created} bon(s) créé(s), ${skipped} ignoré(s)`;
+}
+
+function showError(msg) {
+    formError.innerHTML = msg;
+    formError.style.display = 'block';
+}
+
+// ===== SIDEBAR CLICKS =====
+document.querySelectorAll('.sidebar-file').forEach(el => {
+    el.addEventListener('click', () => goTo(parseInt(el.dataset.index)));
+});
+
+// ===== NAV ARROWS =====
+btnPrev.addEventListener('click', () => {
+    if (currentIndex > 0) goTo(currentIndex - 1);
+});
+btnNext.addEventListener('click', () => {
+    if (currentIndex < results.length - 1) goTo(currentIndex + 1);
+});
+
+// ===== KEYBOARD =====
+document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    if (e.key === 'ArrowRight' && currentIndex < results.length - 1) goTo(currentIndex + 1);
+    if (e.key === 'ArrowLeft'  && currentIndex > 0)                   goTo(currentIndex - 1);
+});
+
+// ===== INIT =====
+goTo(0);
+</script>
+{% endblock %}

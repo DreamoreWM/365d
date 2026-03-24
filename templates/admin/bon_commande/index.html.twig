@@ -975,36 +975,32 @@
 <div class="modal-container" id="ocr-modal">
     <div class="modal-header">
         <h3>
-            <i class="material-icons">photo_camera</i>
-            Importer un bon via OCR
+            <i class="material-icons">document_scanner</i>
+            Importer des bons via OCR
         </h3>
         <button type="button" class="modal-close" id="ocr-modal-close">
             <i class="material-icons">close</i>
         </button>
     </div>
     <div class="modal-body">
-        <form method="post" action="{{ path('admin_bon_commande_import_ocr') }}" enctype="multipart/form-data" id="ocr-form">
-            
+        <form method="post" action="{{ path('admin_bon_commande_import_ocr_multi') }}" enctype="multipart/form-data" id="ocr-form">
+
             <!-- File Upload Area -->
             <div class="file-upload-area" id="file-upload-area">
                 <i class="material-icons file-upload-icon">cloud_upload</i>
-                <div class="file-upload-text">Cliquez pour sélectionner une image</div>
-                <div class="file-upload-hint">ou glissez-déposez une image ici</div>
-                <div class="file-upload-hint" style="margin-top: 8px;">JPG, PNG, PDF (max 10MB)</div>
+                <div class="file-upload-text">Cliquez pour sélectionner un ou plusieurs fichiers</div>
+                <div class="file-upload-hint">ou glissez-déposez les fichiers ici</div>
+                <div class="file-upload-hint" style="margin-top: 8px;">JPG, PNG, PDF — sélection multiple autorisée (max 10MB/fichier)</div>
             </div>
 
-            <input type="file" name="photo" id="ocr-file-input" accept="image/*,.pdf" required>
+            <input type="file" name="photos[]" id="ocr-file-input" accept="image/*,.pdf" multiple>
 
-            <!-- File Preview -->
-            <div class="file-preview" id="file-preview">
-                <i class="material-icons file-preview-icon">image</i>
-                <div class="file-preview-info">
-                    <div class="file-preview-name" id="file-preview-name">-</div>
-                    <div class="file-preview-size" id="file-preview-size">-</div>
+            <!-- Multi-file list -->
+            <div id="file-list" style="display:none; margin-top:12px; display:none;">
+                <div style="font-size:.8rem; font-weight:600; color:#757575; margin-bottom:6px; text-transform:uppercase; letter-spacing:.4px;">
+                    Fichiers sélectionnés (<span id="file-count">0</span>)
                 </div>
-                <button type="button" class="icon-btn delete" id="remove-file" title="Retirer">
-                    <i class="material-icons">close</i>
-                </button>
+                <ul id="file-list-items" style="list-style:none; margin:0; padding:0; max-height:160px; overflow-y:auto;"></ul>
             </div>
 
             <!-- Progress indicator -->
@@ -1012,7 +1008,7 @@
                 <div class="ocr-progress-bar">
                     <div class="ocr-progress-fill" id="ocr-progress-fill"></div>
                 </div>
-                <div class="ocr-progress-text" id="ocr-progress-text">Compression de l'image...</div>
+                <div class="ocr-progress-text" id="ocr-progress-text">Analyse en cours...</div>
             </div>
 
             <!-- Actions -->
@@ -1031,23 +1027,25 @@
 </div>
 
 <script>
-// ==================== MODAL OCR ====================
-const ocrModal = document.getElementById('ocr-modal');
-const ocrOverlay = document.getElementById('ocr-modal-overlay');
-const ocrModalBtn = document.getElementById('ocr-modal-btn');
-const ocrModalClose = document.getElementById('ocr-modal-close');
-const cancelOcrBtn = document.getElementById('cancel-ocr');
-const fileInput = document.getElementById('ocr-file-input');
-const fileUploadArea = document.getElementById('file-upload-area');
-const filePreview = document.getElementById('file-preview');
-const submitBtn = document.getElementById('submit-ocr');
-const removeFileBtn = document.getElementById('remove-file');
-const ocrProgress = document.getElementById('ocr-progress');
+// ==================== MODAL OCR (MULTI-FICHIERS) ====================
+const ocrModal        = document.getElementById('ocr-modal');
+const ocrOverlay      = document.getElementById('ocr-modal-overlay');
+const ocrModalBtn     = document.getElementById('ocr-modal-btn');
+const ocrModalClose   = document.getElementById('ocr-modal-close');
+const cancelOcrBtn    = document.getElementById('cancel-ocr');
+const fileInput       = document.getElementById('ocr-file-input');
+const fileUploadArea  = document.getElementById('file-upload-area');
+const fileList        = document.getElementById('file-list');
+const fileListItems   = document.getElementById('file-list-items');
+const fileCountEl     = document.getElementById('file-count');
+const submitBtn       = document.getElementById('submit-ocr');
+const ocrProgress     = document.getElementById('ocr-progress');
 const ocrProgressFill = document.getElementById('ocr-progress-fill');
 const ocrProgressText = document.getElementById('ocr-progress-text');
-const ocrActions = document.getElementById('ocr-actions');
+const ocrActions      = document.getElementById('ocr-actions');
 
 let isProcessing = false;
+let selectedFiles = [];
 
 function openOcrModal() {
     ocrOverlay.classList.add('open');
@@ -1056,7 +1054,7 @@ function openOcrModal() {
 }
 
 function closeOcrModal() {
-    if (isProcessing) return; // Ne pas fermer pendant le traitement
+    if (isProcessing) return;
     ocrOverlay.classList.remove('open');
     ocrModal.classList.remove('open');
     document.body.style.overflow = '';
@@ -1065,7 +1063,9 @@ function closeOcrModal() {
 
 function resetOcrForm() {
     fileInput.value = '';
-    filePreview.classList.remove('show');
+    selectedFiles = [];
+    fileList.style.display = 'none';
+    fileListItems.innerHTML = '';
     submitBtn.disabled = true;
     ocrProgress.style.display = 'none';
     ocrActions.style.display = 'flex';
@@ -1077,57 +1077,86 @@ function setProgress(percent, text) {
     if (text) ocrProgressText.textContent = text;
 }
 
-// Compression d'image côté client via Canvas
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+// Compression image côté client
 function compressImage(file, maxWidth = 1600, quality = 0.75) {
     return new Promise((resolve) => {
-        // Si c'est un PDF, pas de compression côté client
-        if (file.type === 'application/pdf') {
-            resolve(file);
-            return;
-        }
-
+        if (file.type === 'application/pdf') { resolve(file); return; }
         const img = new Image();
         const url = URL.createObjectURL(file);
-
         img.onload = () => {
             URL.revokeObjectURL(url);
-
             let { width, height } = img;
-
-            // Redimensionner si trop grand
             if (width > maxWidth) {
                 height = Math.round(height * (maxWidth / width));
-                width = maxWidth;
+                width  = maxWidth;
             }
-
             const canvas = document.createElement('canvas');
-            canvas.width = width;
+            canvas.width  = width;
             canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-
-            canvas.toBlob((blob) => {
-                const compressed = new File([blob], file.name.replace(/\.\w+$/, '.jpg'), {
-                    type: 'image/jpeg',
-                    lastModified: Date.now()
-                });
-                resolve(compressed);
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            canvas.toBlob(blob => {
+                resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg', lastModified: Date.now() }));
             }, 'image/jpeg', quality);
         };
-
-        img.onerror = () => {
-            URL.revokeObjectURL(url);
-            resolve(file); // En cas d'erreur, envoyer le fichier original
-        };
-
+        img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
         img.src = url;
     });
 }
 
-// Soumission AJAX avec compression
+function renderFileList() {
+    fileListItems.innerHTML = '';
+    selectedFiles.forEach((f, i) => {
+        const li = document.createElement('li');
+        li.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border-light);font-size:.85rem;';
+        li.innerHTML = `
+            <i class="material-icons" style="font-size:16px;color:var(--primary);">${f.type==='application/pdf' ? 'picture_as_pdf' : 'image'}</i>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${f.name}">${f.name}</span>
+            <span style="color:#999;flex-shrink:0;">${formatFileSize(f.size)}</span>
+            <button type="button" title="Retirer" data-idx="${i}" style="background:none;border:none;cursor:pointer;padding:0;color:#e53935;display:flex;">
+                <i class="material-icons" style="font-size:16px;">close</i>
+            </button>`;
+        li.querySelector('button').addEventListener('click', () => {
+            selectedFiles.splice(i, 1);
+            updateFileSelection();
+        });
+        fileListItems.appendChild(li);
+    });
+    fileCountEl.textContent = selectedFiles.length;
+    fileList.style.display = selectedFiles.length > 0 ? 'block' : 'none';
+    submitBtn.disabled = selectedFiles.length === 0;
+}
+
+function updateFileSelection() {
+    // Rebuild DataTransfer to sync with input (optional — we use selectedFiles directly)
+    renderFileList();
+}
+
+function addFiles(newFiles) {
+    const MAX = 10 * 1024 * 1024;
+    Array.from(newFiles).forEach(f => {
+        if (f.size > MAX) {
+            alert(`"${f.name}" dépasse 10MB et sera ignoré.`);
+            return;
+        }
+        // Avoid duplicates by name+size
+        if (!selectedFiles.find(x => x.name === f.name && x.size === f.size)) {
+            selectedFiles.push(f);
+        }
+    });
+    renderFileList();
+}
+
+// Submit — upload all files to multi endpoint
 async function submitOcr() {
-    const file = fileInput.files[0];
-    if (!file || isProcessing) return;
+    if (selectedFiles.length === 0 || isProcessing) return;
 
     isProcessing = true;
     submitBtn.disabled = true;
@@ -1135,48 +1164,31 @@ async function submitOcr() {
     ocrActions.style.display = 'none';
 
     try {
-        // Étape 1 : Compression
-        setProgress(15, 'Compression de l\'image...');
-        const compressedFile = await compressImage(file);
+        setProgress(10, 'Compression des images...');
+        const compressed = await Promise.all(selectedFiles.map(f => compressImage(f)));
 
-        const originalSize = formatFileSize(file.size);
-        const compressedSize = formatFileSize(compressedFile.size);
-        if (compressedFile !== file) {
-            setProgress(30, `Compressé : ${originalSize} → ${compressedSize}`);
-        } else {
-            setProgress(30, 'Envoi du fichier...');
-        }
-
-        // Étape 2 : Upload + analyse OCR
-        setProgress(40, 'Analyse OCR en cours...');
-
+        setProgress(30, `Envoi de ${compressed.length} fichier(s)...`);
         const formData = new FormData();
-        formData.append('photo', compressedFile);
+        compressed.forEach(f => formData.append('photos[]', f));
 
-        const response = await fetch('{{ path("admin_bon_commande_import_ocr") }}', {
+        setProgress(40, 'Analyse OCR en cours...');
+        const response = await fetch('{{ path("admin_bon_commande_import_ocr_multi") }}', {
             method: 'POST',
             body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
-            }
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
         });
 
         setProgress(90, 'Traitement des résultats...');
 
-        if (!response.ok) {
-            throw new Error('Erreur serveur : ' + response.status);
-        }
-
+        if (!response.ok) throw new Error('Erreur serveur : ' + response.status);
         const result = await response.json();
 
         if (result.success && result.redirectUrl) {
-            setProgress(100, 'Terminé ! Redirection...');
+            setProgress(100, `${result.count} bon(s) analysé(s). Redirection...`);
             window.location.href = result.redirectUrl;
         } else {
             throw new Error(result.error || 'Erreur inconnue');
         }
-
     } catch (error) {
         isProcessing = false;
         ocrProgress.style.display = 'none';
@@ -1186,85 +1198,31 @@ async function submitOcr() {
     }
 }
 
-// Open modal
+// Events
 ocrModalBtn?.addEventListener('click', openOcrModal);
-
-// Close modal
 ocrModalClose?.addEventListener('click', closeOcrModal);
 cancelOcrBtn?.addEventListener('click', closeOcrModal);
 ocrOverlay?.addEventListener('click', closeOcrModal);
 
-// Click to upload
-fileUploadArea?.addEventListener('click', () => {
-    fileInput.click();
-});
+fileUploadArea?.addEventListener('click', () => fileInput.click());
 
-// Drag & Drop
-fileUploadArea?.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    fileUploadArea.classList.add('drag-over');
-});
-
-fileUploadArea?.addEventListener('dragleave', () => {
-    fileUploadArea.classList.remove('drag-over');
-});
-
-fileUploadArea?.addEventListener('drop', (e) => {
+fileUploadArea?.addEventListener('dragover', e => { e.preventDefault(); fileUploadArea.classList.add('drag-over'); });
+fileUploadArea?.addEventListener('dragleave', () => fileUploadArea.classList.remove('drag-over'));
+fileUploadArea?.addEventListener('drop', e => {
     e.preventDefault();
     fileUploadArea.classList.remove('drag-over');
-
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        fileInput.files = files;
-        handleFileSelect();
-    }
+    if (e.dataTransfer.files.length > 0) addFiles(e.dataTransfer.files);
 });
 
-// File selection
-fileInput?.addEventListener('change', handleFileSelect);
+fileInput?.addEventListener('change', () => {
+    if (fileInput.files.length > 0) addFiles(fileInput.files);
+    fileInput.value = ''; // reset so same file can be added again
+});
 
-function handleFileSelect() {
-    const file = fileInput.files[0];
-
-    if (file) {
-        // Check file size (10MB max)
-        if (file.size > 10 * 1024 * 1024) {
-            alert('Le fichier est trop volumineux. Taille maximum : 10MB');
-            fileInput.value = '';
-            return;
-        }
-
-        // Display preview
-        document.getElementById('file-preview-name').textContent = file.name;
-        document.getElementById('file-preview-size').textContent = formatFileSize(file.size);
-        filePreview.classList.add('show');
-        submitBtn.disabled = false;
-    }
-}
-
-// Submit OCR via AJAX
 submitBtn?.addEventListener('click', submitOcr);
 
-// Remove file
-removeFileBtn?.addEventListener('click', () => {
-    fileInput.value = '';
-    filePreview.classList.remove('show');
-    submitBtn.disabled = true;
-});
-
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-}
-
-// Close on Escape
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && ocrModal.classList.contains('open')) {
-        closeOcrModal();
-    }
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && ocrModal.classList.contains('open')) closeOcrModal();
 });
 
 // ==================== EXISTING SCRIPTS ====================
