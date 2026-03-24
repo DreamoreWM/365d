@@ -13,9 +13,11 @@ use App\Service\PdfTextExtractor;
 use App\Service\PrestationManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Annotation\Route;
 use thiagoalessio\TesseractOCR\TesseractOCR;
 
@@ -307,107 +309,18 @@ class BonDeCommandeController extends AbstractController
             }
             unlink($tmpPath);
 
-            // === PARSING REGEX COMMUN ===
+            // === PARSING ET EXTRACTION ===
             $text     = $this->pdfTextExtractor->fixOcrText($textBrut);
             $allLines = array_values(array_filter(array_map('trim', explode("\n", $text))));
+            $data     = $this->extractOcrFields($ext, $text, $allLines);
 
-            $numeroCommande  = '';
-            $complement      = '';
-            $adresse         = '';
-            $nomClient       = '';
-            $telephone       = '';
-            $codePostalVille = '';
-            $dateLimite      = '';
-            $detectedTypeId  = '';
-
-            // === EXTRACTION PAR CONFIG BAILLEUR ===
-            if ($ext === 'pdf') {
-                $pdfConfigs = $this->pdfConfigRepository->findActifsByPriorite();
-                foreach ($pdfConfigs as $pdfConfig) {
-                    if ($pdfConfig->getIdentifiantTexte() && stripos($text, $pdfConfig->getIdentifiantTexte()) !== false) {
-                        $extracted = $this->pdfConfigExtractor->extract($allLines, $text, $pdfConfig);
-                        $numeroCommande  = $extracted['numeroCommande']      ?? $numeroCommande;
-                        $nomClient       = $extracted['clientNom']           ?? $nomClient;
-                        $telephone       = $extracted['clientTelephone']     ?? $telephone;
-                        $adresse         = $extracted['clientAdresse']       ?? $adresse;
-                        $complement      = $extracted['clientComplementAdresse'] ?? $complement;
-                        $dateLimite      = $extracted['dateLimiteExecution'] ?? $dateLimite;
-                        $detectedTypeId  = $extracted['typePrestation']      ?? $detectedTypeId;
-                        break; // première config qui correspond
-                    }
-                }
-            }
-
-            // Recherche regex (fallback si non rempli par config bailleur)
-            if (!$dateLimite && preg_match('/Travaux\s+.+?pour\s+le\s+(\d{2}\/\d{2}\/\d{4})/isu', $text, $m)) {
-                $parts      = explode('/', $m[1]);
-                $dateLimite = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
-            }
-
-            if (!$numeroCommande && preg_match('/Commande\s*n.?\s*([A-Z0-9]{4,})/iu', $text, $m)) {
-                $numeroCommande = trim($m[1]);
-                $firstChar      = $numeroCommande[0] ?? '';
-                if (ctype_digit($firstChar)) {
-                    $map = ['1' => 'I', '0' => 'O'];
-                    if (isset($map[$firstChar])) {
-                        $numeroCommande = $map[$firstChar] . substr($numeroCommande, 1);
-                    }
-                }
-            }
-
-            // Logement Occupé — cherche dans le texte complet
-            if (!$nomClient && preg_match('/Logement\s+Occup.+?\s*:\s*(?:MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)?(.+?)\s*-\s*(?:Portable|T[eé]l)/isu', $text, $m)) {
-                $nomClient = trim($m[1]);
-            }
-            // Prendre le portable sur la même ligne que "Logement Occupé" (= locataire, pas bailleur)
-            if (!$telephone && preg_match('/Logement\s+Occup.+?(?:Portable|T[eé]l[eé]phone)\s*:\s*(\d[\d\s]{8,})/isu', $text, $m)) {
-                $telephone = preg_replace('/\s+/', '', trim($m[1]));
-            }
-            // Fallback : dernier portable dans le texte (le locataire est toujours après le bailleur)
-            if (!$telephone && preg_match_all('/Portable\s*:\s*(\d[\d\s]{8,})/iu', $text, $allMatches)) {
-                $telephone = preg_replace('/\s+/', '', trim(end($allMatches[1])));
-            }
-
-            // Recherche après "Prestation Parties Privatives" pour adresse et complément (si pas déjà rempli)
-            if (!$adresse && !$complement) {
-                $startIndex = 0;
-                foreach ($allLines as $i => $line) {
-                    if (stripos($line, 'Prestation') !== false && stripos($line, 'Privatives') !== false) {
-                        $startIndex = $i + 1;
-                        break;
-                    }
-                }
-
-                $clientLines = array_slice($allLines, $startIndex);
-                foreach ($clientLines as $line) {
-                    if (!$adresse && preg_match('/\d+\s+(RUE|AVENUE|AV|BOULEVARD|BD|ALL[EÉ]E|IMPASSE|CHEMIN|PLACE|ROUTE|PASSAGE|VOIE)\b/i', $line)) {
-                        $adresse = trim($line);
-                    }
-                    if (!$complement && preg_match('/LOGEMENT\s*n.?\s*\d+/iu', $line)) {
-                        $complement = trim($line);
-                    }
-                    if (!$codePostalVille && preg_match('/^\d{5}\s+[A-ZÉÈÊÀÂ\s-]+$/u', $line)) {
-                        $codePostalVille = trim($line);
-                    }
-                }
-
-                if ($codePostalVille && $adresse) {
-                    $adresse = $adresse . "\n" . $codePostalVille;
-                } elseif ($codePostalVille && !$adresse) {
-                    $adresse = $codePostalVille;
-                }
-            }
-
-            if (!$detectedTypeId) {
-                $typePrestations = $this->em->getRepository(TypePrestation::class)->findAll();
-                foreach ($typePrestations as $tp) {
-                    $code = $tp->getCode();
-                    if ($code && stripos($text, $code) !== false) {
-                        $detectedTypeId = $tp->getId();
-                        break;
-                    }
-                }
-            }
+            $numeroCommande = $data['numeroCommande'];
+            $nomClient      = $data['clientNom'];
+            $adresse        = $data['clientAdresse'];
+            $telephone      = $data['clientTelephone'];
+            $complement     = $data['clientComplementAdresse'];
+            $dateLimite     = $data['dateLimiteExecution'];
+            $detectedTypeId = $data['typePrestation'];
 
             // Log
             $log  = "=== $engine OCR " . date('Y-m-d H:i:s') . " ===\n";
@@ -435,15 +348,7 @@ class BonDeCommandeController extends AbstractController
                         'dateLimiteExecution'     => $dateLimite,
                         'typePrestation'          => $detectedTypeId,
                     ]),
-                    'data' => [
-                        'numeroCommande'          => $numeroCommande,
-                        'clientNom'               => $nomClient,
-                        'clientAdresse'           => $adresse,
-                        'clientTelephone'         => $telephone,
-                        'clientComplementAdresse' => $complement,
-                        'dateLimiteExecution'     => $dateLimite,
-                        'typePrestation'          => $detectedTypeId,
-                    ],
+                    'data' => $data,
                 ]);
             }
 
@@ -463,6 +368,300 @@ class BonDeCommandeController extends AbstractController
         }
         $this->addFlash('danger', 'Aucun fichier reçu');
         return $this->redirectToRoute('admin_bon_commande_index');
+    }
+
+    // =====================================================
+    // IMPORT OCR MULTI (Plusieurs fichiers)
+    // =====================================================
+    #[Route('/import-ocr-multi', name: 'admin_bon_commande_import_ocr_multi', methods: ['POST'])]
+    public function importViaOcrMulti(Request $request): JsonResponse
+    {
+        $files = $request->files->get('photos') ?? [];
+        if (empty($files)) {
+            return new JsonResponse(['success' => false, 'error' => 'Aucun fichier reçu'], 400);
+        }
+        if (!is_array($files)) {
+            $files = [$files];
+        }
+
+        $logPath = $this->getParameter('kernel.project_dir') . '/var/ocr_debug.log';
+        $results = [];
+
+        foreach ($files as $file) {
+            $ext          = strtolower($file->getClientOriginalExtension() ?: ($file->guessExtension() ?? ''));
+            $originalName = $file->getClientOriginalName();
+            $fileSize     = $file->getSize();
+            $token        = 'ocr_preview_' . uniqid('', true);
+            $tmpName      = $token . '.' . ($ext ?: 'bin');
+            $tmpDir       = sys_get_temp_dir();
+            $file->move($tmpDir, $tmpName);
+            $tmpPath = $tmpDir . '/' . $tmpName;
+
+            file_put_contents($logPath,
+                "=== MULTI UPLOAD " . date('Y-m-d H:i:s') . " ===\n" .
+                "Nom: $originalName\nExtension: $ext\nTaille: $fileSize octets\n\n",
+                FILE_APPEND
+            );
+
+            if ($ext === 'pdf') {
+                $textBrut = $this->pdfTextExtractor->extractRaw($tmpPath);
+                $engine   = 'PDF Parser';
+            } else {
+                $processedPath = $this->preprocessImageForOcr($tmpPath);
+                $textBrut      = (new TesseractOCR($processedPath))->lang('fra', 'eng')->psm(3)->run();
+                if ($processedPath !== $tmpPath) {
+                    unlink($processedPath);
+                }
+                $engine = 'Tesseract';
+            }
+
+            $text     = $this->pdfTextExtractor->fixOcrText($textBrut);
+            $allLines = array_values(array_filter(array_map('trim', explode("\n", $text))));
+            $data     = $this->extractOcrFields($ext, $text, $allLines);
+
+            $log  = "=== $engine OCR MULTI " . date('Y-m-d H:i:s') . " ===\n";
+            $log .= "Fichier: $originalName\n";
+            $log .= "N° Commande: " . ($data['numeroCommande'] ?: 'NON TROUVÉ') . "\n";
+            $log .= "Nom client: "  . ($data['clientNom']      ?: 'NON TROUVÉ') . "\n\n";
+            file_put_contents($logPath, $log, FILE_APPEND);
+
+            $results[] = [
+                'token'    => $token,
+                'filename' => $originalName,
+                'ext'      => $ext,
+                'tmpPath'  => $tmpPath,
+                'data'     => $data,
+            ];
+        }
+
+        $request->getSession()->set('ocr_import_results', $results);
+
+        return new JsonResponse([
+            'success'     => true,
+            'redirectUrl' => $this->generateUrl('admin_bon_commande_ocr_review'),
+            'count'       => count($results),
+        ]);
+    }
+
+    // =====================================================
+    // PAGE DE RÉVISION OCR MULTI
+    // =====================================================
+    #[Route('/ocr-review', name: 'admin_bon_commande_ocr_review', methods: ['GET'])]
+    public function ocrReview(Request $request): Response
+    {
+        $results = $request->getSession()->get('ocr_import_results', []);
+
+        if (empty($results)) {
+            $this->addFlash('warning', 'Aucun résultat OCR à réviser');
+            return $this->redirectToRoute('admin_bon_commande_index');
+        }
+
+        $typePrestations = $this->em->getRepository(TypePrestation::class)->findAll();
+
+        return $this->render('admin/bon_commande/ocr_review.html.twig', [
+            'results'         => $results,
+            'typePrestations' => $typePrestations,
+        ]);
+    }
+
+    // =====================================================
+    // SERVIR LE FICHIER TEMP POUR PRÉVISUALISATION OCR
+    // =====================================================
+    #[Route('/preview-ocr/{token}', name: 'admin_bon_commande_preview_ocr', methods: ['GET'])]
+    public function previewOcrFile(string $token): Response
+    {
+        if (!preg_match('/^ocr_preview_[a-zA-Z0-9.]+$/', $token)) {
+            throw $this->createNotFoundException('Token invalide');
+        }
+
+        $files = glob(sys_get_temp_dir() . '/' . $token . '.*');
+        if (empty($files)) {
+            throw $this->createNotFoundException('Fichier introuvable ou expiré');
+        }
+
+        $filePath    = $files[0];
+        $ext         = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $contentType = match ($ext) {
+            'pdf'        => 'application/pdf',
+            'png'        => 'image/png',
+            'jpg','jpeg' => 'image/jpeg',
+            'webp'       => 'image/webp',
+            default      => 'application/octet-stream',
+        };
+
+        $response = new BinaryFileResponse($filePath);
+        $response->headers->set('Content-Type', $contentType);
+        $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE);
+
+        return $response;
+    }
+
+    // =====================================================
+    // CRÉER UN BON DEPUIS L'INTERFACE DE RÉVISION OCR
+    // =====================================================
+    #[Route('/create-from-ocr', name: 'admin_bon_commande_create_from_ocr', methods: ['POST'])]
+    public function createFromOcr(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true) ?? $request->request->all();
+
+        $clientNom       = trim($data['clientNom'] ?? '');
+        $clientTelephone = trim($data['clientTelephone'] ?? '');
+
+        if (!$clientNom || !$clientTelephone) {
+            return new JsonResponse(['success' => false, 'error' => 'Nom et téléphone obligatoires'], 400);
+        }
+
+        $bon = new BonDeCommande();
+        $bon->setNumeroCommande($data['numeroCommande'] ?? null);
+        $bon->setClientNom($clientNom);
+        $bon->setClientTelephone($clientTelephone);
+        $bon->setClientAdresse($data['clientAdresse'] ?? '');
+        $bon->setClientComplementAdresse($data['clientComplementAdresse'] ?? '');
+        $bon->setClientEmail(!empty($data['clientEmail']) ? $data['clientEmail'] : null);
+
+        $dateLimite = $data['dateLimiteExecution'] ?? '';
+        if ($dateLimite) {
+            try {
+                $bon->setDateLimiteExecution(new \DateTimeImmutable($dateLimite));
+            } catch (\Exception) {}
+        }
+
+        $typePrestationId = $data['typePrestation'] ?? '';
+        if ($typePrestationId) {
+            $typePrestation = $this->em->getRepository(TypePrestation::class)->find($typePrestationId);
+            if ($typePrestation) {
+                $bon->setTypePrestation($typePrestation);
+                $bon->setNombrePrestationsNecessaires($typePrestation->getNombrePrestationsNecessaires());
+            }
+        }
+
+        if ($bon->getNumeroCommande()) {
+            $existant = $this->repository->findOneBy(['numeroCommande' => $bon->getNumeroCommande()]);
+            if ($existant) {
+                return new JsonResponse([
+                    'success'     => false,
+                    'error'       => 'Ce numéro de commande existe déjà',
+                    'existingId'  => $existant->getId(),
+                    'existingUrl' => $this->generateUrl('admin_bon_commande_show', ['id' => $existant->getId()]),
+                ], 409);
+            }
+        }
+
+        $this->em->persist($bon);
+        $this->em->flush();
+        $this->prestationManager->updateBonDeCommande($bon);
+
+        return new JsonResponse([
+            'success' => true,
+            'id'      => $bon->getId(),
+            'url'     => $this->generateUrl('admin_bon_commande_show', ['id' => $bon->getId()]),
+        ]);
+    }
+
+    // =====================================================
+    // MÉTHODE PRIVÉE : EXTRACTION DES CHAMPS OCR
+    // =====================================================
+    private function extractOcrFields(string $ext, string $text, array $allLines): array
+    {
+        $numeroCommande  = '';
+        $complement      = '';
+        $adresse         = '';
+        $nomClient       = '';
+        $telephone       = '';
+        $codePostalVille = '';
+        $dateLimite      = '';
+        $detectedTypeId  = '';
+
+        if ($ext === 'pdf') {
+            $pdfConfigs = $this->pdfConfigRepository->findActifsByPriorite();
+            foreach ($pdfConfigs as $pdfConfig) {
+                if ($pdfConfig->getIdentifiantTexte() && stripos($text, $pdfConfig->getIdentifiantTexte()) !== false) {
+                    $extracted       = $this->pdfConfigExtractor->extract($allLines, $text, $pdfConfig);
+                    $numeroCommande  = $extracted['numeroCommande']          ?? $numeroCommande;
+                    $nomClient       = $extracted['clientNom']               ?? $nomClient;
+                    $telephone       = $extracted['clientTelephone']         ?? $telephone;
+                    $adresse         = $extracted['clientAdresse']           ?? $adresse;
+                    $complement      = $extracted['clientComplementAdresse'] ?? $complement;
+                    $dateLimite      = $extracted['dateLimiteExecution']     ?? $dateLimite;
+                    $detectedTypeId  = $extracted['typePrestation']          ?? $detectedTypeId;
+                    break;
+                }
+            }
+        }
+
+        if (!$dateLimite && preg_match('/Travaux\s+.+?pour\s+le\s+(\d{2}\/\d{2}\/\d{4})/isu', $text, $m)) {
+            $parts      = explode('/', $m[1]);
+            $dateLimite = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
+        }
+
+        if (!$numeroCommande && preg_match('/Commande\s*n.?\s*([A-Z0-9]{4,})/iu', $text, $m)) {
+            $numeroCommande = trim($m[1]);
+            $firstChar      = $numeroCommande[0] ?? '';
+            if (ctype_digit($firstChar)) {
+                $map = ['1' => 'I', '0' => 'O'];
+                if (isset($map[$firstChar])) {
+                    $numeroCommande = $map[$firstChar] . substr($numeroCommande, 1);
+                }
+            }
+        }
+
+        if (!$nomClient && preg_match('/Logement\s+Occup.+?\s*:\s*(?:MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)?(.+?)\s*-\s*(?:Portable|T[eé]l)/isu', $text, $m)) {
+            $nomClient = trim($m[1]);
+        }
+
+        if (!$telephone && preg_match('/Logement\s+Occup.+?(?:Portable|T[eé]l[eé]phone)\s*:\s*(\d[\d\s]{8,})/isu', $text, $m)) {
+            $telephone = preg_replace('/\s+/', '', trim($m[1]));
+        }
+
+        if (!$telephone && preg_match_all('/Portable\s*:\s*(\d[\d\s]{8,})/iu', $text, $allMatches)) {
+            $telephone = preg_replace('/\s+/', '', trim(end($allMatches[1])));
+        }
+
+        if (!$adresse && !$complement) {
+            $startIndex = 0;
+            foreach ($allLines as $i => $line) {
+                if (stripos($line, 'Prestation') !== false && stripos($line, 'Privatives') !== false) {
+                    $startIndex = $i + 1;
+                    break;
+                }
+            }
+            foreach (array_slice($allLines, $startIndex) as $line) {
+                if (!$adresse && preg_match('/\d+\s+(RUE|AVENUE|AV|BOULEVARD|BD|ALL[EÉ]E|IMPASSE|CHEMIN|PLACE|ROUTE|PASSAGE|VOIE)\b/i', $line)) {
+                    $adresse = trim($line);
+                }
+                if (!$complement && preg_match('/LOGEMENT\s*n.?\s*\d+/iu', $line)) {
+                    $complement = trim($line);
+                }
+                if (!$codePostalVille && preg_match('/^\d{5}\s+[A-ZÉÈÊÀÂ\s-]+$/u', $line)) {
+                    $codePostalVille = trim($line);
+                }
+            }
+            if ($codePostalVille && $adresse) {
+                $adresse = $adresse . "\n" . $codePostalVille;
+            } elseif ($codePostalVille) {
+                $adresse = $codePostalVille;
+            }
+        }
+
+        if (!$detectedTypeId) {
+            foreach ($this->em->getRepository(TypePrestation::class)->findAll() as $tp) {
+                $code = $tp->getCode();
+                if ($code && stripos($text, $code) !== false) {
+                    $detectedTypeId = $tp->getId();
+                    break;
+                }
+            }
+        }
+
+        return [
+            'numeroCommande'          => $numeroCommande,
+            'clientNom'               => $nomClient,
+            'clientAdresse'           => $adresse,
+            'clientTelephone'         => $telephone,
+            'clientComplementAdresse' => $complement,
+            'dateLimiteExecution'     => $dateLimite,
+            'typePrestation'          => $detectedTypeId,
+        ];
     }
 
     // =====================================================
