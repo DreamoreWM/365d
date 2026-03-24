@@ -22,6 +22,7 @@ class PdfConfigExtractor
                 'line_index'           => $this->byLineIndex($lines, $mapping),
                 'line_index_regex'     => $this->byLineIndexRegex($lines, $mapping),
                 'line_index_date'      => $this->byLineIndexDate($lines, $mapping),
+                'full_text_regex'      => $this->byFullTextRegex($fullText, $mapping),
                 'type_prestation_code' => $this->detectType($fullText),
                 default                => '',
             };
@@ -50,6 +51,15 @@ class PdfConfigExtractor
         if (preg_match('/(\d{2}\/\d{2}\/\d{4})/', $line, $matches)) {
             $parts = explode('/', $matches[1]);
             return $parts[2] . '-' . $parts[1] . '-' . $parts[0];
+        }
+        return '';
+    }
+
+    private function byFullTextRegex(string $fullText, array $m): string
+    {
+        $regex = $m['regex'] ?? '';
+        if ($regex && preg_match($regex, $fullText, $matches)) {
+            return trim($matches[$m['regexGroup'] ?? 1] ?? '');
         }
         return '';
     }
