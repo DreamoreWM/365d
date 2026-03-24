@@ -433,18 +433,22 @@
 <div class="detail-container">
 
     {% if bon.statut.value == 'terminé' %}
-    <div style="background: #fff8e1; border-left: 4px solid #ff9800; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
-        <div style="display: flex; align-items: center; gap: 12px;">
+    <div style="background: #fff8e1; border-left: 4px solid #ff9800; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
             <i class="material-icons" style="color: #ff9800; font-size: 28px;">lock_open</i>
             <div>
                 <div style="font-weight: 500; color: #e65100;">Bon de commande terminé</div>
                 <div style="font-size: 0.875rem; color: #757575;">Des prestations supplémentaires sont nécessaires ? Réouvrez ce bon.</div>
             </div>
         </div>
-        <button type="button" id="btn-reopen-open" style="background: #ff9800; color: white; white-space: nowrap; border: none; border-radius: 4px; padding: 10px 20px; font-size: 0.875rem; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; letter-spacing: 0.04em; text-transform: uppercase;">
-            <i class="material-icons" style="font-size: 18px;">lock_open</i>
-            Réouvrir
-        </button>
+        <form method="POST" action="{{ path('admin_bon_commande_reopen', {id: bon.id}) }}" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <input type="hidden" name="_token" value="{{ csrf_token('reopen' ~ bon.id) }}">
+            <label style="font-size: 0.875rem; color: #757575; white-space: nowrap;">Prestations supplémentaires :</label>
+            <input type="number" name="prestations_supplementaires" min="1" value="1" style="width: 70px; padding: 8px; border: 1px solid #ffb74d; border-radius: 4px; font-size: 1rem; text-align: center;">
+            <button type="submit" style="background: #ff9800; color: white; border: none; border-radius: 4px; padding: 10px 20px; font-size: 0.875rem; font-weight: 500; cursor: pointer;">
+                Réouvrir
+            </button>
+        </form>
     </div>
     {% endif %}
 
@@ -882,13 +886,6 @@
 
 </div>
 
-{% if bon.statut.value == 'terminé' %}
-<form id="reopen-bon-form" method="POST" action="{{ path('admin_bon_commande_reopen', {id: bon.id}) }}" style="display: none;">
-    <input type="hidden" name="_token" value="{{ csrf_token('reopen' ~ bon.id) }}">
-    <input type="hidden" name="prestations_supplementaires" id="reopen-prestations-count" value="1">
-</form>
-{% endif %}
-
 {% endblock %}
 
 {% block javascripts %}
@@ -900,21 +897,5 @@ function confirmDeleteBon() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    var btnOpen = document.getElementById('btn-reopen-open');
-    if (!btnOpen) return;
-
-    btnOpen.addEventListener('click', function() {
-        var count = window.prompt('Combien de prestations supplémentaires sont nécessaires ?', '1');
-        if (count === null) return;
-        count = parseInt(count, 10);
-        if (isNaN(count) || count < 1) {
-            alert('Veuillez entrer un nombre valide (minimum 1).');
-            return;
-        }
-        document.getElementById('reopen-prestations-count').value = count;
-        document.getElementById('reopen-bon-form').submit();
-    });
-});
 </script>
 {% endblock %}
