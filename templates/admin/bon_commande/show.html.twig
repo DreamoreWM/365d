@@ -463,6 +463,11 @@
             <p>Bon de commande {{ bon.numeroCommande ? '#' ~ bon.numeroCommande : '#' ~ bon.id }}</p>
         </div>
         <div class="detail-header-actions">
+            {% if bon.statut.value == 'terminé' %}
+            <button type="button" onclick="openReopenModal()" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab" style="background: #ff9800; color: white;" title="Réouvrir">
+                <i class="material-icons">lock_open</i>
+            </button>
+            {% endif %}
             <a href="{{ path('admin_bon_commande_edit', {id: bon.id}) }}" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored" title="Modifier">
                 <i class="material-icons">edit</i>
             </a>
@@ -478,6 +483,34 @@
     <form id="delete-bon-form" method="POST" action="{{ path('admin_bon_commande_delete', {id: bon.id}) }}" style="display: none;">
         <input type="hidden" name="_token" value="{{ csrf_token('delete') }}">
     </form>
+
+    {% if bon.statut.value == 'terminé' %}
+    <form id="reopen-bon-form" method="POST" action="{{ path('admin_bon_commande_reopen', {id: bon.id}) }}" style="display: none;">
+        <input type="hidden" name="_token" value="{{ csrf_token('reopen' ~ bon.id) }}">
+        <input type="hidden" name="prestations_supplementaires" id="reopen-prestations-count" value="1">
+    </form>
+
+    <div id="reopen-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:var(--card-light); border-radius:8px; padding:32px; max-width:420px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+            <h2 style="margin:0 0 8px; font-size:1.25rem; font-weight:500; display:flex; align-items:center; gap:8px;">
+                <i class="material-icons" style="color:#ff9800;">lock_open</i>
+                Réouvrir le bon de commande
+            </h2>
+            <p style="margin:0 0 24px; color:#757575; font-size:0.95rem;">
+                Ce bon est marqué comme terminé. Combien de prestations supplémentaires sont nécessaires ?
+            </p>
+            <label style="display:block; margin-bottom:8px; font-size:0.875rem; color:#757575;">Nombre de prestations supplémentaires</label>
+            <input type="number" id="reopen-input" min="1" value="1" style="width:100%; padding:10px; border:1px solid var(--border-light); border-radius:4px; font-size:1rem; margin-bottom:24px; box-sizing:border-box;">
+            <div style="display:flex; gap:12px; justify-content:flex-end;">
+                <button type="button" onclick="closeReopenModal()" class="mdl-button mdl-js-button">Annuler</button>
+                <button type="button" onclick="confirmReopen()" class="mdl-button mdl-js-button mdl-button--raised" style="background:#ff9800; color:white;">
+                    <i class="material-icons" style="vertical-align:middle; margin-right:4px; font-size:18px;">lock_open</i>
+                    Réouvrir
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Info Grid -->
     <div class="info-grid">
@@ -874,5 +907,32 @@ function confirmDeleteBon() {
         document.getElementById('delete-bon-form').submit();
     }
 }
+
+function openReopenModal() {
+    var modal = document.getElementById('reopen-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.getElementById('reopen-input').focus();
+    }
+}
+
+function closeReopenModal() {
+    var modal = document.getElementById('reopen-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function confirmReopen() {
+    var count = parseInt(document.getElementById('reopen-input').value, 10);
+    if (isNaN(count) || count < 1) {
+        alert('Veuillez entrer un nombre valide (minimum 1).');
+        return;
+    }
+    document.getElementById('reopen-prestations-count').value = count;
+    document.getElementById('reopen-bon-form').submit();
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeReopenModal();
+});
 </script>
 {% endblock %}
