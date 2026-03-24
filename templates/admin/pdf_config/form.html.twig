@@ -10,71 +10,94 @@ body.dark-mode .form-card { background:var(--card-dark); }
 body.dark-mode .field-inp { background:var(--card-dark); border-color:var(--border-dark); color:var(--text-dark); }
 .field-inp:focus { outline:none; border-color:var(--primary); }
 
-/* PDF preview */
-.pdf-zone { border:2px dashed var(--border-light); border-radius:10px; padding:28px 20px; text-align:center; cursor:pointer; transition:.2s; }
-body.dark-mode .pdf-zone { border-color:var(--border-dark); }
-.pdf-zone:hover { border-color:var(--primary); background:rgba(63,81,181,.04); }
-.pdf-lines { max-height:520px; overflow-y:auto; margin-top:14px; border:1px solid var(--border-light); border-radius:8px; }
-body.dark-mode .pdf-lines { border-color:var(--border-dark); }
-
-.pdf-line {
-    display:flex; align-items:center; gap:8px;
-    padding:7px 10px; border-bottom:1px solid var(--border-light);
-    cursor:pointer; font-size:.84rem; font-family:monospace;
-    transition:.12s; position:relative;
+/* PDF viewer */
+.pdf-drop-zone {
+    border:2px dashed var(--border-light); border-radius:10px;
+    padding:36px 20px; text-align:center; cursor:pointer; transition:.2s;
 }
-body.dark-mode .pdf-line { border-color:var(--border-dark); color:var(--text-dark); }
-.pdf-line:hover { background:rgba(63,81,181,.07); }
-.pdf-line.assigned { background:#e8f5e9; }
-body.dark-mode .pdf-line.assigned { background:rgba(76,175,80,.14); }
-.pdf-line.active-pick { background:rgba(63,81,181,.13); outline:2px solid var(--primary); outline-offset:-2px; }
-.line-num { font-size:.7rem; color:#bbb; min-width:26px; text-align:right; flex-shrink:0; }
-.line-chip {
-    font-size:.68rem; padding:2px 8px; border-radius:10px;
-    background:var(--primary); color:white; font-weight:600;
-    margin-left:auto; flex-shrink:0; white-space:nowrap;
-    display:flex; align-items:center; gap:4px;
-}
-.line-chip .chip-del { cursor:pointer; opacity:.7; font-size:12px; line-height:1; }
-.line-chip .chip-del:hover { opacity:1; }
+body.dark-mode .pdf-drop-zone { border-color:var(--border-dark); }
+.pdf-drop-zone:hover { border-color:var(--primary); background:rgba(63,81,181,.04); }
 
-/* Inline field picker dropdown */
-#fieldPicker {
+#pdfViewer {
+    background:#e0e0e0;
+    border-radius:8px;
+    overflow-y:auto;
+    max-height:680px;
+    padding:16px 0;
     display:none;
-    position:fixed;
-    z-index:9999;
+}
+body.dark-mode #pdfViewer { background:#2a2a2a; }
+
+.pdf-page-wrap {
+    position:relative;
+    display:block;
+    margin:0 auto 16px;
+    box-shadow:0 4px 16px rgba(0,0,0,.25);
+    line-height:0; /* prevents gap under canvas */
+}
+.pdf-page-wrap canvas { display:block; }
+
+/* Text layer */
+.textLayer {
+    position:absolute;
+    inset:0;
+    overflow:hidden;
+    pointer-events:none; /* let canvas receive scroll, spans override */
+    line-height:1;
+}
+.textLayer span {
+    color:transparent;
+    position:absolute;
+    white-space:pre;
+    cursor:pointer;
+    pointer-events:all;
+    border-radius:2px;
+    transform-origin:0% 0%;
+    transition:background .1s;
+}
+.textLayer span:hover { background:rgba(63,81,181,.18); }
+.textLayer span.tl-assigned { background:rgba(76,175,80,.30) !important; }
+.textLayer span.tl-active   { background:rgba(63,81,181,.30) !important; }
+
+/* Field picker */
+#fieldPicker {
+    display:none; position:fixed; z-index:9999;
     background:var(--card-light);
     border:1.5px solid var(--primary);
     border-radius:10px;
-    box-shadow:0 6px 24px rgba(0,0,0,.18);
-    min-width:220px;
-    overflow:hidden;
+    box-shadow:0 6px 28px rgba(0,0,0,.22);
+    min-width:230px; overflow:hidden;
 }
 body.dark-mode #fieldPicker { background:var(--card-dark); }
 #fieldPicker.open { display:block; }
 .picker-header {
-    padding:8px 12px 6px;
-    font-size:.72rem; font-weight:700; color:var(--primary);
-    text-transform:uppercase; letter-spacing:.5px;
-    border-bottom:1px solid var(--border-light);
+    padding:9px 14px 7px; font-size:.7rem; font-weight:700;
+    color:var(--primary); text-transform:uppercase; letter-spacing:.5px;
+    border-bottom:1px solid var(--border-light); background:rgba(63,81,181,.05);
 }
 body.dark-mode .picker-header { border-color:var(--border-dark); }
+.picker-linepreview {
+    padding:6px 14px; font-size:.75rem; font-family:monospace;
+    color:#888; border-bottom:1px solid var(--border-light);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    max-width:280px;
+}
+body.dark-mode .picker-linepreview { border-color:var(--border-dark); color:#aaa; }
 .picker-item {
     display:flex; align-items:center; gap:10px;
-    padding:9px 14px; cursor:pointer; font-size:.88rem;
-    transition:.1s;
+    padding:9px 14px; cursor:pointer; font-size:.88rem; transition:.1s;
 }
-.picker-item:hover { background:rgba(63,81,181,.08); }
-.picker-item .picker-icon { font-size:16px; color:var(--primary); flex-shrink:0; }
-.picker-item .picker-label { font-weight:500; }
-.picker-item .picker-check { margin-left:auto; color:#4caf50; font-size:16px; display:none; }
-.picker-item.already-set .picker-check { display:block; }
-.picker-sep { height:1px; background:var(--border-light); margin:4px 0; }
+.picker-item:hover { background:rgba(63,81,181,.09); }
+.picker-item .pi-icon { font-size:17px; color:var(--primary); flex-shrink:0; }
+.picker-item .pi-label { font-weight:500; flex:1; }
+.picker-item .pi-check { margin-left:auto; color:#4caf50; font-size:16px; display:none; }
+.picker-item.is-set .pi-check { display:block; }
+.picker-sep { height:1px; background:var(--border-light); }
 body.dark-mode .picker-sep { background:var(--border-dark); }
 .picker-cancel { padding:8px 14px 10px; font-size:.8rem; color:#e53935; cursor:pointer; text-align:center; }
 .picker-cancel:hover { background:rgba(229,57,53,.07); }
 
-/* Mappings summary */
+/* Mapping rows */
 .mapping-row { display:flex; align-items:center; gap:10px; background:rgba(63,81,181,.04); border-radius:8px; padding:10px 14px; margin-bottom:8px; border:1px solid rgba(63,81,181,.12); }
 body.dark-mode .mapping-row { background:rgba(63,81,181,.08); }
 .del-btn { background:none; border:none; cursor:pointer; color:#e53935; padding:4px; border-radius:4px; display:flex; align-items:center; margin-left:auto; flex-shrink:0; }
@@ -83,7 +106,7 @@ body.dark-mode .mapping-row { background:rgba(63,81,181,.08); }
 @keyframes spin { to { transform:rotate(360deg); } }
 </style>
 
-<div style="max-width:1300px;margin:0 auto;padding:24px 16px;">
+<div style="max-width:1400px;margin:0 auto;padding:24px 16px;">
 
     <div class="page-header" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;padding:24px;border-radius:12px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
         <h1 style="margin:0;font-size:1.6rem;font-weight:400;display:flex;align-items:center;gap:10px;">
@@ -102,39 +125,43 @@ body.dark-mode .mapping-row { background:rgba(63,81,181,.08); }
     {% endfor %}
 
     <form method="post" id="mainForm">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div style="display:grid;grid-template-columns:1.1fr .9fr;gap:20px;align-items:start;">
 
-            <!-- LEFT: PDF preview -->
+            <!-- LEFT: PDF visual viewer -->
             <div>
-                <div class="form-card">
-                    <h3 style="margin:0 0 16px;font-size:1rem;font-weight:600;display:flex;align-items:center;gap:8px;">
-                        <i class="material-icons" style="color:var(--primary);">upload_file</i> PDF exemple
+                <div class="form-card" style="padding:20px;">
+                    <h3 style="margin:0 0 14px;font-size:1rem;font-weight:600;display:flex;align-items:center;gap:8px;">
+                        <i class="material-icons" style="color:var(--primary);">picture_as_pdf</i> PDF exemple
+                        <span id="pdfPageInfo" style="margin-left:auto;font-size:.78rem;color:#9e9e9e;font-weight:400;"></span>
                     </h3>
 
-                    <div class="pdf-zone" id="pdfZone" onclick="document.getElementById('pdfFile').click()">
-                        <i class="material-icons" style="font-size:42px;color:#9e9e9e;">picture_as_pdf</i>
-                        <p style="margin:8px 0 0;color:#9e9e9e;font-size:.9rem;">Cliquez pour charger un PDF exemple</p>
-                        <p style="margin:4px 0 0;color:#bbb;font-size:.78rem;">Chaque ligne sera cliquable pour assigner un champ</p>
+                    <!-- Drop zone -->
+                    <div class="pdf-drop-zone" id="pdfDropZone" onclick="document.getElementById('pdfFile').click()">
+                        <i class="material-icons" style="font-size:48px;color:#bbb;">upload_file</i>
+                        <p style="margin:10px 0 4px;color:#9e9e9e;font-size:.95rem;">Cliquez ou déposez un PDF ici</p>
+                        <p style="margin:0;color:#bbb;font-size:.78rem;">Le PDF s'affichera tel quel — cliquez sur le texte pour assigner les champs</p>
                     </div>
-                    <input type="file" id="pdfFile" accept=".pdf" style="display:none;" onchange="loadPdf(this)">
+                    <input type="file" id="pdfFile" accept=".pdf" style="display:none;" onchange="loadPdf(this.files[0])">
 
-                    <div id="pdfLoading" style="display:none;text-align:center;padding:20px;color:#9e9e9e;">
-                        <i class="material-icons" style="font-size:32px;animation:spin 1s linear infinite;">refresh</i>
-                        <p style="margin:8px 0 0;">Extraction en cours…</p>
+                    <!-- Loading -->
+                    <div id="pdfLoading" style="display:none;text-align:center;padding:32px;color:#9e9e9e;">
+                        <i class="material-icons" style="font-size:36px;animation:spin 1s linear infinite;display:block;">refresh</i>
+                        <p style="margin:10px 0 0;">Rendu en cours…</p>
                     </div>
 
-                    <div id="pdfLinesContainer" style="display:none;">
-                        <p style="margin:12px 0 6px;font-size:.8rem;color:#9e9e9e;">
-                            <i class="material-icons" style="font-size:14px;vertical-align:middle;">touch_app</i>
-                            Cliquez sur une ligne pour choisir le champ à lui assigner
-                        </p>
-                        <div class="pdf-lines" id="pdfLines"></div>
-                    </div>
+                    <!-- PDF pages rendered here -->
+                    <div id="pdfViewer"></div>
+
+                    <!-- Hint -->
+                    <p id="pdfHint" style="display:none;margin:10px 0 0;font-size:.78rem;color:#9e9e9e;">
+                        <i class="material-icons" style="font-size:14px;vertical-align:middle;">touch_app</i>
+                        Cliquez sur n'importe quel texte du PDF pour l'assigner à un champ
+                    </p>
                 </div>
             </div>
 
             <!-- RIGHT: Config + mappings -->
-            <div>
+            <div style="position:sticky;top:16px;">
                 <div class="form-card">
                     <h3 style="margin:0 0 16px;font-size:1rem;font-weight:600;display:flex;align-items:center;gap:8px;">
                         <i class="material-icons" style="color:var(--primary);">settings</i> Informations
@@ -146,7 +173,7 @@ body.dark-mode .mapping-row { background:rgba(63,81,181,.08); }
                         </div>
                         <div>
                             <div class="field-label">Texte identifiant *</div>
-                            <input class="field-inp" type="text" name="identifiantTexte" value="{{ config.identifiantTexte }}" placeholder="Texte unique présent dans tous les PDFs de ce bailleur">
+                            <input class="field-inp" type="text" name="identifiantTexte" value="{{ config.identifiantTexte }}" placeholder="Texte unique présent dans tous les PDFs">
                             <p style="font-size:.75rem;color:#9e9e9e;margin:4px 0 0;">Ce texte sert à reconnaître automatiquement les PDFs de ce bailleur.</p>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -154,7 +181,7 @@ body.dark-mode .mapping-row { background:rgba(63,81,181,.08); }
                                 <div class="field-label">Priorité</div>
                                 <input class="field-inp" type="number" name="priorite" value="{{ config.priorite }}" min="1" max="999">
                             </div>
-                            <div style="display:flex;align-items:center;gap:10px;padding-top:18px;">
+                            <div style="display:flex;align-items:center;padding-top:20px;">
                                 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
                                     <input type="checkbox" name="actif" value="1" {{ config.actif ? 'checked' : '' }} style="accent-color:var(--primary);width:18px;height:18px;">
                                     <span style="font-weight:500;">Config active</span>
@@ -169,14 +196,12 @@ body.dark-mode .mapping-row { background:rgba(63,81,181,.08); }
                         <i class="material-icons" style="color:var(--primary);">tune</i> Champs mappés
                         <span id="mappingCount" style="margin-left:auto;background:rgba(63,81,181,.1);color:var(--primary);font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:10px;">0</span>
                     </h3>
-
                     <div id="mappingRows">
-                        <p id="emptyMappings" style="color:#9e9e9e;font-size:.85rem;text-align:center;padding:16px 0;">
-                            <i class="material-icons" style="font-size:20px;vertical-align:middle;display:block;margin-bottom:6px;">touch_app</i>
-                            Chargez un PDF et cliquez sur les lignes pour assigner les champs
+                        <p id="emptyMappings" style="color:#9e9e9e;font-size:.84rem;text-align:center;padding:14px 0;">
+                            <i class="material-icons" style="font-size:22px;vertical-align:middle;display:block;margin-bottom:6px;">touch_app</i>
+                            Cliquez sur le texte du PDF pour assigner les champs
                         </p>
                     </div>
-
                     <input type="hidden" name="fieldMappings" id="fieldMappingsInput">
                 </div>
 
@@ -187,170 +212,226 @@ body.dark-mode .mapping-row { background:rgba(63,81,181,.08); }
                     </button>
                 </div>
             </div>
+
         </div>
     </form>
 </div>
 
 <!-- Floating field picker -->
 <div id="fieldPicker">
-    <div class="picker-header">Assigner à quel champ ?</div>
+    <div class="picker-header">Assigner ce texte à quel champ ?</div>
+    <div class="picker-linepreview" id="pickerPreview"></div>
     <div id="pickerItems"></div>
     <div class="picker-sep"></div>
     <div class="picker-cancel" onclick="closePicker()">Annuler</div>
 </div>
 
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
-const DB_FIELDS = [
-    { key:'numeroCommande',          label:'N° de commande',           icon:'tag',            strategy:'line_index' },
-    { key:'clientNom',               label:'Nom du client / occupant', icon:'person',         strategy:'line_index' },
-    { key:'clientAdresse',           label:'Adresse',                  icon:'home',           strategy:'line_index' },
-    { key:'clientComplementAdresse', label:'Complément d\'adresse',    icon:'apartment',      strategy:'line_index' },
-    { key:'clientTelephone',         label:'Téléphone',                icon:'phone',          strategy:'line_index' },
-    { key:'dateLimiteExecution',     label:'Date limite d\'exécution', icon:'event',          strategy:'line_index_date' },
-    { key:'typePrestation',          label:'Type de prestation',       icon:'build',          strategy:'type_prestation_code' },
-];
-const DB_FIELDS_MAP = Object.fromEntries(DB_FIELDS.map(f => [f.key, f]));
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-let mappings = {{ config.fieldMappings|json_encode|raw }};
+// ── Config ────────────────────────────────────────────────────────────────────
+const DB_FIELDS = [
+    { key:'numeroCommande',          label:'N° de commande',          icon:'tag',       strategy:'line_index' },
+    { key:'clientNom',               label:'Nom client / occupant',   icon:'person',    strategy:'line_index' },
+    { key:'clientAdresse',           label:'Adresse',                 icon:'home',      strategy:'line_index' },
+    { key:'clientComplementAdresse', label:'Complément d\'adresse',   icon:'apartment', strategy:'line_index' },
+    { key:'clientTelephone',         label:'Téléphone',               icon:'phone',     strategy:'line_index' },
+    { key:'dateLimiteExecution',     label:'Date limite d\'exécution',icon:'event',     strategy:'line_index_date' },
+    { key:'typePrestation',          label:'Type de prestation',      icon:'build',     strategy:'type_prestation_code' },
+];
+const FIELDS_MAP = Object.fromEntries(DB_FIELDS.map(f => [f.key, f]));
+
+let mappings    = {{ config.fieldMappings|json_encode|raw }};
+let serverLines = []; // extracted lines from server
+let activeSpan  = null;
 let pickerLineIndex = -1;
-let pickerLineEl    = null;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     renderAllMappings();
-    syncHiddenInput();
+    syncHidden();
 });
 
-// ── PDF loading ───────────────────────────────────────────────────────────────
-async function loadPdf(input) {
-    const file = input.files[0];
+// ── Load PDF ──────────────────────────────────────────────────────────────────
+async function loadPdf(file) {
     if (!file) return;
-    document.getElementById('pdfLoading').style.display = 'block';
-    document.getElementById('pdfLinesContainer').style.display = 'none';
-    document.getElementById('pdfZone').style.display = 'none';
+    document.getElementById('pdfDropZone').style.display  = 'none';
+    document.getElementById('pdfLoading').style.display   = 'block';
+    document.getElementById('pdfViewer').style.display    = 'none';
+    document.getElementById('pdfHint').style.display      = 'none';
 
+    // 1. Send to server for line extraction
     const fd = new FormData();
     fd.append('pdf', file);
-    const res  = await fetch('{{ path('admin_pdf_config_preview') }}', { method:'POST', body:fd });
-    const data = await res.json();
-    document.getElementById('pdfLoading').style.display = 'none';
+    const serverPromise = fetch('{{ path('admin_pdf_config_preview') }}', { method:'POST', body:fd })
+        .then(r => r.json());
 
-    if (!data.success) { alert('Erreur lors de l\'extraction du PDF.'); return; }
+    // 2. Read locally for PDF.js
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-    const container = document.getElementById('pdfLines');
-    container.innerHTML = data.lines.map(l => `
-        <div class="pdf-line" data-index="${l.index}" onclick="onLineClick(event, ${l.index}, this)">
-            <span class="line-num">${l.index}</span>
-            <span class="line-text" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(l.text)}</span>
-        </div>
-    `).join('');
-    document.getElementById('pdfLinesContainer').style.display = 'block';
-    refreshLineHighlights();
+    // Wait for server lines
+    const serverData = await serverPromise;
+    if (serverData.success) {
+        serverLines = serverData.lines.map(l => l.text); // ["line text", ...]
+    }
+
+    // Render all pages
+    const viewer = document.getElementById('pdfViewer');
+    viewer.innerHTML = '';
+
+    const totalPages = pdfDoc.numPages;
+    document.getElementById('pdfPageInfo').textContent = totalPages + ' page' + (totalPages > 1 ? 's' : '');
+
+    const SCALE = 1.4;
+    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        const page     = await pdfDoc.getPage(pageNum);
+        const viewport = page.getViewport({ scale: SCALE });
+
+        // Page wrapper
+        const wrap   = document.createElement('div');
+        wrap.className = 'pdf-page-wrap';
+        wrap.style.width  = viewport.width  + 'px';
+        wrap.style.height = viewport.height + 'px';
+
+        // Canvas
+        const canvas = document.createElement('canvas');
+        canvas.width  = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        wrap.appendChild(canvas);
+
+        // Text layer
+        const textLayerDiv = document.createElement('div');
+        textLayerDiv.className = 'textLayer';
+        textLayerDiv.style.width  = viewport.width  + 'px';
+        textLayerDiv.style.height = viewport.height + 'px';
+
+        const textContent = await page.getTextContent();
+        const textDivs    = [];
+
+        await pdfjsLib.renderTextLayer({
+            textContentSource: textContent,
+            container: textLayerDiv,
+            viewport,
+            textDivs,
+        }).promise;
+
+        // Attach click handlers after render
+        textDivs.forEach((div, i) => {
+            const rawText = div.textContent?.trim();
+            if (!rawText) return;
+            const lineIdx = findLineIndex(rawText);
+            if (lineIdx < 0) return;
+            div.dataset.lineIndex = lineIdx;
+            div.dataset.lineText  = serverLines[lineIdx] ?? rawText;
+            div.addEventListener('click', e => { e.stopPropagation(); onSpanClick(e, div, lineIdx); });
+        });
+
+        wrap.appendChild(textLayerDiv);
+        viewer.appendChild(wrap);
+    }
+
+    document.getElementById('pdfLoading').style.display  = 'none';
+    document.getElementById('pdfViewer').style.display   = 'block';
+    document.getElementById('pdfHint').style.display     = 'block';
+
+    refreshSpanHighlights();
 }
 
-function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// Find best server line index for a PDF.js text fragment
+function findLineIndex(text) {
+    const needle = text.trim().toLowerCase();
+    if (needle.length < 2) return -1;
+    let idx = serverLines.findIndex(l => l.toLowerCase().includes(needle));
+    if (idx >= 0) return idx;
+    // Try reverse: does any line start contained in needle?
+    idx = serverLines.findIndex(l => {
+        const hay = l.trim().toLowerCase();
+        return hay.length >= 4 && needle.includes(hay.substring(0, Math.min(hay.length, 20)));
+    });
+    return idx;
 }
 
 // ── Field picker ──────────────────────────────────────────────────────────────
-function onLineClick(evt, lineIndex, lineEl) {
-    evt.stopPropagation();
-
-    // Toggle: if picker already open for this line, close it
-    if (pickerLineIndex === lineIndex && document.getElementById('fieldPicker').classList.contains('open')) {
-        closePicker();
-        return;
-    }
-
+function onSpanClick(evt, span, lineIndex) {
+    if (activeSpan) activeSpan.classList.remove('tl-active');
+    activeSpan = span;
+    span.classList.add('tl-active');
     pickerLineIndex = lineIndex;
-    pickerLineEl    = lineEl;
 
-    // Mark active
-    document.querySelectorAll('.pdf-line').forEach(el => el.classList.remove('active-pick'));
-    lineEl.classList.add('active-pick');
+    // Preview text = full server line
+    const lineText = serverLines[lineIndex] ?? span.textContent;
+    document.getElementById('pickerPreview').textContent = lineText;
 
-    // Build picker items
-    const assignedKeys = new Set(mappings.map(m => m.dbField));
+    // Items
+    const byLine = {};
+    mappings.forEach(m => { if (m.lineIndex != null) byLine[m.lineIndex] = m.dbField; });
     const items = DB_FIELDS.map(f => {
-        const isSet = assignedKeys.has(f.key) && mappings.find(m => m.dbField === f.key)?.lineIndex === lineIndex;
-        return `
-            <div class="picker-item ${isSet ? 'already-set' : ''}" onclick="assignField('${f.key}')">
-                <i class="material-icons picker-icon">${f.icon}</i>
-                <span class="picker-label">${f.label}</span>
-                <i class="material-icons picker-check">check_circle</i>
-            </div>`;
+        const isSet = byLine[lineIndex] === f.key;
+        return `<div class="picker-item ${isSet ? 'is-set' : ''}" onclick="assignField('${f.key}')">
+            <i class="material-icons pi-icon">${f.icon}</i>
+            <span class="pi-label">${f.label}</span>
+            <i class="material-icons pi-check">check_circle</i>
+        </div>`;
     }).join('');
     document.getElementById('pickerItems').innerHTML = items;
 
-    // Position picker near the clicked line
+    // Position
     const picker = document.getElementById('fieldPicker');
     picker.classList.add('open');
-
-    const rect = lineEl.getBoundingClientRect();
-    const pw   = picker.offsetWidth  || 230;
-    const ph   = picker.offsetHeight || 320;
-    let top  = rect.bottom + 4;
+    const rect = span.getBoundingClientRect();
+    const pw = 240, ph = picker.offsetHeight || 340;
+    let top  = rect.bottom + 6;
     let left = rect.left;
-
-    if (top + ph > window.innerHeight - 8)  top  = rect.top - ph - 4;
+    if (top  + ph > window.innerHeight - 8) top  = rect.top - ph - 6;
     if (left + pw > window.innerWidth  - 8) left = window.innerWidth - pw - 8;
+    if (left < 8) left = 8;
     picker.style.top  = top  + 'px';
     picker.style.left = left + 'px';
 }
 
 function assignField(fieldKey) {
-    const fieldDef = DB_FIELDS_MAP[fieldKey];
-    const mapping = {
-        dbField:    fieldKey,
-        strategy:   fieldDef.strategy,
-        lineIndex:  pickerLineIndex,
-    };
-
-    // Replace existing mapping for same field
+    const f = FIELDS_MAP[fieldKey];
     mappings = mappings.filter(m => m.dbField !== fieldKey);
-    mappings.push(mapping);
-
+    mappings.push({ dbField: fieldKey, strategy: f.strategy, lineIndex: pickerLineIndex });
     renderAllMappings();
-    syncHiddenInput();
-    refreshLineHighlights();
+    syncHidden();
+    refreshSpanHighlights();
     closePicker();
 }
 
 function closePicker() {
     document.getElementById('fieldPicker').classList.remove('open');
-    document.querySelectorAll('.pdf-line').forEach(el => el.classList.remove('active-pick'));
+    if (activeSpan) { activeSpan.classList.remove('tl-active'); activeSpan = null; }
     pickerLineIndex = -1;
-    pickerLineEl    = null;
 }
 
-// Close picker when clicking outside
 document.addEventListener('click', e => {
     const picker = document.getElementById('fieldPicker');
-    if (picker.classList.contains('open') && !picker.contains(e.target) && !e.target.closest('.pdf-line')) {
+    if (picker.classList.contains('open') && !picker.contains(e.target) && !e.target.closest('.textLayer')) {
         closePicker();
     }
 });
 
-// ── Mappings summary ──────────────────────────────────────────────────────────
+// ── Mappings panel ────────────────────────────────────────────────────────────
 function renderAllMappings() {
     const container = document.getElementById('mappingRows');
     const empty     = document.getElementById('emptyMappings');
-
     if (!mappings.length) {
         container.innerHTML = '';
         container.appendChild(empty);
         document.getElementById('mappingCount').textContent = '0';
         return;
     }
-
-    // Sort by lineIndex
     const sorted = [...mappings].sort((a, b) => (a.lineIndex ?? 999) - (b.lineIndex ?? 999));
-
     container.innerHTML = sorted.map(m => {
-        const f = DB_FIELDS_MAP[m.dbField];
-        const lineInfo = m.strategy === 'type_prestation_code' ? 'Auto-détection' : `Ligne ${m.lineIndex}`;
-        return `
-        <div class="mapping-row" data-field="${m.dbField}">
+        const f = FIELDS_MAP[m.dbField];
+        const lineInfo = m.strategy === 'type_prestation_code' ? 'Auto-détection' : 'Ligne ' + m.lineIndex;
+        return `<div class="mapping-row">
             <i class="material-icons" style="color:var(--primary);flex-shrink:0;">${f?.icon ?? 'label'}</i>
             <div style="flex:1;min-width:0;">
                 <div style="font-weight:600;font-size:.88rem;">${f?.label ?? m.dbField}</div>
@@ -361,43 +442,39 @@ function renderAllMappings() {
             </button>
         </div>`;
     }).join('');
-
     document.getElementById('mappingCount').textContent = mappings.length;
 }
 
 function removeMapping(field) {
     mappings = mappings.filter(m => m.dbField !== field);
     renderAllMappings();
-    syncHiddenInput();
-    refreshLineHighlights();
+    syncHidden();
+    refreshSpanHighlights();
 }
 
-function syncHiddenInput() {
+function syncHidden() {
     document.getElementById('fieldMappingsInput').value = JSON.stringify(mappings);
 }
 
-// ── Line highlights ───────────────────────────────────────────────────────────
-function refreshLineHighlights() {
-    const fieldByLine = {};
-    mappings.forEach(m => { if (m.lineIndex != null) fieldByLine[m.lineIndex] = m.dbField; });
-
-    document.querySelectorAll('.pdf-line').forEach(el => {
-        const idx = parseInt(el.dataset.index);
-        const field = fieldByLine[idx];
-
-        // Remove existing chip
-        el.querySelector('.line-chip')?.remove();
-        el.classList.remove('assigned');
-
-        if (field) {
-            el.classList.add('assigned');
-            const f = DB_FIELDS_MAP[field];
-            const chip = document.createElement('span');
-            chip.className = 'line-chip';
-            chip.innerHTML = `${f?.label ?? field} <span class="chip-del" onclick="event.stopPropagation();removeMapping('${field}')">✕</span>`;
-            el.appendChild(chip);
-        }
+// ── Span highlights (green = assigned) ───────────────────────────────────────
+function refreshSpanHighlights() {
+    const assignedLines = new Set(mappings.filter(m => m.lineIndex != null).map(m => m.lineIndex));
+    document.querySelectorAll('.textLayer span[data-line-index]').forEach(span => {
+        const idx = parseInt(span.dataset.lineIndex);
+        if (assignedLines.has(idx)) span.classList.add('tl-assigned');
+        else span.classList.remove('tl-assigned');
     });
 }
+
+// ── Drag & drop ───────────────────────────────────────────────────────────────
+const dropZone = document.getElementById('pdfDropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = 'var(--primary)'; });
+dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = ''; });
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.style.borderColor = '';
+    const f = e.dataTransfer.files[0];
+    if (f && f.type === 'application/pdf') loadPdf(f);
+});
 </script>
 {% endblock %}
