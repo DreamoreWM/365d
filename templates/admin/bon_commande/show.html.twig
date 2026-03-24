@@ -432,6 +432,22 @@
 
 <div class="detail-container">
 
+    {% if bon.statut.value == 'terminé' %}
+    <div style="background: #fff8e1; border-left: 4px solid #ff9800; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <i class="material-icons" style="color: #ff9800; font-size: 28px;">lock_open</i>
+            <div>
+                <div style="font-weight: 500; color: #e65100;">Bon de commande terminé</div>
+                <div style="font-size: 0.875rem; color: #757575;">Des prestations supplémentaires sont nécessaires ? Réouvrez ce bon.</div>
+            </div>
+        </div>
+        <button type="button" onclick="openReopenModal()" class="mdl-button mdl-js-button mdl-button--raised" style="background: #ff9800; color: white; white-space: nowrap;">
+            <i class="material-icons" style="vertical-align: middle; margin-right: 4px; font-size: 18px;">lock_open</i>
+            Réouvrir
+        </button>
+    </div>
+    {% endif %}
+
     {% if derniereNonEffectuee %}
     <div class="alert-warning">
         <i class="material-icons">warning</i>
@@ -463,11 +479,6 @@
             <p>Bon de commande {{ bon.numeroCommande ? '#' ~ bon.numeroCommande : '#' ~ bon.id }}</p>
         </div>
         <div class="detail-header-actions">
-            {% if bon.statut.value == 'terminé' %}
-            <button type="button" onclick="openReopenModal()" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab" style="background: #ff9800; color: white;" title="Réouvrir">
-                <i class="material-icons">lock_open</i>
-            </button>
-            {% endif %}
             <a href="{{ path('admin_bon_commande_edit', {id: bon.id}) }}" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored" title="Modifier">
                 <i class="material-icons">edit</i>
             </a>
