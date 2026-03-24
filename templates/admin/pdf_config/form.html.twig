@@ -25,6 +25,7 @@ body.dark-mode .pdf-drop-zone { border-color:var(--border-dark); }
     max-height:680px;
     padding:16px 0;
     display:none;
+    user-select:text; /* allow text selection */
 }
 body.dark-mode #pdfViewer { background:#2a2a2a; }
 
@@ -33,7 +34,7 @@ body.dark-mode #pdfViewer { background:#2a2a2a; }
     display:block;
     margin:0 auto 16px;
     box-shadow:0 4px 16px rgba(0,0,0,.25);
-    line-height:0; /* prevents gap under canvas */
+    line-height:0;
 }
 .pdf-page-wrap canvas { display:block; }
 
@@ -42,22 +43,28 @@ body.dark-mode #pdfViewer { background:#2a2a2a; }
     position:absolute;
     inset:0;
     overflow:hidden;
-    pointer-events:none; /* let canvas receive scroll, spans override */
+    pointer-events:none;
     line-height:1;
 }
 .textLayer span {
     color:transparent;
     position:absolute;
     white-space:pre;
-    cursor:pointer;
+    cursor:text;           /* text cursor → signals selectable */
     pointer-events:all;
     border-radius:2px;
     transform-origin:0% 0%;
     transition:background .1s;
 }
-.textLayer span:hover { background:rgba(63,81,181,.18); }
-.textLayer span.tl-assigned { background:rgba(76,175,80,.30) !important; }
-.textLayer span.tl-active   { background:rgba(63,81,181,.30) !important; }
+/* Visible text selection highlight */
+.textLayer span::selection {
+    background:rgba(63,81,181,.35);
+    color:transparent;
+}
+.textLayer span:hover               { background:rgba(63,81,181,.14); }
+.textLayer span.tl-assigned         { background:rgba(76,175,80,.30)  !important; }
+.textLayer span.tl-assigned-partial { background:rgba(255,152,0,.35)  !important; }
+.textLayer span.tl-active           { background:rgba(63,81,181,.30)  !important; }
 
 /* Field picker */
 #fieldPicker {
@@ -66,29 +73,36 @@ body.dark-mode #pdfViewer { background:#2a2a2a; }
     border:1.5px solid var(--primary);
     border-radius:10px;
     box-shadow:0 6px 28px rgba(0,0,0,.22);
-    min-width:230px; overflow:hidden;
+    min-width:240px; overflow:hidden;
 }
 body.dark-mode #fieldPicker { background:var(--card-dark); }
 #fieldPicker.open { display:block; }
+
 .picker-header {
     padding:9px 14px 7px; font-size:.7rem; font-weight:700;
     color:var(--primary); text-transform:uppercase; letter-spacing:.5px;
     border-bottom:1px solid var(--border-light); background:rgba(63,81,181,.05);
 }
 body.dark-mode .picker-header { border-color:var(--border-dark); }
-.picker-linepreview {
-    padding:6px 14px; font-size:.75rem; font-family:monospace;
-    color:#888; border-bottom:1px solid var(--border-light);
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    max-width:280px;
+
+/* Selection badge shown in picker */
+.picker-sel-badge {
+    display:flex; align-items:center; gap:6px;
+    padding:6px 12px; font-size:.76rem;
+    border-bottom:1px solid var(--border-light);
+    background:rgba(63,81,181,.06);
 }
-body.dark-mode .picker-linepreview { border-color:var(--border-dark); color:#aaa; }
+body.dark-mode .picker-sel-badge { border-color:var(--border-dark); background:rgba(63,81,181,.12); }
+.picker-sel-badge .sel-label { font-weight:700; color:var(--primary); flex-shrink:0; font-size:.68rem; text-transform:uppercase; }
+.picker-sel-badge .sel-text  { font-family:monospace; color:var(--text-light); background:rgba(0,0,0,.06); border-radius:4px; padding:2px 6px; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+body.dark-mode .picker-sel-badge .sel-text { color:var(--text-dark); background:rgba(255,255,255,.08); }
+
 .picker-item {
     display:flex; align-items:center; gap:10px;
     padding:9px 14px; cursor:pointer; font-size:.88rem; transition:.1s;
 }
 .picker-item:hover { background:rgba(63,81,181,.09); }
-.picker-item .pi-icon { font-size:17px; color:var(--primary); flex-shrink:0; }
+.picker-item .pi-icon  { font-size:17px; color:var(--primary); flex-shrink:0; }
 .picker-item .pi-label { font-weight:500; flex:1; }
 .picker-item .pi-check { margin-left:auto; color:#4caf50; font-size:16px; display:none; }
 .picker-item.is-set .pi-check { display:block; }
@@ -100,6 +114,7 @@ body.dark-mode .picker-sep { background:var(--border-dark); }
 /* Mapping rows */
 .mapping-row { display:flex; align-items:center; gap:10px; background:rgba(63,81,181,.04); border-radius:8px; padding:10px 14px; margin-bottom:8px; border:1px solid rgba(63,81,181,.12); }
 body.dark-mode .mapping-row { background:rgba(63,81,181,.08); }
+.mapping-row.partial { border-color:rgba(255,152,0,.35); background:rgba(255,152,0,.05); }
 .del-btn { background:none; border:none; cursor:pointer; color:#e53935; padding:4px; border-radius:4px; display:flex; align-items:center; margin-left:auto; flex-shrink:0; }
 .del-btn:hover { background:rgba(229,57,53,.1); }
 
@@ -135,27 +150,25 @@ body.dark-mode .mapping-row { background:rgba(63,81,181,.08); }
                         <span id="pdfPageInfo" style="margin-left:auto;font-size:.78rem;color:#9e9e9e;font-weight:400;"></span>
                     </h3>
 
-                    <!-- Drop zone -->
                     <div class="pdf-drop-zone" id="pdfDropZone" onclick="document.getElementById('pdfFile').click()">
                         <i class="material-icons" style="font-size:48px;color:#bbb;">upload_file</i>
                         <p style="margin:10px 0 4px;color:#9e9e9e;font-size:.95rem;">Cliquez ou déposez un PDF ici</p>
-                        <p style="margin:0;color:#bbb;font-size:.78rem;">Le PDF s'affichera tel quel — cliquez sur le texte pour assigner les champs</p>
+                        <p style="margin:0;color:#bbb;font-size:.78rem;">Le PDF s'affiche tel quel — cliquez ou sélectionnez du texte pour assigner les champs</p>
                     </div>
                     <input type="file" id="pdfFile" accept=".pdf" style="display:none;" onchange="loadPdf(this.files[0])">
 
-                    <!-- Loading -->
                     <div id="pdfLoading" style="display:none;text-align:center;padding:32px;color:#9e9e9e;">
                         <i class="material-icons" style="font-size:36px;animation:spin 1s linear infinite;display:block;">refresh</i>
                         <p style="margin:10px 0 0;">Rendu en cours…</p>
                     </div>
 
-                    <!-- PDF pages rendered here -->
                     <div id="pdfViewer"></div>
 
-                    <!-- Hint -->
                     <p id="pdfHint" style="display:none;margin:10px 0 0;font-size:.78rem;color:#9e9e9e;">
                         <i class="material-icons" style="font-size:14px;vertical-align:middle;">touch_app</i>
-                        Cliquez sur n'importe quel texte du PDF pour l'assigner à un champ
+                        <strong>Clic</strong> = toute la ligne &nbsp;·&nbsp;
+                        <i class="material-icons" style="font-size:14px;vertical-align:middle;">text_fields</i>
+                        <strong>Sélection</strong> = portion du texte
                     </p>
                 </div>
             </div>
@@ -199,7 +212,7 @@ body.dark-mode .mapping-row { background:rgba(63,81,181,.08); }
                     <div id="mappingRows">
                         <p id="emptyMappings" style="color:#9e9e9e;font-size:.84rem;text-align:center;padding:14px 0;">
                             <i class="material-icons" style="font-size:22px;vertical-align:middle;display:block;margin-bottom:6px;">touch_app</i>
-                            Cliquez sur le texte du PDF pour assigner les champs
+                            Cliquez ou sélectionnez du texte dans le PDF
                         </p>
                     </div>
                     <input type="hidden" name="fieldMappings" id="fieldMappingsInput">
@@ -219,19 +232,20 @@ body.dark-mode .mapping-row { background:rgba(63,81,181,.08); }
 
 <!-- Floating field picker -->
 <div id="fieldPicker">
-    <div class="picker-header">Assigner ce texte à quel champ ?</div>
-    <div class="picker-linepreview" id="pickerPreview"></div>
+    <div class="picker-header" id="pickerHeader">Assigner à quel champ ?</div>
+    <div class="picker-sel-badge" id="pickerSelBadge" style="display:none;">
+        <span class="sel-label">Extrait</span>
+        <span class="sel-text" id="pickerSelText"></span>
+    </div>
     <div id="pickerItems"></div>
     <div class="picker-sep"></div>
     <div class="picker-cancel" onclick="closePicker()">Annuler</div>
 </div>
 
-<!-- PDF.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-// ── Config ────────────────────────────────────────────────────────────────────
 const DB_FIELDS = [
     { key:'numeroCommande',          label:'N° de commande',          icon:'tag',       strategy:'line_index' },
     { key:'clientNom',               label:'Nom client / occupant',   icon:'person',    strategy:'line_index' },
@@ -244,9 +258,12 @@ const DB_FIELDS = [
 const FIELDS_MAP = Object.fromEntries(DB_FIELDS.map(f => [f.key, f]));
 
 let mappings    = {{ config.fieldMappings|json_encode|raw }};
-let serverLines = []; // extracted lines from server
-let activeSpan  = null;
-let pickerLineIndex = -1;
+let serverLines = [];
+
+// picker state
+let pickerLineIndex  = -1;
+let pickerSelection  = null; // null = whole line, else the selected text string
+let activeSpan       = null;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -257,31 +274,23 @@ document.addEventListener('DOMContentLoaded', () => {
 // ── Load PDF ──────────────────────────────────────────────────────────────────
 async function loadPdf(file) {
     if (!file) return;
-    document.getElementById('pdfDropZone').style.display  = 'none';
-    document.getElementById('pdfLoading').style.display   = 'block';
-    document.getElementById('pdfViewer').style.display    = 'none';
-    document.getElementById('pdfHint').style.display      = 'none';
+    document.getElementById('pdfDropZone').style.display = 'none';
+    document.getElementById('pdfLoading').style.display  = 'block';
+    document.getElementById('pdfViewer').style.display   = 'none';
+    document.getElementById('pdfHint').style.display     = 'none';
 
-    // 1. Send to server for line extraction
     const fd = new FormData();
     fd.append('pdf', file);
-    const serverPromise = fetch('{{ path('admin_pdf_config_preview') }}', { method:'POST', body:fd })
-        .then(r => r.json());
+    const serverPromise = fetch('{{ path('admin_pdf_config_preview') }}', { method:'POST', body:fd }).then(r => r.json());
 
-    // 2. Read locally for PDF.js
     const arrayBuffer = await file.arrayBuffer();
     const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-    // Wait for server lines
     const serverData = await serverPromise;
-    if (serverData.success) {
-        serverLines = serverData.lines.map(l => l.text); // ["line text", ...]
-    }
+    if (serverData.success) serverLines = serverData.lines.map(l => l.text);
 
-    // Render all pages
     const viewer = document.getElementById('pdfViewer');
     viewer.innerHTML = '';
-
     const totalPages = pdfDoc.numPages;
     document.getElementById('pdfPageInfo').textContent = totalPages + ' page' + (totalPages > 1 ? 's' : '');
 
@@ -290,21 +299,17 @@ async function loadPdf(file) {
         const page     = await pdfDoc.getPage(pageNum);
         const viewport = page.getViewport({ scale: SCALE });
 
-        // Page wrapper
-        const wrap   = document.createElement('div');
+        const wrap = document.createElement('div');
         wrap.className = 'pdf-page-wrap';
         wrap.style.width  = viewport.width  + 'px';
         wrap.style.height = viewport.height + 'px';
 
-        // Canvas
         const canvas = document.createElement('canvas');
         canvas.width  = viewport.width;
         canvas.height = viewport.height;
-        const ctx = canvas.getContext('2d');
-        await page.render({ canvasContext: ctx, viewport }).promise;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
         wrap.appendChild(canvas);
 
-        // Text layer
         const textLayerDiv = document.createElement('div');
         textLayerDiv.className = 'textLayer';
         textLayerDiv.style.width  = viewport.width  + 'px';
@@ -312,43 +317,35 @@ async function loadPdf(file) {
 
         const textContent = await page.getTextContent();
         const textDivs    = [];
+        await pdfjsLib.renderTextLayer({ textContentSource: textContent, container: textLayerDiv, viewport, textDivs }).promise;
 
-        await pdfjsLib.renderTextLayer({
-            textContentSource: textContent,
-            container: textLayerDiv,
-            viewport,
-            textDivs,
-        }).promise;
-
-        // Attach click handlers after render
-        textDivs.forEach((div, i) => {
-            const rawText = div.textContent?.trim();
-            if (!rawText) return;
-            const lineIdx = findLineIndex(rawText);
-            if (lineIdx < 0) return;
-            div.dataset.lineIndex = lineIdx;
-            div.dataset.lineText  = serverLines[lineIdx] ?? rawText;
-            div.addEventListener('click', e => { e.stopPropagation(); onSpanClick(e, div, lineIdx); });
+        textDivs.forEach(div => {
+            const raw = div.textContent?.trim();
+            if (!raw) return;
+            const idx = findLineIndex(raw);
+            if (idx < 0) return;
+            div.dataset.lineIndex = idx;
         });
 
         wrap.appendChild(textLayerDiv);
         viewer.appendChild(wrap);
     }
 
-    document.getElementById('pdfLoading').style.display  = 'none';
-    document.getElementById('pdfViewer').style.display   = 'block';
-    document.getElementById('pdfHint').style.display     = 'block';
+    // Single mouseup handler on the whole viewer
+    viewer.addEventListener('mouseup', onViewerMouseUp);
+
+    document.getElementById('pdfLoading').style.display = 'none';
+    document.getElementById('pdfViewer').style.display  = 'block';
+    document.getElementById('pdfHint').style.display    = 'block';
 
     refreshSpanHighlights();
 }
 
-// Find best server line index for a PDF.js text fragment
 function findLineIndex(text) {
     const needle = text.trim().toLowerCase();
     if (needle.length < 2) return -1;
     let idx = serverLines.findIndex(l => l.toLowerCase().includes(needle));
     if (idx >= 0) return idx;
-    // Try reverse: does any line start contained in needle?
     idx = serverLines.findIndex(l => {
         const hay = l.trim().toLowerCase();
         return hay.length >= 4 && needle.includes(hay.substring(0, Math.min(hay.length, 20)));
@@ -356,39 +353,67 @@ function findLineIndex(text) {
     return idx;
 }
 
+// ── Mouse up — handles both click and selection ───────────────────────────────
+function onViewerMouseUp(e) {
+    const sel     = window.getSelection();
+    const selText = sel?.toString().trim();
+
+    if (selText && selText.length >= 2) {
+        // ── User made a text SELECTION ──────────────────────────────────────
+        const anchorSpan = sel.anchorNode?.parentElement?.closest('[data-line-index]');
+        if (!anchorSpan) { sel.removeAllRanges(); return; }
+        const lineIdx = parseInt(anchorSpan.dataset.lineIndex);
+        sel.removeAllRanges();
+        openPicker(e, lineIdx, selText);
+
+    } else {
+        // ── Simple click on a span (whole line) ─────────────────────────────
+        const span = e.target.closest('[data-line-index]');
+        if (!span) return;
+        const lineIdx = parseInt(span.dataset.lineIndex);
+        if (activeSpan) activeSpan.classList.remove('tl-active');
+        activeSpan = span;
+        span.classList.add('tl-active');
+        openPicker(e, lineIdx, null);
+    }
+}
+
 // ── Field picker ──────────────────────────────────────────────────────────────
-function onSpanClick(evt, span, lineIndex) {
-    if (activeSpan) activeSpan.classList.remove('tl-active');
-    activeSpan = span;
-    span.classList.add('tl-active');
+function openPicker(e, lineIndex, selectionText) {
     pickerLineIndex = lineIndex;
+    pickerSelection = selectionText; // null = whole line
 
-    // Preview text = full server line
-    const lineText = serverLines[lineIndex] ?? span.textContent;
-    document.getElementById('pickerPreview').textContent = lineText;
+    // Header & selection badge
+    if (selectionText) {
+        document.getElementById('pickerHeader').textContent  = 'Assigner la sélection à :';
+        document.getElementById('pickerSelBadge').style.display = 'flex';
+        document.getElementById('pickerSelText').textContent = selectionText;
+    } else {
+        document.getElementById('pickerHeader').textContent  = 'Assigner la ligne à :';
+        document.getElementById('pickerSelBadge').style.display = 'none';
+    }
 
-    // Items
-    const byLine = {};
-    mappings.forEach(m => { if (m.lineIndex != null) byLine[m.lineIndex] = m.dbField; });
-    const items = DB_FIELDS.map(f => {
-        const isSet = byLine[lineIndex] === f.key;
+    // Items — mark already-set fields
+    const assignedByLine = {};
+    mappings.forEach(m => { if (m.lineIndex != null) assignedByLine[m.lineIndex + '_' + m.dbField] = true; });
+
+    document.getElementById('pickerItems').innerHTML = DB_FIELDS.map(f => {
+        const isSet = assignedByLine[lineIndex + '_' + f.key] ?? false;
         return `<div class="picker-item ${isSet ? 'is-set' : ''}" onclick="assignField('${f.key}')">
             <i class="material-icons pi-icon">${f.icon}</i>
             <span class="pi-label">${f.label}</span>
             <i class="material-icons pi-check">check_circle</i>
         </div>`;
     }).join('');
-    document.getElementById('pickerItems').innerHTML = items;
 
     // Position
     const picker = document.getElementById('fieldPicker');
     picker.classList.add('open');
-    const rect = span.getBoundingClientRect();
-    const pw = 240, ph = picker.offsetHeight || 340;
-    let top  = rect.bottom + 6;
-    let left = rect.left;
-    if (top  + ph > window.innerHeight - 8) top  = rect.top - ph - 6;
-    if (left + pw > window.innerWidth  - 8) left = window.innerWidth - pw - 8;
+    const pw = 260, ph = picker.offsetHeight || 360;
+    let top  = e.clientY + 8;
+    let left = e.clientX;
+    if (top  + ph > window.innerHeight - 8) top  = e.clientY - ph - 8;
+    if (left + pw > window.innerWidth  - 8) left = window.innerWidth  - pw - 8;
     if (left < 8) left = 8;
     picker.style.top  = top  + 'px';
     picker.style.left = left + 'px';
@@ -396,8 +421,32 @@ function onSpanClick(evt, span, lineIndex) {
 
 function assignField(fieldKey) {
     const f = FIELDS_MAP[fieldKey];
+    const isPartial = pickerSelection !== null && fieldKey !== 'typePrestation';
+
+    let strategy, mapping;
+    if (fieldKey === 'typePrestation') {
+        strategy = 'type_prestation_code';
+        mapping  = { dbField: fieldKey, strategy, lineIndex: pickerLineIndex };
+    } else if (isPartial) {
+        // Selection: use regex to extract only the chosen portion
+        strategy = f.key === 'dateLimiteExecution' ? 'line_index_date' : 'line_index_regex';
+        const escaped = pickerSelection.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        mapping = {
+            dbField:    fieldKey,
+            strategy,
+            lineIndex:  pickerLineIndex,
+            regex:      '/(' + escaped + ')/',
+            regexGroup: 1,
+            _preview:   pickerSelection,
+        };
+    } else {
+        strategy = f.strategy;
+        mapping  = { dbField: fieldKey, strategy, lineIndex: pickerLineIndex };
+    }
+
     mappings = mappings.filter(m => m.dbField !== fieldKey);
-    mappings.push({ dbField: fieldKey, strategy: f.strategy, lineIndex: pickerLineIndex });
+    mappings.push(mapping);
+
     renderAllMappings();
     syncHidden();
     refreshSpanHighlights();
@@ -408,11 +457,12 @@ function closePicker() {
     document.getElementById('fieldPicker').classList.remove('open');
     if (activeSpan) { activeSpan.classList.remove('tl-active'); activeSpan = null; }
     pickerLineIndex = -1;
+    pickerSelection = null;
 }
 
 document.addEventListener('click', e => {
     const picker = document.getElementById('fieldPicker');
-    if (picker.classList.contains('open') && !picker.contains(e.target) && !e.target.closest('.textLayer')) {
+    if (picker.classList.contains('open') && !picker.contains(e.target) && !e.target.closest('#pdfViewer')) {
         closePicker();
     }
 });
@@ -429,9 +479,12 @@ function renderAllMappings() {
     }
     const sorted = [...mappings].sort((a, b) => (a.lineIndex ?? 999) - (b.lineIndex ?? 999));
     container.innerHTML = sorted.map(m => {
-        const f = FIELDS_MAP[m.dbField];
-        const lineInfo = m.strategy === 'type_prestation_code' ? 'Auto-détection' : 'Ligne ' + m.lineIndex;
-        return `<div class="mapping-row">
+        const f        = FIELDS_MAP[m.dbField];
+        const isPartial = !!m._preview || (m.strategy === 'line_index_regex' && m.regex);
+        const lineInfo = m.strategy === 'type_prestation_code'
+            ? 'Auto-détection'
+            : 'Ligne ' + m.lineIndex + (isPartial ? ` · <span style="font-family:monospace;color:#e65100;">"${m._preview ?? ''}"</span>` : '');
+        return `<div class="mapping-row ${isPartial ? 'partial' : ''}">
             <i class="material-icons" style="color:var(--primary);flex-shrink:0;">${f?.icon ?? 'label'}</i>
             <div style="flex:1;min-width:0;">
                 <div style="font-weight:600;font-size:.88rem;">${f?.label ?? m.dbField}</div>
@@ -456,19 +509,28 @@ function syncHidden() {
     document.getElementById('fieldMappingsInput').value = JSON.stringify(mappings);
 }
 
-// ── Span highlights (green = assigned) ───────────────────────────────────────
+// ── Span highlights ───────────────────────────────────────────────────────────
 function refreshSpanHighlights() {
-    const assignedLines = new Set(mappings.filter(m => m.lineIndex != null).map(m => m.lineIndex));
+    // Build maps: lineIndex → {isPartial}
+    const wholeLines   = new Set();
+    const partialLines = new Set();
+    mappings.forEach(m => {
+        if (m.lineIndex == null) return;
+        if (m.strategy === 'line_index_regex') partialLines.add(m.lineIndex);
+        else wholeLines.add(m.lineIndex);
+    });
+
     document.querySelectorAll('.textLayer span[data-line-index]').forEach(span => {
         const idx = parseInt(span.dataset.lineIndex);
-        if (assignedLines.has(idx)) span.classList.add('tl-assigned');
-        else span.classList.remove('tl-assigned');
+        span.classList.remove('tl-assigned', 'tl-assigned-partial');
+        if (wholeLines.has(idx))   span.classList.add('tl-assigned');
+        if (partialLines.has(idx)) span.classList.add('tl-assigned-partial');
     });
 }
 
 // ── Drag & drop ───────────────────────────────────────────────────────────────
 const dropZone = document.getElementById('pdfDropZone');
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = 'var(--primary)'; });
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.style.borderColor = 'var(--primary)'; });
 dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = ''; });
 dropZone.addEventListener('drop', e => {
     e.preventDefault();
