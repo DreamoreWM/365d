@@ -182,7 +182,7 @@ class BonDeCommandeController extends AbstractController
     // =====================================================
     // VOIR UN BON
     // =====================================================
-    #[Route('/{id}', name: 'admin_bon_commande_show', methods: ['GET'])]
+    #[Route('/{id}', name: 'admin_bon_commande_show', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function show(BonDeCommande $bon): Response
     {
         // Mise à jour du statut avant affichage
@@ -218,7 +218,7 @@ class BonDeCommandeController extends AbstractController
     // =====================================================
     // MODIFIER UN BON
     // =====================================================
-    #[Route('/{id}/edit', name: 'admin_bon_commande_edit', methods: ['GET', 'POST'])]
+    #[Route('/{id}/edit', name: 'admin_bon_commande_edit', methods: ['GET', 'POST'], requirements: ['id' => '\d+'])]
     public function edit(Request $request, BonDeCommande $bon): Response
     {
         if ($request->isMethod('POST')) {
@@ -237,7 +237,7 @@ class BonDeCommandeController extends AbstractController
     // =====================================================
     // CRÉER UNE PRESTATION POUR UN BON
     // =====================================================
-    #[Route('/{bonId}/nouvelle-prestation', name: 'admin_bon_commande_new_prestation', methods: ['GET'])]
+    #[Route('/{bonId}/nouvelle-prestation', name: 'admin_bon_commande_new_prestation', methods: ['GET'], requirements: ['bonId' => '\d+'])]
     public function newForBon(int $bonId): Response
     {
         $bon = $this->em->getRepository(BonDeCommande::class)->find($bonId);
@@ -253,7 +253,7 @@ class BonDeCommandeController extends AbstractController
     // =====================================================
     // SUPPRIMER UN BON
     // =====================================================
-    #[Route('/{id}/delete', name: 'admin_bon_commande_delete', methods: ['POST'])]
+    #[Route('/{id}/delete', name: 'admin_bon_commande_delete', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function delete(Request $request, BonDeCommande $bon): Response
     {
         if (!$this->isCsrfTokenValid('delete', $request->request->get('_token'))) {
