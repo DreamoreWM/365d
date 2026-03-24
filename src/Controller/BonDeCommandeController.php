@@ -251,6 +251,37 @@ class BonDeCommandeController extends AbstractController
     }
 
     // =====================================================
+    // RÉOUVRIR UN BON TERMINÉ
+    // =====================================================
+    #[Route('/{id}/reopen', name: 'admin_bon_commande_reopen', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function reopen(Request $request, BonDeCommande $bon): Response
+    {
+        if (!$this->isCsrfTokenValid('reopen' . $bon->getId(), $request->request->get('_token'))) {
+            $this->addFlash('danger', 'Token CSRF invalide');
+            return $this->redirectToRoute('admin_bon_commande_show', ['id' => $bon->getId()]);
+        }
+
+        if ($bon->getStatut() !== StatutBonDeCommande::TERMINE) {
+            $this->addFlash('warning', 'Ce bon de commande n\'est pas terminé');
+            return $this->redirectToRoute('admin_bon_commande_show', ['id' => $bon->getId()]);
+        }
+
+        $prestationsSupplementaires = max(1, (int) $request->request->get('prestations_supplementaires', 1));
+
+        $bon->setNombrePrestationsNecessaires(
+            $bon->getNombrePrestationsNecessaires() + $prestationsSupplementaires
+        );
+        $bon->setStatut(StatutBonDeCommande::A_PROGRAMMER);
+
+        $this->em->persist($bon);
+        $this->em->flush();
+
+        $this->addFlash('success', "Le bon de commande a été réouvert. {$prestationsSupplementaires} prestation(s) supplémentaire(s) requise(s).");
+
+        return $this->redirectToRoute('admin_bon_commande_show', ['id' => $bon->getId()]);
+    }
+
+    // =====================================================
     // SUPPRIMER UN BON
     // =====================================================
     #[Route('/{id}/delete', name: 'admin_bon_commande_delete', methods: ['POST'], requirements: ['id' => '\d+'])]
