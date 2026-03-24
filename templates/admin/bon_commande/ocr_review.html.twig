@@ -337,11 +337,78 @@ body.dark-mode .nav-arrows button {
 .nav-arrows button:hover { background: rgba(63,81,181,.08); border-color: var(--primary); }
 .nav-arrows button:disabled { opacity: .4; cursor: not-allowed; }
 
+/* ===== MOBILE TABS ===== */
+.mobile-tabs {
+    display: none;
+}
+
 @media (max-width: 900px) {
+    .review-page {
+        height: auto;
+        overflow: visible;
+        min-height: 100vh;
+    }
+    .review-body {
+        flex-direction: column;
+        overflow: visible;
+        flex: none;
+    }
     .review-sidebar { display: none; }
-    .review-form-panel { width: 100%; border-left: none; border-top: 1px solid var(--border-light); }
-    .review-body { flex-direction: column; }
-    .review-viewer { min-height: 300px; }
+
+    /* Tab bar */
+    .mobile-tabs {
+        display: flex;
+        border-bottom: 2px solid var(--border-light);
+        background: var(--card-light);
+        flex-shrink: 0;
+    }
+    body.dark-mode .mobile-tabs {
+        background: var(--card-dark);
+        border-bottom-color: var(--border-dark);
+    }
+    .mobile-tab {
+        flex: 1;
+        padding: 10px 8px;
+        text-align: center;
+        cursor: pointer;
+        font-size: .85rem;
+        font-weight: 500;
+        color: #757575;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: color .15s, border-color .15s;
+    }
+    body.dark-mode .mobile-tab { color: #aaa; }
+    .mobile-tab.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+    }
+    .mobile-tab .material-icons { font-size: 18px; }
+
+    /* Viewer: fixed height on mobile */
+    .review-viewer {
+        height: 55vw;
+        min-height: 220px;
+        max-height: 60vh;
+        flex-shrink: 0;
+    }
+    .review-viewer.mobile-hidden,
+    .review-form-panel.mobile-hidden {
+        display: none !important;
+    }
+
+    .review-form-panel {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid var(--border-light);
+        overflow-y: visible;
+        padding-bottom: 40px;
+    }
+    body.dark-mode .review-form-panel { border-top-color: var(--border-dark); }
 }
 </style>
 
@@ -367,6 +434,16 @@ body.dark-mode .nav-arrows button {
             <button id="btn-next" title="Suivant">
                 <i class="material-icons">chevron_right</i>
             </button>
+        </div>
+    </div>
+
+    <!-- Mobile tab bar (hidden on desktop) -->
+    <div class="mobile-tabs">
+        <div class="mobile-tab active" id="tab-doc" onclick="switchMobileTab('doc')">
+            <i class="material-icons">description</i> Document
+        </div>
+        <div class="mobile-tab" id="tab-form" onclick="switchMobileTab('form')">
+            <i class="material-icons">edit</i> Formulaire
         </div>
     </div>
 
@@ -486,6 +563,7 @@ const fileStates = results.map(() => ({ status: 'pending' })); // pending | crea
 let currentIndex = 0;
 let zoomScale = 1.0;
 let currentPdfDoc = null;
+let activeMobileTab = 'doc';
 
 // ===== DOM =====
 const counterEl     = document.getElementById('counter-current');
@@ -502,14 +580,6 @@ const summaryText   = document.getElementById('summary-text');
 const zoomLevelEl   = document.getElementById('zoom-level');
 
 // ===== NAVIGATION =====
-function goTo(index) {
-    currentIndex = index;
-    updateNav();
-    updateSidebar();
-    loadFile(index);
-    fillForm(index);
-}
-
 function updateNav() {
     counterEl.textContent = currentIndex + 1;
     btnPrev.disabled = currentIndex === 0;
@@ -707,6 +777,19 @@ btnSkip.addEventListener('click', () => {
     advanceOrFinish();
 });
 
+// Sur mobile : basculer vers le formulaire quand on navigue (doc déjà chargé)
+function goTo(index) {
+    currentIndex = index;
+    updateNav();
+    updateSidebar();
+    loadFile(index);
+    fillForm(index);
+    // Sur mobile, aller direct sur le formulaire si on était déjà dessus
+    if (window.innerWidth <= 900 && activeMobileTab === 'form') {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+}
+
 function advanceOrFinish() {
     // Check if all done
     const allDone = fileStates.every(s => s.status !== 'pending');
@@ -763,6 +846,32 @@ document.addEventListener('keydown', e => {
     if (e.key === 'ArrowRight' && currentIndex < results.length - 1) goTo(currentIndex + 1);
     if (e.key === 'ArrowLeft'  && currentIndex > 0)                   goTo(currentIndex - 1);
 });
+
+// ===== MOBILE TABS =====
+function switchMobileTab(tab) {
+    activeMobileTab = tab;
+    const viewer = document.querySelector('.review-viewer');
+    const panel  = document.querySelector('.review-form-panel');
+    const tabDoc  = document.getElementById('tab-doc');
+    const tabForm = document.getElementById('tab-form');
+    if (tab === 'doc') {
+        viewer.classList.remove('mobile-hidden');
+        panel.classList.add('mobile-hidden');
+        tabDoc.classList.add('active');
+        tabForm.classList.remove('active');
+    } else {
+        viewer.classList.add('mobile-hidden');
+        panel.classList.remove('mobile-hidden');
+        tabDoc.classList.remove('active');
+        tabForm.classList.add('active');
+        // Scroll top pour voir le formulaire dès le début
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+// Sur mobile, basculer vers le formulaire automatiquement au chargement
+function autoSwitchToForm() {
+    if (window.innerWidth <= 900) switchMobileTab('form');
+}
 
 // ===== INIT =====
 goTo(0);
