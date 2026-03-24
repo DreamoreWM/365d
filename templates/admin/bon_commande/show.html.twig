@@ -441,8 +441,8 @@
                 <div style="font-size: 0.875rem; color: #757575;">Des prestations supplémentaires sont nécessaires ? Réouvrez ce bon.</div>
             </div>
         </div>
-        <button type="button" onclick="openReopenModal()" class="mdl-button mdl-js-button mdl-button--raised" style="background: #ff9800; color: white; white-space: nowrap;">
-            <i class="material-icons" style="vertical-align: middle; margin-right: 4px; font-size: 18px;">lock_open</i>
+        <button type="button" id="btn-reopen-open" style="background: #ff9800; color: white; white-space: nowrap; border: none; border-radius: 4px; padding: 10px 20px; font-size: 0.875rem; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; letter-spacing: 0.04em; text-transform: uppercase;">
+            <i class="material-icons" style="font-size: 18px;">lock_open</i>
             Réouvrir
         </button>
     </div>
@@ -900,9 +900,9 @@
         <label style="display:block; margin-bottom:8px; font-size:0.875rem; color:#757575;">Nombre de prestations supplémentaires</label>
         <input type="number" id="reopen-input" min="1" value="1" style="width:100%; padding:10px; border:1px solid var(--border-light); border-radius:4px; font-size:1rem; margin-bottom:24px; box-sizing:border-box;">
         <div style="display:flex; gap:12px; justify-content:flex-end;">
-            <button type="button" onclick="closeReopenModal()" class="mdl-button mdl-js-button">Annuler</button>
-            <button type="button" onclick="confirmReopen()" class="mdl-button mdl-js-button mdl-button--raised" style="background:#ff9800; color:white;">
-                <i class="material-icons" style="vertical-align:middle; margin-right:4px; font-size:18px;">lock_open</i>
+            <button type="button" id="btn-reopen-cancel" style="background:none; border:1px solid #ccc; border-radius:4px; padding:8px 16px; font-size:0.875rem; cursor:pointer; text-transform:uppercase; letter-spacing:0.04em;">Annuler</button>
+            <button type="button" id="btn-reopen-confirm" style="background:#ff9800; color:white; border:none; border-radius:4px; padding:8px 16px; font-size:0.875rem; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:6px; text-transform:uppercase; letter-spacing:0.04em;">
+                <i class="material-icons" style="font-size:18px;">lock_open</i>
                 Réouvrir
             </button>
         </div>
@@ -923,10 +923,7 @@ function confirmDeleteBon() {
 
 function openReopenModal() {
     var modal = document.getElementById('reopen-modal');
-    if (modal) {
-        modal.style.display = 'flex';
-        document.getElementById('reopen-input').focus();
-    }
+    if (modal) modal.style.display = 'flex';
 }
 
 function closeReopenModal() {
@@ -944,8 +941,18 @@ function confirmReopen() {
     document.getElementById('reopen-bon-form').submit();
 }
 
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeReopenModal();
+document.addEventListener('DOMContentLoaded', function() {
+    var btnOpen = document.getElementById('btn-reopen-open');
+    var btnCancel = document.getElementById('btn-reopen-cancel');
+    var btnConfirm = document.getElementById('btn-reopen-confirm');
+
+    if (btnOpen) btnOpen.addEventListener('click', openReopenModal);
+    if (btnCancel) btnCancel.addEventListener('click', closeReopenModal);
+    if (btnConfirm) btnConfirm.addEventListener('click', confirmReopen);
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeReopenModal();
+    });
 });
 </script>
 {% endblock %}
