@@ -99,9 +99,11 @@ class PrestationManager
         $bon->setNombrePrestations($terminees);
 
         if ($bon->getTypePrestation()) {
-            $bon->setNombrePrestationsNecessaires(
-                $bon->getTypePrestation()->getNombrePrestationsNecessaires()
-            );
+            $typeCount = $bon->getTypePrestation()->getNombrePrestationsNecessaires();
+            // Ne pas réduire si la valeur a été augmentée manuellement (ex: réouverture)
+            if ($bon->getNombrePrestationsNecessaires() < $typeCount) {
+                $bon->setNombrePrestationsNecessaires($typeCount);
+            }
         }
 
         // Détermination du statut du bon de commande
