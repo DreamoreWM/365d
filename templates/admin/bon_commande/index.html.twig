@@ -1246,7 +1246,7 @@ function confirmDelete(id, clientNom) {
         // Create and submit delete form
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = '{{ path('admin_bon_commande_delete', {id: '__ID__'}) }}'.replace('__ID__', id);
+        form.action = '{{ path('admin_bon_commande_delete', {id: 0}) }}'.replace('/0', '/' + id);
         
         const csrfInput = document.createElement('input');
         csrfInput.type = 'hidden';
