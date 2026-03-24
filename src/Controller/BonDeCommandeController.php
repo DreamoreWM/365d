@@ -442,19 +442,13 @@ class BonDeCommandeController extends AbstractController
     // =====================================================
     private function extractTextFromPdf(string $pdfPath): string
     {
-        $pdftotext = trim((string) shell_exec('which pdftotext 2>/dev/null'));
-        if (!$pdftotext) {
+        try {
+            $parser = new \Smalot\PdfParser\Parser();
+            $pdf    = $parser->parseFile($pdfPath);
+            return $pdf->getText();
+        } catch (\Throwable $e) {
             return '';
         }
-        $outPath = $pdfPath . '.txt';
-        $cmd     = escapeshellcmd($pdftotext) . ' -layout -enc UTF-8 ' . escapeshellarg($pdfPath) . ' ' . escapeshellarg($outPath) . ' 2>/dev/null';
-        exec($cmd, $output, $code);
-        if ($code !== 0 || !file_exists($outPath)) {
-            return '';
-        }
-        $text = (string) file_get_contents($outPath);
-        @unlink($outPath);
-        return $text;
     }
 
     // =====================================================
