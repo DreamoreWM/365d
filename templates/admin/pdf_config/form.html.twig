@@ -11,42 +11,80 @@ body.dark-mode .field-inp { background:var(--card-dark); border-color:var(--bord
 .field-inp:focus { outline:none; border-color:var(--primary); }
 
 /* PDF preview */
-.pdf-zone { border:2px dashed var(--border-light); border-radius:10px; padding:20px; text-align:center; cursor:pointer; transition:.2s; }
+.pdf-zone { border:2px dashed var(--border-light); border-radius:10px; padding:28px 20px; text-align:center; cursor:pointer; transition:.2s; }
 body.dark-mode .pdf-zone { border-color:var(--border-dark); }
 .pdf-zone:hover { border-color:var(--primary); background:rgba(63,81,181,.04); }
-.pdf-lines { max-height:480px; overflow-y:auto; margin-top:14px; border:1px solid var(--border-light); border-radius:8px; }
+.pdf-lines { max-height:520px; overflow-y:auto; margin-top:14px; border:1px solid var(--border-light); border-radius:8px; }
 body.dark-mode .pdf-lines { border-color:var(--border-dark); }
-.pdf-line { display:flex; align-items:center; gap:8px; padding:6px 10px; border-bottom:1px solid var(--border-light); cursor:pointer; font-size:.85rem; font-family:monospace; transition:.15s; }
-body.dark-mode .pdf-line { border-color:var(--border-dark); color:var(--text-dark); }
-.pdf-line:hover { background:rgba(63,81,181,.06); }
-.pdf-line.assigned { background:#e8f5e9; }
-body.dark-mode .pdf-line.assigned { background:rgba(76,175,80,.15); }
-.line-num { font-size:.72rem; color:#9e9e9e; min-width:28px; text-align:right; flex-shrink:0; }
-.line-chip { font-size:.68rem; padding:2px 7px; border-radius:10px; background:var(--primary); color:white; font-weight:600; margin-left:auto; flex-shrink:0; }
 
-/* Mappings */
-.mapping-row { display:grid; grid-template-columns:1fr 1fr auto; gap:10px; align-items:start; background:rgba(63,81,181,.04); border-radius:8px; padding:10px 12px; margin-bottom:8px; border:1px solid rgba(63,81,181,.12); }
+.pdf-line {
+    display:flex; align-items:center; gap:8px;
+    padding:7px 10px; border-bottom:1px solid var(--border-light);
+    cursor:pointer; font-size:.84rem; font-family:monospace;
+    transition:.12s; position:relative;
+}
+body.dark-mode .pdf-line { border-color:var(--border-dark); color:var(--text-dark); }
+.pdf-line:hover { background:rgba(63,81,181,.07); }
+.pdf-line.assigned { background:#e8f5e9; }
+body.dark-mode .pdf-line.assigned { background:rgba(76,175,80,.14); }
+.pdf-line.active-pick { background:rgba(63,81,181,.13); outline:2px solid var(--primary); outline-offset:-2px; }
+.line-num { font-size:.7rem; color:#bbb; min-width:26px; text-align:right; flex-shrink:0; }
+.line-chip {
+    font-size:.68rem; padding:2px 8px; border-radius:10px;
+    background:var(--primary); color:white; font-weight:600;
+    margin-left:auto; flex-shrink:0; white-space:nowrap;
+    display:flex; align-items:center; gap:4px;
+}
+.line-chip .chip-del { cursor:pointer; opacity:.7; font-size:12px; line-height:1; }
+.line-chip .chip-del:hover { opacity:1; }
+
+/* Inline field picker dropdown */
+#fieldPicker {
+    display:none;
+    position:fixed;
+    z-index:9999;
+    background:var(--card-light);
+    border:1.5px solid var(--primary);
+    border-radius:10px;
+    box-shadow:0 6px 24px rgba(0,0,0,.18);
+    min-width:220px;
+    overflow:hidden;
+}
+body.dark-mode #fieldPicker { background:var(--card-dark); }
+#fieldPicker.open { display:block; }
+.picker-header {
+    padding:8px 12px 6px;
+    font-size:.72rem; font-weight:700; color:var(--primary);
+    text-transform:uppercase; letter-spacing:.5px;
+    border-bottom:1px solid var(--border-light);
+}
+body.dark-mode .picker-header { border-color:var(--border-dark); }
+.picker-item {
+    display:flex; align-items:center; gap:10px;
+    padding:9px 14px; cursor:pointer; font-size:.88rem;
+    transition:.1s;
+}
+.picker-item:hover { background:rgba(63,81,181,.08); }
+.picker-item .picker-icon { font-size:16px; color:var(--primary); flex-shrink:0; }
+.picker-item .picker-label { font-weight:500; }
+.picker-item .picker-check { margin-left:auto; color:#4caf50; font-size:16px; display:none; }
+.picker-item.already-set .picker-check { display:block; }
+.picker-sep { height:1px; background:var(--border-light); margin:4px 0; }
+body.dark-mode .picker-sep { background:var(--border-dark); }
+.picker-cancel { padding:8px 14px 10px; font-size:.8rem; color:#e53935; cursor:pointer; text-align:center; }
+.picker-cancel:hover { background:rgba(229,57,53,.07); }
+
+/* Mappings summary */
+.mapping-row { display:flex; align-items:center; gap:10px; background:rgba(63,81,181,.04); border-radius:8px; padding:10px 14px; margin-bottom:8px; border:1px solid rgba(63,81,181,.12); }
 body.dark-mode .mapping-row { background:rgba(63,81,181,.08); }
-.mapping-row select, .mapping-row input { padding:7px 10px; border:1.5px solid var(--border-light); border-radius:6px; font-size:.88rem; background:var(--card-light); color:var(--text-light); width:100%; box-sizing:border-box; }
-body.dark-mode .mapping-row select, body.dark-mode .mapping-row input { background:var(--card-dark); border-color:var(--border-dark); color:var(--text-dark); }
-.del-btn { background:none; border:none; cursor:pointer; color:#e53935; padding:4px; border-radius:4px; display:flex; align-items:center; }
+.del-btn { background:none; border:none; cursor:pointer; color:#e53935; padding:4px; border-radius:4px; display:flex; align-items:center; margin-left:auto; flex-shrink:0; }
 .del-btn:hover { background:rgba(229,57,53,.1); }
 
-/* Modal */
-.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9999; align-items:center; justify-content:center; }
-.modal-overlay.open { display:flex; }
-.modal-box { background:var(--card-light); border-radius:12px; padding:24px; width:380px; max-width:95vw; box-shadow:0 8px 32px rgba(0,0,0,.25); }
-body.dark-mode .modal-box { background:var(--card-dark); }
-.modal-title { font-size:1rem; font-weight:600; margin-bottom:16px; color:var(--text-light); display:flex; align-items:center; gap:8px; }
-body.dark-mode .modal-title { color:var(--text-dark); }
-.modal-linetext { font-family:monospace; font-size:.82rem; background:rgba(0,0,0,.05); border-radius:6px; padding:8px 10px; margin-bottom:14px; color:#555; word-break:break-all; }
-body.dark-mode .modal-linetext { background:rgba(255,255,255,.07); color:#bbb; }
-.modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+@keyframes spin { to { transform:rotate(360deg); } }
 </style>
 
 <div style="max-width:1300px;margin:0 auto;padding:24px 16px;">
 
-    <!-- Header -->
     <div class="page-header" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;padding:24px;border-radius:12px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
         <h1 style="margin:0;font-size:1.6rem;font-weight:400;display:flex;align-items:center;gap:10px;">
             <i class="material-icons">picture_as_pdf</i>
@@ -59,9 +97,7 @@ body.dark-mode .modal-linetext { background:rgba(255,255,255,.07); color:#bbb; }
 
     {% for label, msgs in app.flashes %}
         {% for msg in msgs %}
-            <div style="padding:12px 16px;border-radius:8px;margin-bottom:16px;background:{{ label=='success'?'#e8f5e9':'#ffebee' }};color:{{ label=='success'?'#2e7d32':'#c62828' }};">
-                {{ msg }}
-            </div>
+            <div style="padding:12px 16px;border-radius:8px;margin-bottom:16px;background:{{ label=='success'?'#e8f5e9':'#ffebee' }};color:{{ label=='success'?'#2e7d32':'#c62828' }};">{{ msg }}</div>
         {% endfor %}
     {% endfor %}
 
@@ -74,10 +110,11 @@ body.dark-mode .modal-linetext { background:rgba(255,255,255,.07); color:#bbb; }
                     <h3 style="margin:0 0 16px;font-size:1rem;font-weight:600;display:flex;align-items:center;gap:8px;">
                         <i class="material-icons" style="color:var(--primary);">upload_file</i> PDF exemple
                     </h3>
+
                     <div class="pdf-zone" id="pdfZone" onclick="document.getElementById('pdfFile').click()">
-                        <i class="material-icons" style="font-size:40px;color:#9e9e9e;">picture_as_pdf</i>
+                        <i class="material-icons" style="font-size:42px;color:#9e9e9e;">picture_as_pdf</i>
                         <p style="margin:8px 0 0;color:#9e9e9e;font-size:.9rem;">Cliquez pour charger un PDF exemple</p>
-                        <p style="margin:4px 0 0;color:#bbb;font-size:.78rem;">Le texte sera extrait et affiché ligne par ligne</p>
+                        <p style="margin:4px 0 0;color:#bbb;font-size:.78rem;">Chaque ligne sera cliquable pour assigner un champ</p>
                     </div>
                     <input type="file" id="pdfFile" accept=".pdf" style="display:none;" onchange="loadPdf(this)">
 
@@ -87,18 +124,17 @@ body.dark-mode .modal-linetext { background:rgba(255,255,255,.07); color:#bbb; }
                     </div>
 
                     <div id="pdfLinesContainer" style="display:none;">
-                        <p style="margin:12px 0 6px;font-size:.82rem;color:#9e9e9e;">
-                            <i class="material-icons" style="font-size:14px;vertical-align:middle;">info</i>
-                            Cliquez sur une ligne pour l'assigner à un champ
+                        <p style="margin:12px 0 6px;font-size:.8rem;color:#9e9e9e;">
+                            <i class="material-icons" style="font-size:14px;vertical-align:middle;">touch_app</i>
+                            Cliquez sur une ligne pour choisir le champ à lui assigner
                         </p>
                         <div class="pdf-lines" id="pdfLines"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- RIGHT: Config form -->
+            <!-- RIGHT: Config + mappings -->
             <div>
-                <!-- Config info -->
                 <div class="form-card">
                     <h3 style="margin:0 0 16px;font-size:1rem;font-weight:600;display:flex;align-items:center;gap:8px;">
                         <i class="material-icons" style="color:var(--primary);">settings</i> Informations
@@ -110,8 +146,8 @@ body.dark-mode .modal-linetext { background:rgba(255,255,255,.07); color:#bbb; }
                         </div>
                         <div>
                             <div class="field-label">Texte identifiant *</div>
-                            <input class="field-inp" type="text" name="identifiantTexte" value="{{ config.identifiantTexte }}" placeholder="Ex: PARIS HABITAT (présent dans chaque PDF)">
-                            <p style="font-size:.75rem;color:#9e9e9e;margin:4px 0 0;">Ce texte doit être unique à ce bailleur et présent dans tous ses PDFs.</p>
+                            <input class="field-inp" type="text" name="identifiantTexte" value="{{ config.identifiantTexte }}" placeholder="Texte unique présent dans tous les PDFs de ce bailleur">
+                            <p style="font-size:.75rem;color:#9e9e9e;margin:4px 0 0;">Ce texte sert à reconnaître automatiquement les PDFs de ce bailleur.</p>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                             <div>
@@ -128,25 +164,20 @@ body.dark-mode .modal-linetext { background:rgba(255,255,255,.07); color:#bbb; }
                     </div>
                 </div>
 
-                <!-- Mappings -->
                 <div class="form-card">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-                        <h3 style="margin:0;font-size:1rem;font-weight:600;display:flex;align-items:center;gap:8px;">
-                            <i class="material-icons" style="color:var(--primary);">tune</i> Mappings champs
-                        </h3>
-                        <button type="button" onclick="addMappingRow()" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" style="font-size:.8rem;height:32px;line-height:32px;">
-                            <i class="material-icons" style="font-size:16px;vertical-align:middle;">add</i> Ajouter
-                        </button>
+                    <h3 style="margin:0 0 14px;font-size:1rem;font-weight:600;display:flex;align-items:center;gap:8px;">
+                        <i class="material-icons" style="color:var(--primary);">tune</i> Champs mappés
+                        <span id="mappingCount" style="margin-left:auto;background:rgba(63,81,181,.1);color:var(--primary);font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:10px;">0</span>
+                    </h3>
+
+                    <div id="mappingRows">
+                        <p id="emptyMappings" style="color:#9e9e9e;font-size:.85rem;text-align:center;padding:16px 0;">
+                            <i class="material-icons" style="font-size:20px;vertical-align:middle;display:block;margin-bottom:6px;">touch_app</i>
+                            Chargez un PDF et cliquez sur les lignes pour assigner les champs
+                        </p>
                     </div>
 
-                    <div id="mappingRows"></div>
-
                     <input type="hidden" name="fieldMappings" id="fieldMappingsInput">
-
-                    <p style="font-size:.75rem;color:#9e9e9e;margin:10px 0 0;">
-                        <i class="material-icons" style="font-size:13px;vertical-align:middle;">lightbulb</i>
-                        Chargez un PDF exemple puis cliquez sur les lignes pour assigner automatiquement.
-                    </p>
                 </div>
 
                 <div style="text-align:right;">
@@ -160,66 +191,37 @@ body.dark-mode .modal-linetext { background:rgba(255,255,255,.07); color:#bbb; }
     </form>
 </div>
 
-<!-- Modal assignation -->
-<div class="modal-overlay" id="assignModal">
-    <div class="modal-box">
-        <div class="modal-title"><i class="material-icons" style="color:var(--primary);">link</i> Assigner cette ligne</div>
-        <div class="modal-linetext" id="modalLineText"></div>
-
-        <div style="margin-bottom:12px;">
-            <div class="field-label">Champ de la base de données</div>
-            <select id="modalField" class="field-inp">
-                <option value="">-- Choisir --</option>
-                <option value="numeroCommande">N° de commande</option>
-                <option value="clientNom">Nom du client / occupant</option>
-                <option value="clientAdresse">Adresse</option>
-                <option value="clientComplementAdresse">Complément d'adresse</option>
-                <option value="clientTelephone">Téléphone</option>
-                <option value="dateLimiteExecution">Date limite d'exécution</option>
-                <option value="typePrestation">Type de prestation (auto-détecté)</option>
-            </select>
-        </div>
-
-        <div id="regexSection" style="display:none;margin-bottom:12px;">
-            <div class="field-label">Regex d'extraction (optionnel)</div>
-            <input type="text" id="modalRegex" class="field-inp" placeholder="Ex: /(\d{2}\/\d{2}\/\d{4})/">
-            <p style="font-size:.72rem;color:#9e9e9e;margin:4px 0 0;">Laissez vide pour prendre toute la ligne. Groupe 1 sera extrait.</p>
-        </div>
-
-        <div class="modal-actions">
-            <button type="button" onclick="closeModal()" class="mdl-button mdl-js-button">Annuler</button>
-            <button type="button" onclick="confirmAssign()" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">Assigner</button>
-        </div>
-    </div>
+<!-- Floating field picker -->
+<div id="fieldPicker">
+    <div class="picker-header">Assigner à quel champ ?</div>
+    <div id="pickerItems"></div>
+    <div class="picker-sep"></div>
+    <div class="picker-cancel" onclick="closePicker()">Annuler</div>
 </div>
 
-<style>
-@keyframes spin { to { transform:rotate(360deg); } }
-</style>
-
 <script>
-const DB_FIELDS = {
-    'numeroCommande':          'N° commande',
-    'clientNom':               'Nom client',
-    'clientAdresse':           'Adresse',
-    'clientComplementAdresse': 'Complément adresse',
-    'clientTelephone':         'Téléphone',
-    'dateLimiteExecution':     'Date limite',
-    'typePrestation':          'Type prestation',
-};
-const DATE_FIELDS = ['dateLimiteExecution'];
+const DB_FIELDS = [
+    { key:'numeroCommande',          label:'N° de commande',           icon:'tag',            strategy:'line_index' },
+    { key:'clientNom',               label:'Nom du client / occupant', icon:'person',         strategy:'line_index' },
+    { key:'clientAdresse',           label:'Adresse',                  icon:'home',           strategy:'line_index' },
+    { key:'clientComplementAdresse', label:'Complément d\'adresse',    icon:'apartment',      strategy:'line_index' },
+    { key:'clientTelephone',         label:'Téléphone',                icon:'phone',          strategy:'line_index' },
+    { key:'dateLimiteExecution',     label:'Date limite d\'exécution', icon:'event',          strategy:'line_index_date' },
+    { key:'typePrestation',          label:'Type de prestation',       icon:'build',          strategy:'type_prestation_code' },
+];
+const DB_FIELDS_MAP = Object.fromEntries(DB_FIELDS.map(f => [f.key, f]));
 
-let currentLineIndex = -1;
-let currentLineText  = '';
 let mappings = {{ config.fieldMappings|json_encode|raw }};
+let pickerLineIndex = -1;
+let pickerLineEl    = null;
 
-// Init existing mappings
+// ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-    mappings.forEach(m => renderMappingRow(m));
+    renderAllMappings();
     syncHiddenInput();
 });
 
-// ====== PDF LOADING ======
+// ── PDF loading ───────────────────────────────────────────────────────────────
 async function loadPdf(input) {
     const file = input.files[0];
     if (!file) return;
@@ -229,155 +231,171 @@ async function loadPdf(input) {
 
     const fd = new FormData();
     fd.append('pdf', file);
-    const res = await fetch('{{ path('admin_pdf_config_preview') }}', { method:'POST', body:fd });
+    const res  = await fetch('{{ path('admin_pdf_config_preview') }}', { method:'POST', body:fd });
     const data = await res.json();
     document.getElementById('pdfLoading').style.display = 'none';
 
-    if (!data.success) { alert('Erreur lors de l\'extraction'); return; }
+    if (!data.success) { alert('Erreur lors de l\'extraction du PDF.'); return; }
 
     const container = document.getElementById('pdfLines');
     container.innerHTML = data.lines.map(l => `
-        <div class="pdf-line" data-index="${l.index}" data-text="${escHtml(l.text)}" onclick="openModal(${l.index}, this.dataset.text)">
+        <div class="pdf-line" data-index="${l.index}" onclick="onLineClick(event, ${l.index}, this)">
             <span class="line-num">${l.index}</span>
-            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(l.text)}</span>
+            <span class="line-text" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(l.text)}</span>
         </div>
     `).join('');
     document.getElementById('pdfLinesContainer').style.display = 'block';
-    highlightAssigned();
+    refreshLineHighlights();
 }
 
 function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ====== MODAL ======
-function openModal(lineIndex, lineText) {
-    currentLineIndex = lineIndex;
-    currentLineText  = lineText;
-    document.getElementById('modalLineText').textContent = lineText;
-    document.getElementById('modalField').value = '';
-    document.getElementById('modalRegex').value = '';
-    document.getElementById('regexSection').style.display = 'none';
-    document.getElementById('assignModal').classList.add('open');
+// ── Field picker ──────────────────────────────────────────────────────────────
+function onLineClick(evt, lineIndex, lineEl) {
+    evt.stopPropagation();
+
+    // Toggle: if picker already open for this line, close it
+    if (pickerLineIndex === lineIndex && document.getElementById('fieldPicker').classList.contains('open')) {
+        closePicker();
+        return;
+    }
+
+    pickerLineIndex = lineIndex;
+    pickerLineEl    = lineEl;
+
+    // Mark active
+    document.querySelectorAll('.pdf-line').forEach(el => el.classList.remove('active-pick'));
+    lineEl.classList.add('active-pick');
+
+    // Build picker items
+    const assignedKeys = new Set(mappings.map(m => m.dbField));
+    const items = DB_FIELDS.map(f => {
+        const isSet = assignedKeys.has(f.key) && mappings.find(m => m.dbField === f.key)?.lineIndex === lineIndex;
+        return `
+            <div class="picker-item ${isSet ? 'already-set' : ''}" onclick="assignField('${f.key}')">
+                <i class="material-icons picker-icon">${f.icon}</i>
+                <span class="picker-label">${f.label}</span>
+                <i class="material-icons picker-check">check_circle</i>
+            </div>`;
+    }).join('');
+    document.getElementById('pickerItems').innerHTML = items;
+
+    // Position picker near the clicked line
+    const picker = document.getElementById('fieldPicker');
+    picker.classList.add('open');
+
+    const rect = lineEl.getBoundingClientRect();
+    const pw   = picker.offsetWidth  || 230;
+    const ph   = picker.offsetHeight || 320;
+    let top  = rect.bottom + 4;
+    let left = rect.left;
+
+    if (top + ph > window.innerHeight - 8)  top  = rect.top - ph - 4;
+    if (left + pw > window.innerWidth  - 8) left = window.innerWidth - pw - 8;
+    picker.style.top  = top  + 'px';
+    picker.style.left = left + 'px';
 }
-document.getElementById('modalField').addEventListener('change', function() {
-    document.getElementById('regexSection').style.display = this.value ? 'block' : 'none';
-});
-function closeModal() {
-    document.getElementById('assignModal').classList.remove('open');
-}
-document.getElementById('assignModal').addEventListener('click', e => {
-    if (e.target === document.getElementById('assignModal')) closeModal();
-});
 
-function confirmAssign() {
-    const field = document.getElementById('modalField').value;
-    if (!field) { alert('Choisissez un champ.'); return; }
+function assignField(fieldKey) {
+    const fieldDef = DB_FIELDS_MAP[fieldKey];
+    const mapping = {
+        dbField:    fieldKey,
+        strategy:   fieldDef.strategy,
+        lineIndex:  pickerLineIndex,
+    };
 
-    const regex = document.getElementById('modalRegex').value.trim();
-    let strategy = 'line_index';
-    if (field === 'typePrestation') strategy = 'type_prestation_code';
-    else if (DATE_FIELDS.includes(field)) strategy = 'line_index_date';
-    else if (regex) strategy = 'line_index_regex';
-
-    const mapping = { dbField: field, label: DB_FIELDS[field], strategy, lineIndex: currentLineIndex };
-    if (regex) { mapping.regex = regex; mapping.regexGroup = 1; }
-
-    // Remove existing mapping for same field
-    mappings = mappings.filter(m => m.dbField !== field);
+    // Replace existing mapping for same field
+    mappings = mappings.filter(m => m.dbField !== fieldKey);
     mappings.push(mapping);
 
     renderAllMappings();
     syncHiddenInput();
-    highlightAssigned();
-    closeModal();
+    refreshLineHighlights();
+    closePicker();
 }
 
-// ====== MAPPINGS RENDER ======
+function closePicker() {
+    document.getElementById('fieldPicker').classList.remove('open');
+    document.querySelectorAll('.pdf-line').forEach(el => el.classList.remove('active-pick'));
+    pickerLineIndex = -1;
+    pickerLineEl    = null;
+}
+
+// Close picker when clicking outside
+document.addEventListener('click', e => {
+    const picker = document.getElementById('fieldPicker');
+    if (picker.classList.contains('open') && !picker.contains(e.target) && !e.target.closest('.pdf-line')) {
+        closePicker();
+    }
+});
+
+// ── Mappings summary ──────────────────────────────────────────────────────────
 function renderAllMappings() {
-    document.getElementById('mappingRows').innerHTML = '';
-    mappings.forEach(m => renderMappingRow(m));
-}
+    const container = document.getElementById('mappingRows');
+    const empty     = document.getElementById('emptyMappings');
 
-function renderMappingRow(m) {
-    const row = document.createElement('div');
-    row.className = 'mapping-row';
-    row.dataset.field = m.dbField;
+    if (!mappings.length) {
+        container.innerHTML = '';
+        container.appendChild(empty);
+        document.getElementById('mappingCount').textContent = '0';
+        return;
+    }
 
-    const strategyLabel = {
-        'line_index': 'Ligne entière',
-        'line_index_regex': 'Regex sur ligne',
-        'line_index_date': 'Date sur ligne',
-        'type_prestation_code': 'Auto-détection',
-    }[m.strategy] ?? m.strategy;
+    // Sort by lineIndex
+    const sorted = [...mappings].sort((a, b) => (a.lineIndex ?? 999) - (b.lineIndex ?? 999));
 
-    const lineInfo = m.strategy !== 'type_prestation_code'
-        ? `Ligne <strong>${m.lineIndex}</strong>`
-        : 'Auto';
+    container.innerHTML = sorted.map(m => {
+        const f = DB_FIELDS_MAP[m.dbField];
+        const lineInfo = m.strategy === 'type_prestation_code' ? 'Auto-détection' : `Ligne ${m.lineIndex}`;
+        return `
+        <div class="mapping-row" data-field="${m.dbField}">
+            <i class="material-icons" style="color:var(--primary);flex-shrink:0;">${f?.icon ?? 'label'}</i>
+            <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;font-size:.88rem;">${f?.label ?? m.dbField}</div>
+                <div style="font-size:.75rem;color:#9e9e9e;">${lineInfo}</div>
+            </div>
+            <button type="button" class="del-btn" onclick="removeMapping('${m.dbField}')">
+                <i class="material-icons">close</i>
+            </button>
+        </div>`;
+    }).join('');
 
-    row.innerHTML = `
-        <div>
-            <div style="font-weight:600;font-size:.88rem;">${DB_FIELDS[m.dbField] ?? m.dbField}</div>
-            <div style="font-size:.75rem;color:#9e9e9e;margin-top:2px;">${strategyLabel} · ${lineInfo}</div>
-            ${m.regex ? `<div style="font-size:.72rem;color:#7b1fa2;margin-top:2px;font-family:monospace;">${m.regex}</div>` : ''}
-        </div>
-        <div>
-            <input type="number" min="0" value="${m.lineIndex ?? ''}" placeholder="N° ligne"
-                   oninput="updateMappingLine('${m.dbField}', this.value)"
-                   style="width:80px;" ${m.strategy === 'type_prestation_code' ? 'disabled' : ''}>
-        </div>
-        <button type="button" class="del-btn" onclick="removeMapping('${m.dbField}')">
-            <i class="material-icons">delete</i>
-        </button>
-    `;
-    document.getElementById('mappingRows').appendChild(row);
-}
-
-function addMappingRow() {
-    openModalManual();
-}
-
-function openModalManual() {
-    currentLineIndex = 0;
-    currentLineText  = '(saisie manuelle)';
-    document.getElementById('modalLineText').textContent = 'Assignation manuelle — entrez le numéro de ligne dans le mapping.';
-    document.getElementById('modalField').value = '';
-    document.getElementById('modalRegex').value = '';
-    document.getElementById('regexSection').style.display = 'none';
-    document.getElementById('assignModal').classList.add('open');
+    document.getElementById('mappingCount').textContent = mappings.length;
 }
 
 function removeMapping(field) {
     mappings = mappings.filter(m => m.dbField !== field);
     renderAllMappings();
     syncHiddenInput();
-    highlightAssigned();
-}
-
-function updateMappingLine(field, val) {
-    const m = mappings.find(x => x.dbField === field);
-    if (m) { m.lineIndex = parseInt(val) || 0; syncHiddenInput(); }
+    refreshLineHighlights();
 }
 
 function syncHiddenInput() {
     document.getElementById('fieldMappingsInput').value = JSON.stringify(mappings);
 }
 
-function highlightAssigned() {
-    const assignedLines = new Set(mappings.filter(m => m.lineIndex != null).map(m => m.lineIndex));
+// ── Line highlights ───────────────────────────────────────────────────────────
+function refreshLineHighlights() {
     const fieldByLine = {};
     mappings.forEach(m => { if (m.lineIndex != null) fieldByLine[m.lineIndex] = m.dbField; });
 
     document.querySelectorAll('.pdf-line').forEach(el => {
         const idx = parseInt(el.dataset.index);
-        if (assignedLines.has(idx)) {
+        const field = fieldByLine[idx];
+
+        // Remove existing chip
+        el.querySelector('.line-chip')?.remove();
+        el.classList.remove('assigned');
+
+        if (field) {
             el.classList.add('assigned');
-            let chip = el.querySelector('.line-chip');
-            if (!chip) { chip = document.createElement('span'); chip.className = 'line-chip'; el.appendChild(chip); }
-            chip.textContent = DB_FIELDS[fieldByLine[idx]] ?? '';
-        } else {
-            el.classList.remove('assigned');
-            el.querySelector('.line-chip')?.remove();
+            const f = DB_FIELDS_MAP[field];
+            const chip = document.createElement('span');
+            chip.className = 'line-chip';
+            chip.innerHTML = `${f?.label ?? field} <span class="chip-del" onclick="event.stopPropagation();removeMapping('${field}')">✕</span>`;
+            el.appendChild(chip);
         }
     });
 }
