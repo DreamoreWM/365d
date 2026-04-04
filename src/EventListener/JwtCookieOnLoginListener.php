@@ -31,10 +31,13 @@ class JwtCookieOnLoginListener
             return;
         }
 
+        $rememberMe = $event->getRequest()->request->has('_remember_me');
+        $ttl = $rememberMe ? 30 * 24 * 3600 : $this->tokenTtl;
+
         $response->headers->setCookie(
             Cookie::create('BEARER')
                 ->withValue($token)
-                ->withExpires(time() + $this->tokenTtl)
+                ->withExpires(time() + $ttl)
                 ->withPath('/')
                 ->withHttpOnly(true)
                 ->withSecure('auto')
