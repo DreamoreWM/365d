@@ -611,6 +611,16 @@
             <i class="material-icons">account_circle</i>
             <span>Mon Compte</span>
         </a>
+        <a href="#" class="menu-item" id="theme-toggle-drawer">
+            <i class="material-icons">brightness_4</i>
+            <span>Thème sombre</span>
+        </a>
+        <div class="menu-divider"></div>
+
+        <a href="{{ path('app_logout') }}" class="menu-item logout-item">
+            <i class="material-icons">logout</i>
+            <span>Déconnexion</span>
+        </a>
     </div>
 </nav>
 
@@ -687,6 +697,11 @@
     });
 
     document.getElementById('theme-toggle-mobile')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleTheme();
+    });
+
+    document.getElementById('theme-toggle-drawer')?.addEventListener('click', (e) => {
         e.preventDefault();
         toggleTheme();
     });
