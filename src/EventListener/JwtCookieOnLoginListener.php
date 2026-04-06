@@ -2,6 +2,7 @@
 
 namespace App\EventListener;
 
+use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\Cookie;
@@ -10,8 +11,11 @@ use Symfony\Component\Security\Http\Event\LoginSuccessEvent;
 #[AsEventListener(event: LoginSuccessEvent::class)]
 class JwtCookieOnLoginListener
 {
+    private const REMEMBER_ME_TTL = 30 * 24 * 3600; // 30 days
+
     public function __construct(
         private JWTTokenManagerInterface $jwtManager,
+        private JWTEncoderInterface $jwtEncoder,
         private int $tokenTtl = 3600,
     ) {
     }
@@ -24,15 +28,22 @@ class JwtCookieOnLoginListener
         }
 
         $user = $event->getUser();
-        $token = $this->jwtManager->create($user);
+        $rememberMe = $event->getRequest()->request->has('_remember_me');
+        $ttl = $rememberMe ? self::REMEMBER_ME_TTL : $this->tokenTtl;
+
+        if ($rememberMe) {
+            // Create token with extended expiration
+            $payload = $this->jwtManager->parse($this->jwtManager->create($user));
+            $payload['exp'] = time() + $ttl;
+            $token = $this->jwtEncoder->encode($payload);
+        } else {
+            $token = $this->jwtManager->create($user);
+        }
 
         $response = $event->getResponse();
         if ($response === null) {
             return;
         }
-
-        $rememberMe = $event->getRequest()->request->has('_remember_me');
-        $ttl = $rememberMe ? 30 * 24 * 3600 : $this->tokenTtl;
 
         $response->headers->setCookie(
             Cookie::create('BEARER')
