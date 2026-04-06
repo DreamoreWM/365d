@@ -319,25 +319,59 @@
         @media (max-width: 900px) {
             .showcase-row { grid-template-columns: 1fr; gap: 32px; }
             .showcase-row.reverse { direction: ltr; }
-            .mock-app-layout { flex-direction: column; }
+            /* App frames responsive */
+            .app-frame { max-width: 100%; overflow: hidden; }
+            .mock-app-layout { flex-direction: column; min-height: auto; }
             .mock-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-light); }
             .mock-sidebar-header { height: 48px; }
             .mock-menu-item, .mock-submenu-item { display: none; }
+            .mock-content { padding: 12px; }
             .mock-stats-grid { grid-template-columns: repeat(2, 1fr); }
             .mock-actions-grid { grid-template-columns: 1fr; }
-            .mock-planning-layout { grid-template-columns: 1fr; }
+            /* Planning responsive */
+            .mock-planning-layout { grid-template-columns: 1fr; min-height: auto; }
             .mock-emp-panel, .mock-wizard-panel { display: none; }
+            .mock-cal-panel { overflow-x: auto; }
+            /* BDC responsive */
+            .mock-bdc-layout { padding: 10px; }
+            .mock-table { overflow-x: auto; }
+            .mock-table table { min-width: 500px; }
+            .mock-filter-card { flex-wrap: wrap; }
+            .mock-page-header { flex-direction: column; gap: 10px; align-items: flex-start; padding: 14px; }
+            .mock-page-header h2 { font-size: 1rem; }
+            /* Geo responsive */
             .mock-geo-layout { grid-template-columns: 1fr; }
             .mock-geo-sidebar { border-right: none; border-bottom: 1px solid var(--border-light); }
             .mock-geo-map { min-height: 250px; }
+            .mock-geo-other-groups { display: none; }
+            /* Phone frame stays centered */
+            .phone-frame { max-width: 280px; margin: 0 auto; }
+            /* General */
             .landing-nav-links { display: none; }
             .hero-text h1 { font-size: 2rem; }
             .fake-cursor { display: none !important; }
+            .landing-section { padding: 50px 16px; }
+            .showcase-text h3 { font-size: 1.25rem; }
         }
         @media (max-width: 600px) {
             .mock-stats-grid { grid-template-columns: 1fr; }
             .landing-nav { padding: 10px 16px; }
             .hero { padding: 100px 16px 40px; }
+            .hero-text h1 { font-size: 1.6rem; }
+            .hero-text p { font-size: 1rem; }
+            .hero-buttons { flex-direction: column; align-items: center; }
+            /* Dashboard mockup simplification */
+            .mock-welcome h2 { font-size: 1.1rem; }
+            .mock-stat-value { font-size: 1.2rem; }
+            .mock-stat-card { padding: 10px; }
+            .mock-action-card { padding: 10px; gap: 10px; }
+            .mock-action-icon { width: 38px; height: 38px; }
+            .mock-action-title { font-size: 0.85rem; }
+            /* BDC detail screen */
+            #bdcDetailScreen > div:nth-child(2) { grid-template-columns: 1fr !important; }
+            /* CTA */
+            .landing-cta h2 { font-size: 1.5rem; }
+            .landing-cta { padding: 50px 16px; }
         }
     </style>
 </head>
