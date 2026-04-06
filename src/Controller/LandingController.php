@@ -6,11 +6,11 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
-class HomeController extends AbstractController
+class LandingController extends AbstractController
 {
-    #[Route('/', name: 'app_home')]
+    #[Route('/landing', name: 'app_landing', methods: ['GET'])]
     public function index(): Response
     {
-        return $this->redirectToRoute('app_landing');
+        return $this->render('landing/index.html.twig');
     }
 }

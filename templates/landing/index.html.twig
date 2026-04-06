@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Services 4D - Gestion de prestations terrain</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3f51b5;
+            --primary-dark: #303f9f;
+            --accent: #ff4081;
+            --bg-light: #fafafa;
+            --card-light: #ffffff;
+            --text-light: #212121;
+            --text-muted: #757575;
+            --border-light: #e0e0e0;
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Roboto', sans-serif; background: var(--bg-light); color: var(--text-light); overflow-x: hidden; }
+
+        /* ========== NAV ========== */
+        .landing-nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            padding: 14px 40px; display: flex; align-items: center; justify-content: space-between;
+            backdrop-filter: blur(20px); background: rgba(255,255,255,0.9);
+            border-bottom: 1px solid rgba(0,0,0,0.06); transition: all 0.3s;
+        }
+        .landing-nav.scrolled { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .landing-nav-logo { display: flex; align-items: center; gap: 10px; font-weight: 500; font-size: 1.4rem; color: var(--primary); text-decoration: none; }
+        .landing-nav-logo .material-icons { font-size: 28px; }
+        .landing-nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
+        .landing-nav-links a { text-decoration: none; color: var(--text-muted); font-weight: 500; font-size: 0.9rem; transition: color 0.2s; }
+        .landing-nav-links a:hover { color: var(--primary); }
+        .btn-login { display: inline-flex; align-items: center; gap: 6px; padding: 8px 20px; border-radius: 4px; font-weight: 500; font-size: 0.9rem; text-decoration: none; background: var(--primary); color: white; box-shadow: 0 2px 4px rgba(63,81,181,0.3); transition: all 0.2s; }
+        .btn-login:hover { background: var(--primary-dark); }
+
+        /* ========== HERO ========== */
+        .hero { min-height: 100vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 120px 24px 60px; position: relative; }
+        .hero::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 60%; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); z-index: 0; }
+        .hero-inner { position: relative; z-index: 1; max-width: 1100px; width: 100%; }
+        .hero-text { color: white; margin-bottom: 48px; }
+        .hero-text h1 { font-size: 2.8rem; font-weight: 400; margin-bottom: 12px; }
+        .hero-text p { font-size: 1.15rem; opacity: 0.9; max-width: 550px; margin: 0 auto; }
+        .hero-buttons { display: flex; gap: 12px; justify-content: center; margin-top: 28px; }
+        .btn-hero-primary { display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; border-radius: 4px; font-weight: 500; background: white; color: var(--primary); text-decoration: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.2s; }
+        .btn-hero-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.2); }
+        .btn-hero-outline { display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; border-radius: 4px; font-weight: 500; border: 2px solid rgba(255,255,255,0.6); color: white; text-decoration: none; transition: all 0.2s; }
+        .btn-hero-outline:hover { border-color: white; background: rgba(255,255,255,0.1); }
+
+        /* ========== APP FRAME ========== */
+        .app-frame { background: var(--card-light); border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); overflow: hidden; border: 1px solid var(--border-light); position: relative; }
+        .app-frame-bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #f5f5f5; border-bottom: 1px solid var(--border-light); }
+        .frame-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .frame-dot.r { background: #ef5350; } .frame-dot.y { background: #ff9800; } .frame-dot.g { background: #4caf50; }
+        .frame-url { flex: 1; margin-left: 10px; background: white; border-radius: 4px; padding: 5px 12px; font-size: 0.78rem; color: var(--text-muted); border: 1px solid var(--border-light); transition: all 0.3s; }
+
+        /* ========== FAKE CURSOR ========== */
+        .fake-cursor {
+            position: absolute; z-index: 50; width: 20px; height: 20px; pointer-events: none;
+            transition: left 0.5s cubic-bezier(0.4, 0, 0.2, 1), top 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+        }
+        .fake-cursor.visible { opacity: 1; }
+        .fake-cursor svg { width: 20px; height: 20px; filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.3)); }
+        .fake-cursor.clicking svg { transform: scale(0.85); }
+        .click-ripple {
+            position: absolute; z-index: 49; width: 30px; height: 30px; border-radius: 50%;
+            background: rgba(63,81,181,0.3); pointer-events: none;
+            animation: rippleOut 0.6s ease-out forwards; opacity: 0;
+        }
+        @keyframes rippleOut { 0% { transform: scale(0); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+
+        /* ========== MOCKUP DASHBOARD ========== */
+        .mock-app-layout { display: flex; min-height: 420px; position: relative; }
+        .mock-sidebar { width: 220px; background: var(--card-light); border-right: 1px solid var(--border-light); flex-shrink: 0; }
+        .mock-sidebar-header { height: 56px; background: var(--primary); color: white; display: flex; align-items: center; padding: 0 16px; font-size: 1.1rem; font-weight: 500; gap: 8px; }
+        .mock-menu-item { display: flex; align-items: center; gap: 12px; padding: 11px 16px; font-size: 0.85rem; color: var(--text-light); border-left: 3px solid transparent; transition: all 0.3s; cursor: default; }
+        .mock-menu-item.active { background: rgba(63,81,181,0.1); color: var(--primary); font-weight: 500; border-left-color: var(--primary); }
+        .mock-menu-item.hover-effect { background: rgba(63,81,181,0.06); }
+        .mock-menu-item .material-icons { font-size: 20px; }
+        .mock-menu-divider { height: 1px; background: var(--border-light); margin: 6px 0; }
+        .mock-submenu-item { display: flex; align-items: center; gap: 10px; padding: 9px 16px 9px 48px; font-size: 0.82rem; color: var(--text-muted); }
+        .mock-submenu-item .material-icons { font-size: 18px; }
+        .mock-content { flex: 1; padding: 20px; background: var(--bg-light); overflow: hidden; position: relative; }
+
+        /* Dashboard screens */
+        .mock-screen { transition: opacity 0.3s, transform 0.3s; }
+        .mock-screen.hidden { opacity: 0; transform: translateX(20px); position: absolute; top: 20px; left: 20px; right: 20px; pointer-events: none; }
+        .mock-screen.visible { opacity: 1; transform: translateX(0); }
+
+        .mock-welcome { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 24px 20px; border-radius: 8px; margin-bottom: 16px; position: relative; overflow: hidden; }
+        .mock-welcome::before { content: ''; position: absolute; top: -50%; right: -10%; width: 200px; height: 200px; background: rgba(255,255,255,0.1); border-radius: 50%; }
+        .mock-welcome h2 { font-size: 1.3rem; font-weight: 400; margin-bottom: 4px; position: relative; }
+        .mock-welcome p { font-size: 0.85rem; opacity: 0.9; position: relative; }
+
+        .mock-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+        .mock-stat-card { background: white; border-radius: 8px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); position: relative; overflow: hidden; }
+        .mock-stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--primary); }
+        .mock-stat-card .stat-row { display: flex; justify-content: space-between; align-items: flex-start; }
+        .mock-stat-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .mock-stat-value { font-size: 1.6rem; font-weight: 600; }
+        .mock-stat-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+        .mock-stat-icon .material-icons { font-size: 22px; }
+        .mock-stat-footer { display: flex; align-items: center; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-light); font-size: 0.75rem; color: var(--text-muted); }
+        .mock-stat-footer .material-icons { font-size: 16px; }
+
+        .mock-actions-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .mock-action-card { background: white; border-radius: 8px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 14px; border: 2px solid transparent; transition: border-color 0.3s; }
+        .mock-action-card.hover-effect { border-color: var(--primary); }
+        .mock-action-icon { width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .mock-action-icon .material-icons { font-size: 24px; }
+        .mock-action-title { font-size: 0.95rem; font-weight: 500; margin-bottom: 2px; }
+        .mock-action-desc { font-size: 0.78rem; color: var(--text-muted); }
+
+        /* Prestations screen */
+        .mock-presta-list-item { display: flex; align-items: center; gap: 14px; padding: 14px; background: rgba(63,81,181,0.03); border-radius: 8px; margin-bottom: 10px; border-left: 4px solid var(--primary); }
+        .mock-presta-list-icon { width: 42px; height: 42px; border-radius: 10px; background: rgba(63,81,181,0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .mock-presta-list-icon .material-icons { font-size: 22px; }
+        .mock-presta-list-content { flex: 1; }
+        .mock-presta-list-title { font-weight: 500; font-size: 0.88rem; margin-bottom: 2px; }
+        .mock-presta-list-sub { font-size: 0.78rem; color: var(--text-muted); }
+
+        /* ========== SECTIONS ========== */
+        .landing-section { padding: 80px 24px; }
+        .landing-section.alt { background: white; }
+        .landing-container { max-width: 1100px; margin: 0 auto; }
+
+        .showcase-row { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+        .showcase-row.reverse { direction: rtl; }
+        .showcase-row.reverse > * { direction: ltr; }
+        .showcase-text h3 { font-size: 1.5rem; font-weight: 500; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+        .showcase-text h3 .material-icons { color: var(--primary); }
+        .showcase-text p { color: var(--text-muted); margin-bottom: 20px; line-height: 1.6; }
+        .showcase-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .showcase-list li { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
+        .showcase-list .material-icons { color: #4caf50; font-size: 20px; }
+
+        /* ========== PLANNING MOCKUP ========== */
+        .mock-planning-layout { display: grid; grid-template-columns: 160px 1fr 200px; gap: 8px; padding: 12px; background: var(--bg-light); min-height: 340px; position: relative; }
+        .mock-emp-panel { background: white; border-radius: 8px; padding: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        .mock-emp-title { font-size: 0.68rem; font-weight: 700; color: #9e9e9e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; display: flex; align-items: center; gap: 4px; }
+        .mock-emp-title .material-icons { font-size: 14px; color: var(--primary); }
+        .mock-emp-actions { display: flex; gap: 4px; margin-bottom: 8px; }
+        .mock-emp-actions button { flex: 1; padding: 4px; border: 1px solid var(--border-light); border-radius: 4px; background: transparent; font-size: 0.65rem; color: var(--text-muted); cursor: default; }
+        .mock-emp-item { display: flex; align-items: center; gap: 7px; padding: 6px 8px; border-radius: 6px; font-size: 0.78rem; transition: background 0.3s; }
+        .mock-emp-item.selected { background: rgba(63,81,181,0.1); }
+        .mock-emp-avatar { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; color: white; flex-shrink: 0; }
+        .mock-emp-name { flex: 1; font-weight: 500; }
+        .mock-emp-count { font-size: 0.65rem; font-weight: 700; background: rgba(0,0,0,0.06); border-radius: 8px; padding: 1px 6px; color: #666; }
+
+        .mock-cal-panel { background: white; border-radius: 8px; padding: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        .mock-cal-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border-light); }
+        .mock-cal-toolbar h4 { font-size: 0.85rem; font-weight: 500; }
+        .mock-cal-nav { display: flex; gap: 4px; }
+        .mock-cal-nav span { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px solid var(--border-light); }
+        .mock-cal-nav .material-icons { font-size: 16px; color: var(--text-muted); }
+        .mock-cal-header { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 4px; }
+        .mock-cal-header span { text-align: center; font-size: 0.68rem; font-weight: 500; color: var(--text-muted); padding: 4px; }
+        .mock-cal-body { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+        .mock-cal-cell { background: var(--bg-light); border-radius: 6px; padding: 4px; min-height: 70px; transition: background 0.3s; }
+        .mock-cal-cell.highlighted { background: rgba(63,81,181,0.08); outline: 2px solid var(--primary); outline-offset: -2px; }
+        .mock-cal-event { padding: 3px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 500; margin-bottom: 3px; color: white; overflow: hidden; white-space: nowrap; transition: opacity 0.3s; }
+        .mock-cal-event.new-event { animation: eventAppear 0.4s ease; }
+        @keyframes eventAppear { 0% { opacity: 0; transform: scaleY(0); } 100% { opacity: 1; transform: scaleY(1); } }
+
+        .mock-wizard-panel { background: white; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; display: flex; flex-direction: column; }
+        .mock-wizard-header { padding: 10px 14px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; font-size: 0.82rem; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .mock-wizard-header .material-icons { font-size: 18px; }
+        .mock-wizard-step { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border-light); transition: background 0.3s; }
+        .mock-wizard-step.highlight { background: rgba(63,81,181,0.05); }
+        .mock-step-num { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; flex-shrink: 0; transition: all 0.4s; }
+        .mock-step-num.active { background: var(--primary); color: white; }
+        .mock-step-num.done { background: #4caf50; color: white; }
+        .mock-step-num.pending { background: #e0e0e0; color: #9e9e9e; }
+        .mock-step-label { font-size: 0.78rem; font-weight: 500; transition: color 0.3s; }
+        .mock-step-label.active { color: var(--text-light); }
+        .mock-step-label.pending { color: #bdbdbd; }
+        .mock-step-badge { margin-left: auto; font-size: 0.65rem; color: #4caf50; font-weight: 600; display: flex; align-items: center; gap: 2px; opacity: 0; transition: opacity 0.4s; }
+        .mock-step-badge.visible { opacity: 1; }
+        .mock-step-badge .material-icons { font-size: 12px; }
+
+        /* ========== PRESTATION MOCKUP ========== */
+        .mock-presta-layout { padding: 16px; background: var(--bg-light); position: relative; }
+        .mock-presta-header { background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%); color: white; padding: 16px 20px; border-radius: 8px 8px 0 0; }
+        .mock-presta-header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .mock-presta-back { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 16px; background: rgba(255,255,255,0.15); font-size: 0.78rem; color: rgba(255,255,255,0.9); }
+        .mock-presta-back .material-icons { font-size: 16px; }
+        .mock-presta-status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 16px; background: rgba(255,255,255,0.2); font-size: 0.78rem; font-weight: 500; }
+        .mock-presta-status-badge .material-icons { font-size: 16px; }
+        .mock-presta-main { display: flex; align-items: flex-start; gap: 12px; }
+        .mock-presta-main .header-icon { font-size: 30px; opacity: 0.9; }
+        .mock-presta-main h3 { font-size: 1.2rem; font-weight: 400; margin-bottom: 4px; }
+        .mock-presta-meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.8rem; opacity: 0.9; }
+        .mock-presta-meta span { display: inline-flex; align-items: center; gap: 3px; }
+        .mock-presta-meta .material-icons { font-size: 14px; }
+        .mock-presta-body { background: white; border-radius: 0 0 8px 8px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        .mock-field-group { margin-bottom: 16px; }
+        .mock-field-label { font-size: 0.75rem; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+        .mock-field-label .material-icons { font-size: 16px; color: var(--primary); }
+        .mock-field-value { padding: 10px 14px; background: var(--bg-light); border-radius: 6px; border: 1px solid var(--border-light); font-size: 0.88rem; line-height: 1.5; min-height: 50px; transition: border-color 0.3s; }
+        .mock-field-value.focused { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(63,81,181,0.15); }
+        .mock-field-value .typing-text { display: inline; }
+        .mock-field-value .typing-cursor { display: inline-block; width: 2px; height: 1em; background: var(--primary); animation: blink 0.8s infinite; vertical-align: text-bottom; margin-left: 1px; }
+        @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+        .mock-checkboxes { display: flex; gap: 14px; flex-wrap: wrap; }
+        .mock-cb { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; }
+        .mock-cb-box { width: 18px; height: 18px; border-radius: 3px; border: 2px solid var(--border-light); display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
+        .mock-cb-box.checked { background: var(--primary); border-color: var(--primary); }
+        .mock-cb-box.checked .material-icons { font-size: 14px; color: white; }
+        .mock-cb-box .material-icons { font-size: 14px; color: white; opacity: 0; transition: opacity 0.2s; }
+        .mock-cb-box.checked .material-icons { opacity: 1; }
+        .mock-signature-pad { border: 2px dashed var(--border-light); border-radius: 8px; height: 70px; position: relative; overflow: hidden; transition: border-color 0.3s; }
+        .mock-signature-pad.active { border-color: var(--primary); }
+        .mock-signature-pad svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .mock-signature-pad svg path { stroke-dasharray: 500; stroke-dashoffset: 500; transition: none; }
+        .mock-signature-pad svg path.drawing { animation: drawSignature 1.2s ease forwards; }
+        @keyframes drawSignature { to { stroke-dashoffset: 0; } }
+
+        /* ========== BDC MOCKUP ========== */
+        .mock-bdc-layout { padding: 16px; background: var(--bg-light); }
+        .mock-page-header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .mock-page-header h2 { margin: 0; font-size: 1.25rem; font-weight: 400; display: flex; align-items: center; gap: 10px; }
+        .mock-page-header .material-icons { font-size: 28px; }
+        .mock-page-header .btn-add { display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 4px; background: rgba(255,255,255,0.2); color: white; font-size: 0.85rem; font-weight: 500; border: none; }
+        .mock-filter-card { background: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); display: flex; gap: 12px; align-items: center; }
+        .mock-filter-input { flex: 1; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 4px; font-size: 0.85rem; color: var(--text-muted); background: white; }
+        .mock-table { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); width: 100%; }
+        .mock-table table { width: 100%; border-collapse: collapse; }
+        .mock-table thead { background: rgba(63,81,181,0.08); }
+        .mock-table th { padding: 12px 16px; text-align: left; font-weight: 500; color: var(--primary); border-bottom: 2px solid var(--border-light); font-size: 0.82rem; white-space: nowrap; }
+        .mock-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-light); font-size: 0.85rem; }
+        .mock-table tbody tr { transition: background 0.3s; }
+        .mock-table tbody tr.row-highlight { background: rgba(63,81,181,0.06); }
+        .mock-status { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 500; }
+        .mock-status .material-icons { font-size: 14px; }
+        .mock-status.a-prog { background: #fff3e0; color: #e65100; }
+        .mock-status.prog { background: #e3f2fd; color: #1565c0; }
+        .mock-status.done { background: #e8f5e9; color: #2e7d32; }
+        .mock-action-btns { display: flex; gap: 4px; }
+        .mock-icon-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: none; display: flex; align-items: center; justify-content: center; }
+        .mock-icon-btn .material-icons { font-size: 18px; color: var(--text-muted); }
+        .mock-progress-mini { width: 60px; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden; display: inline-block; vertical-align: middle; margin-left: 6px; }
+        .mock-progress-fill { height: 100%; border-radius: 3px; }
+        .mock-presta-list-item.hover-effect { background: rgba(63,81,181,0.08); cursor: default; }
+
+        /* ========== PHONE FRAME ========== */
+        .phone-frame {
+            width: 280px; background: #1a1a1a; border-radius: 36px; padding: 8px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25); position: relative; overflow: hidden;
+        }
+        .phone-notch {
+            width: 100px; height: 24px; background: #1a1a1a; border-radius: 0 0 16px 16px;
+            position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 10;
+        }
+        .phone-status-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 20px 4px; background: var(--bg-light); font-size: 0.72rem; font-weight: 600;
+            color: var(--text-light); border-radius: 28px 28px 0 0;
+        }
+        .phone-status-icons { display: flex; gap: 3px; color: var(--text-light); }
+        .phone-content {
+            background: var(--bg-light); min-height: 460px; overflow: hidden;
+        }
+        .phone-home-bar {
+            height: 20px; background: var(--bg-light); display: flex; align-items: center; justify-content: center;
+            border-radius: 0 0 28px 28px;
+        }
+        .phone-home-bar::after {
+            content: ''; width: 100px; height: 4px; background: #ccc; border-radius: 2px;
+        }
+        .phone-content .mock-screen.hidden { top: 0; left: 0; right: 0; }
+        .phone-content .mock-screen.visible { position: relative; }
+        @media (max-width: 900px) {
+            .phone-frame .fake-cursor { display: none !important; }
+        }
+
+        /* ========== GEO ZONES MOCKUP ========== */
+        .mock-geo-layout { display: grid; grid-template-columns: 220px 1fr; min-height: 380px; background: var(--bg-light); }
+        .mock-geo-sidebar { background: white; border-right: 1px solid var(--border-light); padding: 14px; overflow: hidden; }
+        .mock-geo-sidebar-header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 10px 14px; margin: -14px -14px 12px; font-size: 0.85rem; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+        .mock-geo-sidebar-header .material-icons { font-size: 18px; }
+        .mock-geo-group-label { font-size: 0.68rem; font-weight: 700; color: #9e9e9e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .mock-geo-group-active { display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 6px; background: rgba(63,81,181,0.06); border: 1px solid var(--border-light); margin-bottom: 12px; }
+        .mock-geo-color { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid white; box-shadow: 0 0 0 1px rgba(0,0,0,0.1); }
+        .mock-geo-group-name { font-size: 0.85rem; font-weight: 500; }
+        .mock-geo-city-list { list-style: none; }
+        .mock-geo-city { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 4px; font-size: 0.78rem; margin-bottom: 3px; opacity: 0; transform: translateX(-10px); transition: opacity 0.3s, transform 0.3s, background 0.2s; }
+        .mock-geo-city.visible { opacity: 1; transform: translateX(0); }
+        .mock-geo-city .material-icons { font-size: 14px; }
+        .mock-geo-city-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .mock-geo-other-groups { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-light); }
+        .mock-geo-other-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 4px; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 3px; }
+        .mock-geo-other-item .mock-geo-color { width: 10px; height: 10px; }
+        .mock-geo-other-count { margin-left: auto; font-size: 0.68rem; background: rgba(0,0,0,0.06); border-radius: 8px; padding: 1px 6px; }
+        .mock-geo-map { position: relative; background: #eef1f7; overflow: hidden; }
+        .mock-geo-map svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .mock-geo-city-shape { fill: #d0d4de; stroke: white; stroke-width: 1.5; transition: fill 0.4s; cursor: default; }
+        .mock-geo-city-shape.colored { stroke-width: 2; }
+        .mock-geo-city-name { font-size: 7px; fill: #666; text-anchor: middle; pointer-events: none; font-weight: 500; font-family: 'Roboto', sans-serif; }
+        .mock-geo-city-name.colored { fill: white; font-weight: 600; }
+        .mock-geo-click-ring { fill: none; stroke-width: 2; opacity: 0; }
+        @keyframes clickRingPulse { 0% { r: 8; opacity: 0.8; } 100% { r: 22; opacity: 0; } }
+
+        /* ========== CTA + FOOTER ========== */
+        .landing-cta { text-align: center; padding: 80px 24px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; }
+        .landing-cta h2 { font-size: 2rem; font-weight: 400; margin-bottom: 12px; }
+        .landing-cta p { font-size: 1rem; opacity: 0.9; margin-bottom: 28px; }
+        .landing-footer { padding: 32px 24px; text-align: center; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid var(--border-light); }
+        .landing-footer a { color: var(--primary); text-decoration: none; }
+
+        /* ========== ANIMATIONS ========== */
+        .fade-up { opacity: 0; transform: translateY(30px); transition: opacity 0.6s, transform 0.6s; }
+        .fade-up.visible { opacity: 1; transform: translateY(0); }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 900px) {
+            .showcase-row { grid-template-columns: 1fr; gap: 32px; }
+            .showcase-row.reverse { direction: ltr; }
+            .mock-app-layout { flex-direction: column; }
+            .mock-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-light); }
+            .mock-sidebar-header { height: 48px; }
+            .mock-menu-item, .mock-submenu-item { display: none; }
+            .mock-stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .mock-actions-grid { grid-template-columns: 1fr; }
+            .mock-planning-layout { grid-template-columns: 1fr; }
+            .mock-emp-panel, .mock-wizard-panel { display: none; }
+            .mock-geo-layout { grid-template-columns: 1fr; }
+            .mock-geo-sidebar { border-right: none; border-bottom: 1px solid var(--border-light); }
+            .mock-geo-map { min-height: 250px; }
+            .landing-nav-links { display: none; }
+            .hero-text h1 { font-size: 2rem; }
+            .fake-cursor { display: none !important; }
+        }
+        @media (max-width: 600px) {
+            .mock-stats-grid { grid-template-columns: 1fr; }
+            .landing-nav { padding: 10px 16px; }
+            .hero { padding: 100px 16px 40px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="landing-nav" id="landingNav">
+    <a href="#" class="landing-nav-logo"><i class="material-icons">dashboard</i> Services 4D</a>
+    <ul class="landing-nav-links">
+        <li><a href="#dashboard">Dashboard</a></li>
+        <li><a href="#planning">Planning</a></li>
+        <li><a href="#terrain">Terrain</a></li>
+        <li><a href="#commandes">Commandes</a></li>
+        <li><a href="#zones">Zones</a></li>
+        <li><a href="{{ path('app_login') }}" class="btn-login"><i class="material-icons" style="font-size:18px;">login</i> Connexion</a></li>
+    </ul>
+</nav>
+
+<!-- ==================== HERO + DASHBOARD ==================== -->
+<section class="hero" id="dashboard">
+    <div class="hero-inner">
+        <div class="hero-text">
+            <h1>Gerez vos prestations terrain en toute simplicite</h1>
+            <p>Planifiez, suivez et optimisez vos interventions terrain. Du bon de commande a la signature client, tout est centralise.</p>
+            <div class="hero-buttons">
+                <a href="{{ path('app_login') }}" class="btn-hero-primary"><i class="material-icons" style="font-size:18px;">login</i> Acceder a l'application</a>
+                <a href="#planning" class="btn-hero-outline"><i class="material-icons" style="font-size:18px;">arrow_downward</i> Decouvrir</a>
+            </div>
+        </div>
+
+        <div class="app-frame fade-up" id="dashboardFrame">
+            <div class="app-frame-bar">
+                <div class="frame-dot r"></div><div class="frame-dot y"></div><div class="frame-dot g"></div>
+                <div class="frame-url">services4d.app/dashboard</div>
+            </div>
+            <div class="mock-app-layout">
+                <div class="mock-sidebar">
+                    <div class="mock-sidebar-header"><i class="material-icons" style="font-size:20px;">dashboard</i> Services 4D</div>
+                    <div class="mock-menu-item active"><i class="material-icons">home</i> Dashboard</div>
+                    <div class="mock-menu-item"><i class="material-icons">description</i> Mes Prestations</div>
+                    <div class="mock-menu-divider"></div>
+                    <div class="mock-menu-item"><i class="material-icons">admin_panel_settings</i> Administration</div>
+                    <div class="mock-submenu-item"><i class="material-icons">receipt_long</i> Bons de commande</div>
+                    <div class="mock-submenu-item"><i class="material-icons">event_note</i> Prestations</div>
+                    <div class="mock-submenu-item"><i class="material-icons">calendar_today</i> Planning</div>
+                    <div class="mock-menu-divider"></div>
+                    <div class="mock-menu-item"><i class="material-icons">account_circle</i> Mon Compte</div>
+                </div>
+                <div class="mock-content">
+                    <div class="mock-welcome"><h2>Bienvenue, Jean Dupont !</h2><p>Voici un apercu de votre activite</p></div>
+                    <div class="mock-stats-grid">
+                        <div class="mock-stat-card"><div class="stat-row"><div><div class="mock-stat-label">Prestations</div><div class="mock-stat-value">247</div></div><div class="mock-stat-icon" style="background:rgba(33,150,243,0.1);"><i class="material-icons" style="color:#2196F3;">event_note</i></div></div><div class="mock-stat-footer"><i class="material-icons">info</i> Total assignees</div></div>
+                        <div class="mock-stat-card"><div class="stat-row"><div><div class="mock-stat-label">En cours</div><div class="mock-stat-value">18</div></div><div class="mock-stat-icon" style="background:rgba(255,152,0,0.1);"><i class="material-icons" style="color:#FF9800;">pending</i></div></div><div class="mock-stat-footer"><i class="material-icons">trending_up</i> A realiser</div></div>
+                        <div class="mock-stat-card"><div class="stat-row"><div><div class="mock-stat-label">Terminees</div><div class="mock-stat-value">203</div></div><div class="mock-stat-icon" style="background:rgba(76,175,80,0.1);"><i class="material-icons" style="color:#4CAF50;">check_circle</i></div></div><div class="mock-stat-footer"><i class="material-icons">done_all</i> Completees</div></div>
+                        <div class="mock-stat-card"><div class="stat-row"><div><div class="mock-stat-label">Programmees</div><div class="mock-stat-value">26</div></div><div class="mock-stat-icon" style="background:rgba(156,39,176,0.1);"><i class="material-icons" style="color:#9C27B0;">schedule</i></div></div><div class="mock-stat-footer"><i class="material-icons">calendar_today</i> A venir</div></div>
+                    </div>
+                    <div class="mock-actions-grid">
+                        <div class="mock-action-card"><div class="mock-action-icon"><i class="material-icons">event_note</i></div><div><div class="mock-action-title">Mes prestations</div><div class="mock-action-desc">Consulter et gerer vos prestations du jour</div></div></div>
+                        <div class="mock-action-card"><div class="mock-action-icon"><i class="material-icons">receipt_long</i></div><div><div class="mock-action-title">Bons de commande</div><div class="mock-action-desc">Gerer les bons de commande et clients</div></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== PLANNING ==================== -->
+<section class="landing-section alt" id="planning">
+    <div class="landing-container">
+        <div class="showcase-row">
+            <div class="showcase-text fade-up">
+                <h3><i class="material-icons">calendar_today</i> Planning interactif</h3>
+                <p>Un calendrier interactif pour assigner les techniciens, visualiser les creneaux et organiser les journees de votre equipe.</p>
+                <ul class="showcase-list">
+                    <li><i class="material-icons">check_circle</i> Vue calendrier FullCalendar</li>
+                    <li><i class="material-icons">check_circle</i> Panel employes avec filtrage</li>
+                    <li><i class="material-icons">check_circle</i> Assistant de creation par etapes</li>
+                    <li><i class="material-icons">check_circle</i> Creation en lot de prestations</li>
+                </ul>
+            </div>
+            <div class="fade-up">
+                <div class="app-frame" id="planningFrame">
+                    <div class="app-frame-bar">
+                        <div class="frame-dot r"></div><div class="frame-dot y"></div><div class="frame-dot g"></div>
+                        <div class="frame-url">services4d.app/admin/planning</div>
+                    </div>
+                    <svg class="fake-cursor" id="planCursor" viewBox="0 0 24 24"><path d="M4 0L4 20L9 15L14 22L17 20L12 13L19 13Z" fill="white" stroke="#333" stroke-width="1.5"/></svg>
+                    <div class="mock-planning-layout">
+                        <div class="mock-emp-panel">
+                            <div class="mock-emp-title"><i class="material-icons">people</i> Employes</div>
+                            <div class="mock-emp-actions"><button>Tous</button><button>Aucun</button></div>
+                            <div class="mock-emp-item" id="empDupont"><div class="mock-emp-avatar" style="background:#e91e63;">JD</div><div class="mock-emp-name">J. Dupont</div><div class="mock-emp-count">3</div></div>
+                            <div class="mock-emp-item" id="empLaurent"><div class="mock-emp-avatar" style="background:#2196f3;">ML</div><div class="mock-emp-name">M. Laurent</div><div class="mock-emp-count">5</div></div>
+                            <div class="mock-emp-item" id="empBernard"><div class="mock-emp-avatar" style="background:#4caf50;">PB</div><div class="mock-emp-name">P. Bernard</div><div class="mock-emp-count">2</div></div>
+                        </div>
+                        <div class="mock-cal-panel">
+                            <div class="mock-cal-toolbar"><h4>Avril 2026</h4><div class="mock-cal-nav"><span><i class="material-icons">chevron_left</i></span><span><i class="material-icons">chevron_right</i></span></div></div>
+                            <div class="mock-cal-header"><span>Lun 6</span><span>Mar 7</span><span>Mer 8</span><span>Jeu 9</span><span>Ven 10</span></div>
+                            <div class="mock-cal-body" id="calBody">
+                                <div class="mock-cal-cell" id="cell0"><div class="mock-cal-event" style="background:#e91e63;">9h - Dupont</div></div>
+                                <div class="mock-cal-cell" id="cell1"><div class="mock-cal-event" style="background:#2196f3;">10h - Laurent</div></div>
+                                <div class="mock-cal-cell" id="cell2"><div class="mock-cal-event" style="background:#4caf50;">8h30 - Bernard</div></div>
+                                <div class="mock-cal-cell" id="cell3"></div>
+                                <div class="mock-cal-cell" id="cell4"><div class="mock-cal-event" style="background:#2196f3;">10h - Laurent</div></div>
+                            </div>
+                        </div>
+                        <div class="mock-wizard-panel">
+                            <div class="mock-wizard-header"><i class="material-icons">add_circle</i> Creer prestation</div>
+                            <div class="mock-wizard-step" id="wStep1"><div class="mock-step-num pending" id="wNum1">1</div><div class="mock-step-label pending" id="wLabel1">Bon de commande</div><div class="mock-step-badge" id="wBadge1"><i class="material-icons">check</i> BC-091</div></div>
+                            <div class="mock-wizard-step" id="wStep2"><div class="mock-step-num pending" id="wNum2">2</div><div class="mock-step-label pending" id="wLabel2">Employe</div><div class="mock-step-badge" id="wBadge2"><i class="material-icons">check</i> J. Dupont</div></div>
+                            <div class="mock-wizard-step" id="wStep3"><div class="mock-step-num pending" id="wNum3">3</div><div class="mock-step-label pending" id="wLabel3">Date & heure</div><div class="mock-step-badge" id="wBadge3"><i class="material-icons">check</i> Jeu 9 - 14h</div></div>
+                            <div class="mock-wizard-step" id="wStep4"><div class="mock-step-num pending" id="wNum4">4</div><div class="mock-step-label pending" id="wLabel4">Confirmer</div><div class="mock-step-badge" id="wBadge4"><i class="material-icons">check</i> Cree !</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== SUIVI TERRAIN ==================== -->
+<section class="landing-section" id="terrain">
+    <div class="landing-container">
+        <div class="showcase-row reverse">
+            <div class="showcase-text fade-up">
+                <h3><i class="material-icons">engineering</i> Suivi terrain</h3>
+                <p>Vos techniciens remplissent leurs comptes rendus directement sur le terrain depuis leur telephone. Signature client, champs personnalises et suivi en temps reel.</p>
+                <ul class="showcase-list">
+                    <li><i class="material-icons">check_circle</i> Application mobile optimisee</li>
+                    <li><i class="material-icons">check_circle</i> Signature digitale client</li>
+                    <li><i class="material-icons">check_circle</i> Champs personnalises par type</li>
+                    <li><i class="material-icons">check_circle</i> Comptes rendus detailles</li>
+                </ul>
+            </div>
+            <div class="fade-up" style="display:flex;justify-content:center;">
+                <div class="phone-frame" id="prestaFrame">
+                    <div class="phone-notch"></div>
+                    <div class="phone-status-bar">
+                        <span>9:41</span>
+                        <div class="phone-status-icons"><i class="material-icons" style="font-size:14px;">signal_cellular_alt</i><i class="material-icons" style="font-size:14px;">wifi</i><i class="material-icons" style="font-size:14px;">battery_full</i></div>
+                    </div>
+                    <div class="phone-content" style="position:relative;">
+                        <!-- Screen 1: Liste des prestations -->
+                        <div class="mock-screen visible" id="prestaListScreen">
+                            <div class="mock-welcome" style="background:linear-gradient(135deg,#1976d2,#1565c0);padding:18px 16px;border-radius:0;margin-bottom:0;"><h2 style="font-size:1.1rem;">Mes Prestations</h2><p style="font-size:0.78rem;">3 prestations aujourd'hui</p></div>
+                            <div style="padding:10px;">
+                                <div class="mock-presta-list-item" id="terrainPrestaItem1" style="padding:12px;"><div class="mock-presta-list-icon" style="width:36px;height:36px;"><i class="material-icons" style="font-size:18px;">event</i></div><div class="mock-presta-list-content"><div class="mock-presta-list-title" style="font-size:0.82rem;">Copropriete Haussmann</div><div class="mock-presta-list-sub" style="font-size:0.72rem;">06/04/2026 a 09:00 &bull; Deratisation</div></div></div>
+                                <div class="mock-presta-list-item" style="padding:12px;"><div class="mock-presta-list-icon" style="width:36px;height:36px;"><i class="material-icons" style="font-size:18px;">event</i></div><div class="mock-presta-list-content"><div class="mock-presta-list-title" style="font-size:0.82rem;">SCI Rivoli Gestion</div><div class="mock-presta-list-sub" style="font-size:0.72rem;">06/04/2026 a 11:00 &bull; Desinsectisation</div></div></div>
+                                <div class="mock-presta-list-item" style="padding:12px;"><div class="mock-presta-list-icon" style="width:36px;height:36px;"><i class="material-icons" style="font-size:18px;">event</i></div><div class="mock-presta-list-content"><div class="mock-presta-list-title" style="font-size:0.82rem;">Residence du Parc</div><div class="mock-presta-list-sub" style="font-size:0.72rem;">06/04/2026 a 14:30 &bull; Deratisation</div></div></div>
+                            </div>
+                        </div>
+                        <!-- Screen 2: Detail prestation -->
+                        <div class="mock-screen hidden" id="prestaDetailScreen">
+                            <div class="mock-presta-header" style="border-radius:0;padding:14px 16px;">
+                                <div class="mock-presta-header-top" style="margin-bottom:8px;">
+                                    <div class="mock-presta-back" style="font-size:0.72rem;"><i class="material-icons" style="font-size:14px;">arrow_back</i> Retour</div>
+                                    <div class="mock-presta-status-badge" style="font-size:0.72rem;"><i class="material-icons" style="font-size:14px;">hourglass_empty</i> En cours</div>
+                                </div>
+                                <div class="mock-presta-main">
+                                    <i class="material-icons header-icon" style="font-size:24px;">assignment</i>
+                                    <div><h3 style="font-size:1rem;">Copropriete Haussmann</h3><div class="mock-presta-meta" style="font-size:0.7rem;gap:8px;"><span><i class="material-icons">event</i> 09:00</span><span><i class="material-icons">person</i> J. Dupont</span></div></div>
+                                </div>
+                            </div>
+                            <div class="mock-presta-body" style="padding:14px;border-radius:0;">
+                                <div class="mock-field-group" style="margin-bottom:12px;">
+                                    <div class="mock-field-label" style="font-size:0.7rem;"><i class="material-icons">description</i> Compte rendu</div>
+                                    <div class="mock-field-value" id="compteRendu" style="font-size:0.8rem;min-height:40px;padding:8px 10px;"><span class="typing-text" id="typingText"></span><span class="typing-cursor" id="typingCursor" style="display:none;"></span></div>
+                                </div>
+                                <div class="mock-field-group" style="margin-bottom:12px;">
+                                    <div class="mock-field-label" style="font-size:0.7rem;"><i class="material-icons">checklist</i> Constatations</div>
+                                    <div class="mock-checkboxes" style="gap:10px;">
+                                        <div class="mock-cb" style="font-size:0.75rem;"><div class="mock-cb-box" id="cb1" style="width:16px;height:16px;"><i class="material-icons" style="font-size:12px;">check</i></div><span>Presence constatee</span></div>
+                                        <div class="mock-cb" style="font-size:0.75rem;"><div class="mock-cb-box" id="cb2" style="width:16px;height:16px;"><i class="material-icons" style="font-size:12px;">check</i></div><span>Encombrement</span></div>
+                                        <div class="mock-cb" style="font-size:0.75rem;"><div class="mock-cb-box" id="cb3" style="width:16px;height:16px;"><i class="material-icons" style="font-size:12px;">check</i></div><span>Logement propre</span></div>
+                                    </div>
+                                </div>
+                                <div class="mock-field-group">
+                                    <div class="mock-field-label" style="font-size:0.7rem;"><i class="material-icons">draw</i> Signature client</div>
+                                    <div class="mock-signature-pad" id="sigPad" style="height:60px;">
+                                        <svg viewBox="0 0 400 70">
+                                            <path id="sigPath" d="M 20 50 Q 40 15, 60 45 T 100 35 T 140 48 T 180 25 T 220 42 T 260 28 T 300 38 T 340 22" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="phone-home-bar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== BONS DE COMMANDE ==================== -->
+<section class="landing-section alt" id="commandes">
+    <div class="landing-container">
+        <div class="showcase-row">
+            <div class="showcase-text fade-up">
+                <h3><i class="material-icons">receipt_long</i> Bons de commande</h3>
+                <p>Centralisez tous vos bons de commande, suivez les prestations et importez vos documents automatiquement grace a l'OCR.</p>
+                <ul class="showcase-list">
+                    <li><i class="material-icons">check_circle</i> Suivi du statut en temps reel</li>
+                    <li><i class="material-icons">check_circle</i> Import PDF avec OCR par IA</li>
+                    <li><i class="material-icons">check_circle</i> Barre de progression des prestations</li>
+                    <li><i class="material-icons">check_circle</i> Filtrage et recherche avancee</li>
+                </ul>
+            </div>
+            <div class="fade-up">
+                <div class="app-frame" id="bdcFrame">
+                    <div class="app-frame-bar">
+                        <div class="frame-dot r"></div><div class="frame-dot y"></div><div class="frame-dot g"></div>
+                        <div class="frame-url">services4d.app/admin/bon-commande</div>
+                    </div>
+                    <svg class="fake-cursor" id="bdcCursor" viewBox="0 0 24 24"><path d="M4 0L4 20L9 15L14 22L17 20L12 13L19 13Z" fill="white" stroke="#333" stroke-width="1.5"/></svg>
+                    <div class="mock-bdc-layout" style="position:relative;">
+                        <!-- BDC Screen 1: Liste -->
+                        <div class="mock-screen visible" id="bdcListScreen">
+                            <div class="mock-page-header"><h2><i class="material-icons">receipt_long</i> Bons de commande</h2><div class="btn-add"><i class="material-icons" style="font-size:18px;">add</i> Nouveau</div></div>
+                            <div class="mock-filter-card"><div class="mock-filter-input">Rechercher un client...</div><div class="mock-filter-input" style="max-width:150px;">Tous les statuts</div></div>
+                            <div class="mock-table">
+                                <table>
+                                    <thead><tr><th>Client</th><th>N&deg; BC</th><th>Date</th><th>Statut</th><th>Prestations</th><th>Actions</th></tr></thead>
+                                    <tbody>
+                                        <tr id="bdcRow1"><td><strong>Copropriete Haussmann</strong></td><td>BC-2024-089</td><td>15/03/2026</td><td><span class="mock-status done"><i class="material-icons">check_circle</i> Termine</span></td><td>4/4 <span class="mock-progress-mini"><span class="mock-progress-fill" style="width:100%;background:#4caf50;"></span></span></td><td><div class="mock-action-btns"><span class="mock-icon-btn"><i class="material-icons">visibility</i></span><span class="mock-icon-btn"><i class="material-icons">edit</i></span></div></td></tr>
+                                        <tr id="bdcRow2"><td><strong>SCI Rivoli Gestion</strong></td><td>BC-2024-091</td><td>22/03/2026</td><td><span class="mock-status prog"><i class="material-icons">schedule</i> Programme</span></td><td>2/6 <span class="mock-progress-mini"><span class="mock-progress-fill" style="width:33%;background:#2196f3;"></span></span></td><td><div class="mock-action-btns"><span class="mock-icon-btn"><i class="material-icons">visibility</i></span><span class="mock-icon-btn"><i class="material-icons">edit</i></span></div></td></tr>
+                                        <tr id="bdcRow3"><td><strong>Residence du Parc</strong></td><td>BC-2024-094</td><td>01/04/2026</td><td><span class="mock-status a-prog"><i class="material-icons">warning</i> A programmer</span></td><td>0/3 <span class="mock-progress-mini"><span class="mock-progress-fill" style="width:0%;"></span></span></td><td><div class="mock-action-btns"><span class="mock-icon-btn"><i class="material-icons">visibility</i></span><span class="mock-icon-btn"><i class="material-icons">edit</i></span></div></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <!-- BDC Screen 2: Detail -->
+                        <div class="mock-screen hidden" id="bdcDetailScreen">
+                            <div class="mock-page-header" style="margin-bottom:12px;"><h2><i class="material-icons">receipt_long</i> BC-2024-091</h2><div class="mock-presta-back" style="background:rgba(255,255,255,0.2);cursor:default;"><i class="material-icons">arrow_back</i> Retour</div></div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                                <div style="background:white;border-radius:8px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                                    <div class="mock-field-label"><i class="material-icons">business</i> Client</div>
+                                    <div style="font-weight:500;font-size:0.95rem;">SCI Rivoli Gestion</div>
+                                    <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">12 Rue de Rivoli, 75001 Paris</div>
+                                </div>
+                                <div style="background:white;border-radius:8px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                                    <div class="mock-field-label"><i class="material-icons">info</i> Informations</div>
+                                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+                                        <span class="mock-status prog"><i class="material-icons">schedule</i> Programme</span>
+                                        <span style="font-size:0.82rem;color:var(--text-muted);">22/03/2026</span>
+                                    </div>
+                                    <div style="font-size:0.82rem;color:var(--text-muted);margin-top:6px;">Type: Deratisation + Desinsectisation</div>
+                                </div>
+                            </div>
+                            <div style="background:white;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.08);overflow:hidden;">
+                                <div style="padding:12px 16px;font-weight:500;font-size:0.88rem;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:6px;"><i class="material-icons" style="font-size:18px;color:var(--primary);">event_note</i> Prestations (2/6)</div>
+                                <div style="padding:10px 16px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:10px;">
+                                    <span class="mock-status done" style="font-size:0.72rem;"><i class="material-icons">check_circle</i> Fait</span>
+                                    <span style="font-size:0.82rem;font-weight:500;">Deratisation - RDC</span>
+                                    <span style="font-size:0.75rem;color:var(--text-muted);margin-left:auto;">J. Dupont - 02/04</span>
+                                </div>
+                                <div style="padding:10px 16px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:10px;">
+                                    <span class="mock-status done" style="font-size:0.72rem;"><i class="material-icons">check_circle</i> Fait</span>
+                                    <span style="font-size:0.82rem;font-weight:500;">Desinsectisation - Sous-sol</span>
+                                    <span style="font-size:0.75rem;color:var(--text-muted);margin-left:auto;">M. Laurent - 03/04</span>
+                                </div>
+                                <div style="padding:10px 16px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:10px;">
+                                    <span class="mock-status prog" style="font-size:0.72rem;"><i class="material-icons">schedule</i> Prog.</span>
+                                    <span style="font-size:0.82rem;font-weight:500;">Deratisation - Etage 1</span>
+                                    <span style="font-size:0.75rem;color:var(--text-muted);margin-left:auto;">J. Dupont - 09/04</span>
+                                </div>
+                                <div style="padding:10px 16px;display:flex;align-items:center;gap:10px;">
+                                    <span class="mock-status a-prog" style="font-size:0.72rem;"><i class="material-icons">warning</i> A prog.</span>
+                                    <span style="font-size:0.82rem;font-weight:500;">Desinsectisation - Etage 2</span>
+                                    <span style="font-size:0.75rem;color:var(--text-muted);margin-left:auto;">Non assigne</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== ZONES GEOGRAPHIQUES ==================== -->
+<section class="landing-section" id="zones">
+    <div class="landing-container">
+        <div class="showcase-row reverse">
+            <div class="showcase-text fade-up">
+                <h3><i class="material-icons">map</i> Zones geographiques</h3>
+                <p>Creez des groupes geographiques en cliquant sur les communes de la carte. Chaque groupe a sa couleur pour visualiser vos secteurs d'intervention.</p>
+                <ul class="showcase-list">
+                    <li><i class="material-icons">check_circle</i> Cliquez sur les communes pour les ajouter</li>
+                    <li><i class="material-icons">check_circle</i> Groupes colores pour identifier les secteurs</li>
+                    <li><i class="material-icons">check_circle</i> Limites communales reelles</li>
+                    <li><i class="material-icons">check_circle</i> Recherche et ajout instantane</li>
+                </ul>
+            </div>
+            <div class="fade-up">
+                <div class="app-frame" id="geoFrame">
+                    <div class="app-frame-bar">
+                        <div class="frame-dot r"></div><div class="frame-dot y"></div><div class="frame-dot g"></div>
+                        <div class="frame-url" id="geoUrl">services4d.app/admin/groupes-geographiques</div>
+                    </div>
+                    <svg class="fake-cursor" id="geoCursor" viewBox="0 0 24 24"><path d="M4 0L4 20L9 15L14 22L17 20L12 13L19 13Z" fill="white" stroke="#333" stroke-width="1.5"/></svg>
+                    <div class="mock-geo-layout">
+                        <div class="mock-geo-sidebar">
+                            <div class="mock-geo-sidebar-header"><i class="material-icons">map</i> Groupes geographiques</div>
+                            <div class="mock-geo-group-label">Groupe actif</div>
+                            <div class="mock-geo-group-active" id="geoActiveGroup">
+                                <div class="mock-geo-color" id="geoActiveColor" style="background:#e91e63;"></div>
+                                <div class="mock-geo-group-name" id="geoActiveGroupName">Secteur Nord</div>
+                            </div>
+                            <div class="mock-geo-group-label">Communes (<span id="geoCityCount">0</span>)</div>
+                            <ul class="mock-geo-city-list" id="geoCityList"></ul>
+                            <div class="mock-geo-other-groups">
+                                <div class="mock-geo-group-label">Autres groupes</div>
+                                <div class="mock-geo-other-item"><div class="mock-geo-color" style="background:#2196f3;"></div> Secteur Sud <span class="mock-geo-other-count">5</span></div>
+                                <div class="mock-geo-other-item"><div class="mock-geo-color" style="background:#4caf50;"></div> Secteur Est <span class="mock-geo-other-count">3</span></div>
+                            </div>
+                        </div>
+                        <div class="mock-geo-map">
+                            <!-- Carte SVG avec communes -->
+                            <svg viewBox="0 0 500 380" id="geoMapSvg">
+                                <!-- Fond carte -->
+                                <rect width="500" height="380" fill="#eef1f7"/>
+                                <!-- Grille subtile -->
+                                <line x1="0" y1="95" x2="500" y2="95" stroke="#d5d9e3" stroke-width="0.5"/>
+                                <line x1="0" y1="190" x2="500" y2="190" stroke="#d5d9e3" stroke-width="0.5"/>
+                                <line x1="0" y1="285" x2="500" y2="285" stroke="#d5d9e3" stroke-width="0.5"/>
+                                <line x1="125" y1="0" x2="125" y2="380" stroke="#d5d9e3" stroke-width="0.5"/>
+                                <line x1="250" y1="0" x2="250" y2="380" stroke="#d5d9e3" stroke-width="0.5"/>
+                                <line x1="375" y1="0" x2="375" y2="380" stroke="#d5d9e3" stroke-width="0.5"/>
+                                <!-- Routes -->
+                                <path d="M 60 380 Q 180 260 260 190 T 450 40" fill="none" stroke="#c8ccd6" stroke-width="2"/>
+                                <path d="M 0 200 Q 150 185 260 190 T 500 210" fill="none" stroke="#c8ccd6" stroke-width="2"/>
+                                <path d="M 220 0 Q 245 100 260 190 T 290 380" fill="none" stroke="#c8ccd6" stroke-width="1.5"/>
+                                <!-- Communes (formes polygonales) -->
+                                <!-- Pre-colored (Secteur Sud - bleu) -->
+                                <polygon class="mock-geo-city-shape colored" points="80,260 120,245 145,265 130,290 90,285" fill="#2196f3" data-city="pre1"/>
+                                <text class="mock-geo-city-name colored" x="110" y="272">Issy</text>
+                                <polygon class="mock-geo-city-shape colored" points="150,270 185,255 210,275 195,300 155,295" fill="#2196f3" data-city="pre2"/>
+                                <text class="mock-geo-city-name colored" x="178" y="282">Vanves</text>
+                                <polygon class="mock-geo-city-shape colored" points="50,215 90,200 115,225 100,248 60,242" fill="#2196f3" data-city="pre3"/>
+                                <text class="mock-geo-city-name colored" x="82" y="228">Meudon</text>
+                                <!-- Pre-colored (Secteur Est - vert) -->
+                                <polygon class="mock-geo-city-shape colored" points="340,200 380,185 405,210 390,235 350,230" fill="#4caf50" data-city="pre4"/>
+                                <text class="mock-geo-city-name colored" x="370" y="215">Vincennes</text>
+                                <polygon class="mock-geo-city-shape colored" points="380,230 420,215 445,240 430,265 390,258" fill="#4caf50" data-city="pre5"/>
+                                <text class="mock-geo-city-name colored" x="415" y="245">Fontenay</text>
+                                <!-- Communes a animer (Secteur Nord - rose) -->
+                                <polygon class="mock-geo-city-shape" id="geoCity1" points="180,100 220,85 250,105 240,135 190,130" data-name="Aubervilliers"/>
+                                <text class="mock-geo-city-name" id="geoCityLabel1" x="215" y="115">Aubervilliers</text>
+                                <polygon class="mock-geo-city-shape" id="geoCity2" points="250,80 290,65 320,90 310,118 260,112" data-name="Pantin"/>
+                                <text class="mock-geo-city-name" id="geoCityLabel2" x="285" y="95">Pantin</text>
+                                <polygon class="mock-geo-city-shape" id="geoCity3" points="150,135 190,120 215,145 200,170 160,165" data-name="Saint-Denis"/>
+                                <text class="mock-geo-city-name" id="geoCityLabel3" x="183" y="150">Saint-Denis</text>
+                                <polygon class="mock-geo-city-shape" id="geoCity4" points="220,140 260,125 285,150 270,178 230,172" data-name="Le Pre-St-G."/>
+                                <text class="mock-geo-city-name" id="geoCityLabel4" x="253" y="157">Le Pre-St-G.</text>
+                                <polygon class="mock-geo-city-shape" id="geoCity5" points="290,110 330,95 358,120 345,148 300,142" data-name="Bobigny"/>
+                                <text class="mock-geo-city-name" id="geoCityLabel5" x="322" y="127">Bobigny</text>
+                                <!-- Autres communes non-assignees -->
+                                <polygon class="mock-geo-city-shape" points="200,190 240,175 268,200 255,228 210,222" data-city="neutral1"/>
+                                <text class="mock-geo-city-name" x="234" y="205">Paris</text>
+                                <polygon class="mock-geo-city-shape" points="120,165 158,150 180,172 168,198 130,192" data-city="neutral2"/>
+                                <text class="mock-geo-city-name" x="150" y="178">Clichy</text>
+                                <polygon class="mock-geo-city-shape" points="320,155 358,140 382,165 370,192 330,185" data-city="neutral3"/>
+                                <text class="mock-geo-city-name" x="352" y="172">Montreuil</text>
+                                <polygon class="mock-geo-city-shape" points="100,110 138,95 160,120 148,148 110,142" data-city="neutral4"/>
+                                <text class="mock-geo-city-name" x="130" y="125">Gennevilliers</text>
+                                <polygon class="mock-geo-city-shape" points="260,195 298,180 322,205 310,232 270,226" data-city="neutral5"/>
+                                <text class="mock-geo-city-name" x="292" y="212">Charenton</text>
+                                <!-- Click ring animation -->
+                                <circle class="mock-geo-click-ring" id="geoClickRing" cx="0" cy="0" r="8" stroke="#e91e63"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="landing-cta">
+    <h2>Pret a optimiser vos interventions ?</h2>
+    <p>Connectez-vous et commencez a gerer vos prestations terrain des maintenant.</p>
+    <a href="{{ path('app_login') }}" class="btn-hero-primary" style="display:inline-flex;"><i class="material-icons" style="font-size:18px;">login</i> Acceder a l'application</a>
+</section>
+
+<footer class="landing-footer">
+    <p>&copy; {{ "now"|date("Y") }} <strong>SENI Services</strong> - Services 4D</p>
+    <p style="margin-top:6px;"><a href="{{ path('app_login') }}">Connexion</a></p>
+</footer>
+
+<script>
+// ==================== UTILITIES ====================
+function moveCursor(cursor, x, y) {
+    cursor.style.left = x + 'px';
+    cursor.style.top = y + 'px';
+}
+function showCursor(cursor) { cursor.classList.add('visible'); }
+function hideCursor(cursor) { cursor.classList.remove('visible'); }
+function clickEffect(cursor) {
+    cursor.classList.add('clicking');
+    // Ripple
+    const ripple = document.createElement('div');
+    ripple.className = 'click-ripple';
+    ripple.style.left = (parseInt(cursor.style.left) - 5) + 'px';
+    ripple.style.top = (parseInt(cursor.style.top) + 5) + 'px';
+    cursor.parentElement.appendChild(ripple);
+    setTimeout(() => { cursor.classList.remove('clicking'); }, 200);
+    setTimeout(() => ripple.remove(), 700);
+}
+
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function getRelativePos(el, frame) {
+    const elR = el.getBoundingClientRect();
+    const frR = frame.getBoundingClientRect();
+    return { x: elR.left - frR.left + elR.width / 2, y: elR.top - frR.top + elR.height / 2 };
+}
+
+// ==================== PLANNING ANIMATION ====================
+async function animatePlanning() {
+    const frame = document.getElementById('planningFrame');
+    const cursor = document.getElementById('planCursor');
+
+    while (true) {
+        // Reset all steps
+        for (let i = 1; i <= 4; i++) {
+            document.getElementById('wNum' + i).className = 'mock-step-num pending';
+            document.getElementById('wLabel' + i).className = 'mock-step-label pending';
+            document.getElementById('wBadge' + i).classList.remove('visible');
+            document.getElementById('wStep' + i).classList.remove('highlight');
+        }
+        document.querySelectorAll('.mock-emp-item').forEach(e => e.classList.remove('selected'));
+        document.querySelectorAll('.mock-cal-cell').forEach(e => e.classList.remove('highlighted'));
+        const newEv = document.getElementById('newPlanEvent');
+        if (newEv) newEv.remove();
+        hideCursor(cursor);
+
+        await wait(1200);
+        showCursor(cursor);
+        moveCursor(cursor, 300, 200);
+        await wait(400);
+
+        // Step 1: Select BC
+        const s1 = getRelativePos(document.getElementById('wStep1'), frame);
+        moveCursor(cursor, s1.x, s1.y);
+        await wait(500);
+        clickEffect(cursor);
+        await wait(200);
+        document.getElementById('wStep1').classList.add('highlight');
+        document.getElementById('wNum1').className = 'mock-step-num active';
+        document.getElementById('wLabel1').className = 'mock-step-label active';
+        await wait(350);
+        document.getElementById('wNum1').className = 'mock-step-num done';
+        document.getElementById('wBadge1').classList.add('visible');
+        document.getElementById('wStep1').classList.remove('highlight');
+        await wait(400);
+
+        // Step 2: Select employee (click on Dupont)
+        const empPos = getRelativePos(document.getElementById('empDupont'), frame);
+        moveCursor(cursor, empPos.x, empPos.y);
+        await wait(500);
+        clickEffect(cursor);
+        await wait(200);
+        document.getElementById('empDupont').classList.add('selected');
+        document.getElementById('wStep2').classList.add('highlight');
+        document.getElementById('wNum2').className = 'mock-step-num active';
+        document.getElementById('wLabel2').className = 'mock-step-label active';
+        await wait(350);
+        document.getElementById('wNum2').className = 'mock-step-num done';
+        document.getElementById('wBadge2').classList.add('visible');
+        document.getElementById('wStep2').classList.remove('highlight');
+        await wait(400);
+
+        // Step 3: Select date (click on cell3 = Jeu)
+        const cellPos = getRelativePos(document.getElementById('cell3'), frame);
+        moveCursor(cursor, cellPos.x, cellPos.y);
+        await wait(500);
+        clickEffect(cursor);
+        await wait(200);
+        document.getElementById('cell3').classList.add('highlighted');
+        document.getElementById('wStep3').classList.add('highlight');
+        document.getElementById('wNum3').className = 'mock-step-num active';
+        document.getElementById('wLabel3').className = 'mock-step-label active';
+        await wait(350);
+        document.getElementById('wNum3').className = 'mock-step-num done';
+        document.getElementById('wBadge3').classList.add('visible');
+        document.getElementById('wStep3').classList.remove('highlight');
+        await wait(400);
+
+        // Step 4: Confirm
+        const s4 = getRelativePos(document.getElementById('wStep4'), frame);
+        moveCursor(cursor, s4.x, s4.y);
+        await wait(500);
+        clickEffect(cursor);
+        await wait(200);
+        document.getElementById('wStep4').classList.add('highlight');
+        document.getElementById('wNum4').className = 'mock-step-num active';
+        document.getElementById('wLabel4').className = 'mock-step-label active';
+        await wait(250);
+        document.getElementById('wNum4').className = 'mock-step-num done';
+        document.getElementById('wBadge4').classList.add('visible');
+
+        // Add event to calendar
+        const ev = document.createElement('div');
+        ev.className = 'mock-cal-event new-event';
+        ev.style.background = '#e91e63';
+        ev.textContent = '14h - Dupont';
+        ev.id = 'newPlanEvent';
+        document.getElementById('cell3').appendChild(ev);
+
+        hideCursor(cursor);
+        await wait(2500);
+    }
+}
+
+// ==================== BDC ANIMATION ====================
+async function animateBdc() {
+    const frame = document.getElementById('bdcFrame');
+    const cursor = document.getElementById('bdcCursor');
+    const listScreen = document.getElementById('bdcListScreen');
+    const detailScreen = document.getElementById('bdcDetailScreen');
+
+    while (true) {
+        // Reset
+        document.querySelectorAll('#bdcFrame tbody tr').forEach(r => r.classList.remove('row-highlight'));
+        listScreen.className = 'mock-screen visible';
+        detailScreen.className = 'mock-screen hidden';
+        hideCursor(cursor);
+        await wait(1200);
+
+        showCursor(cursor);
+        moveCursor(cursor, 300, 200);
+        await wait(400);
+
+        // Hover row 1
+        const r1 = getRelativePos(document.getElementById('bdcRow1'), frame);
+        moveCursor(cursor, r1.x, r1.y);
+        await wait(500);
+        document.getElementById('bdcRow1').classList.add('row-highlight');
+        await wait(350);
+
+        // Move to row 2
+        const r2 = getRelativePos(document.getElementById('bdcRow2'), frame);
+        moveCursor(cursor, r2.x, r2.y);
+        await wait(500);
+        document.getElementById('bdcRow1').classList.remove('row-highlight');
+        document.getElementById('bdcRow2').classList.add('row-highlight');
+        await wait(350);
+
+        // Click visibility icon on row 2
+        const visBtn = document.getElementById('bdcRow2').querySelector('.mock-icon-btn');
+        const vp = getRelativePos(visBtn, frame);
+        moveCursor(cursor, vp.x, vp.y);
+        await wait(400);
+        clickEffect(cursor);
+        await wait(200);
+
+        // Open BDC detail screen
+        document.getElementById('bdcRow2').classList.remove('row-highlight');
+        listScreen.className = 'mock-screen hidden';
+        detailScreen.className = 'mock-screen visible';
+
+        hideCursor(cursor);
+        await wait(2500);
+
+        // Go back to list
+        showCursor(cursor);
+        const backBtn = detailScreen.querySelector('.mock-presta-back');
+        const backPos = getRelativePos(backBtn, frame);
+        moveCursor(cursor, backPos.x, backPos.y);
+        await wait(500);
+        clickEffect(cursor);
+        await wait(200);
+
+        detailScreen.className = 'mock-screen hidden';
+        listScreen.className = 'mock-screen visible';
+
+        hideCursor(cursor);
+        await wait(1500);
+    }
+}
+
+// ==================== PRESTATION ANIMATION (TOUCH) ====================
+function tapEffect(el) {
+    el.style.transition = 'background 0.15s';
+    const orig = el.style.background;
+    el.style.background = 'rgba(63,81,181,0.12)';
+    setTimeout(() => { el.style.background = orig; }, 300);
+}
+
+async function animatePrestation() {
+    const listScreen = document.getElementById('prestaListScreen');
+    const detailScreen = document.getElementById('prestaDetailScreen');
+    const typingText = document.getElementById('typingText');
+    const typingCursor = document.getElementById('typingCursor');
+    const compteRendu = document.getElementById('compteRendu');
+    const text = "Intervention realisee avec succes. Traitement applique dans les zones identifiees.";
+
+    while (true) {
+        // Reset
+        listScreen.className = 'mock-screen visible';
+        detailScreen.className = 'mock-screen hidden';
+        typingText.textContent = '';
+        typingCursor.style.display = 'none';
+        compteRendu.classList.remove('focused');
+        document.getElementById('cb1').classList.remove('checked');
+        document.getElementById('cb2').classList.remove('checked');
+        document.getElementById('cb3').classList.remove('checked');
+        document.getElementById('sigPath').classList.remove('drawing');
+        document.getElementById('sigPath').style.strokeDashoffset = '500';
+        document.getElementById('sigPad').classList.remove('active');
+        document.getElementById('terrainPrestaItem1').classList.remove('hover-effect');
+
+        await wait(1500);
+
+        // Tap on first prestation in list
+        const item1 = document.getElementById('terrainPrestaItem1');
+        tapEffect(item1);
+        await wait(400);
+
+        // Switch to detail screen
+        listScreen.className = 'mock-screen hidden';
+        detailScreen.className = 'mock-screen visible';
+        await wait(600);
+
+        // Tap on compte rendu field → start typing
+        tapEffect(compteRendu);
+        await wait(300);
+        compteRendu.classList.add('focused');
+        typingCursor.style.display = 'inline-block';
+
+        for (let i = 0; i < text.length; i++) {
+            typingText.textContent += text[i];
+            await wait(18 + Math.random() * 18);
+        }
+        typingCursor.style.display = 'none';
+        compteRendu.classList.remove('focused');
+        await wait(400);
+
+        // Tap checkboxes
+        tapEffect(document.getElementById('cb1').parentElement);
+        await wait(200);
+        document.getElementById('cb1').classList.add('checked');
+        await wait(400);
+
+        tapEffect(document.getElementById('cb3').parentElement);
+        await wait(200);
+        document.getElementById('cb3').classList.add('checked');
+        await wait(400);
+
+        // Signature
+        document.getElementById('sigPad').classList.add('active');
+        document.getElementById('sigPath').classList.add('drawing');
+
+        await wait(2800);
+    }
+}
+
+// ==================== GEO ZONES ANIMATION ====================
+async function animateGeo() {
+    const frame = document.getElementById('geoFrame');
+    const cursor = document.getElementById('geoCursor');
+    const cityList = document.getElementById('geoCityList');
+    const cityCount = document.getElementById('geoCityCount');
+    const clickRing = document.getElementById('geoClickRing');
+    const color = '#e91e63';
+
+    const cities = [
+        { id: 'geoCity1', labelId: 'geoCityLabel1', name: 'Aubervilliers' },
+        { id: 'geoCity2', labelId: 'geoCityLabel2', name: 'Pantin' },
+        { id: 'geoCity3', labelId: 'geoCityLabel3', name: 'Saint-Denis' },
+        { id: 'geoCity4', labelId: 'geoCityLabel4', name: 'Le Pre-St-G.' },
+        { id: 'geoCity5', labelId: 'geoCityLabel5', name: 'Bobigny' }
+    ];
+
+    while (true) {
+        // Reset
+        cities.forEach(c => {
+            document.getElementById(c.id).style.fill = '#d0d4de';
+            document.getElementById(c.id).classList.remove('colored');
+            document.getElementById(c.labelId).classList.remove('colored');
+        });
+        cityList.innerHTML = '';
+        cityCount.textContent = '0';
+        hideCursor(cursor);
+        await wait(1200);
+
+        showCursor(cursor);
+        moveCursor(cursor, 350, 200);
+        await wait(400);
+
+        // Click on each city one by one
+        for (let i = 0; i < cities.length; i++) {
+            const c = cities[i];
+            const shape = document.getElementById(c.id);
+            const label = document.getElementById(c.labelId);
+
+            // Move cursor to city center
+            const bbox = shape.getBBox();
+            const svgEl = document.getElementById('geoMapSvg');
+            const svgRect = svgEl.getBoundingClientRect();
+            const frameRect = frame.getBoundingClientRect();
+            const scaleX = svgRect.width / 500;
+            const scaleY = svgRect.height / 380;
+            const cx = svgRect.left - frameRect.left + (bbox.x + bbox.width / 2) * scaleX;
+            const cy = svgRect.top - frameRect.top + (bbox.y + bbox.height / 2) * scaleY;
+
+            moveCursor(cursor, cx, cy);
+            await wait(500);
+            clickEffect(cursor);
+            await wait(150);
+
+            // Color the city
+            shape.style.fill = color;
+            shape.classList.add('colored');
+            label.classList.add('colored');
+
+            // Click ring animation on SVG
+            const svgCx = bbox.x + bbox.width / 2;
+            const svgCy = bbox.y + bbox.height / 2;
+            clickRing.setAttribute('cx', svgCx);
+            clickRing.setAttribute('cy', svgCy);
+            clickRing.setAttribute('stroke', color);
+            clickRing.style.animation = 'none';
+            clickRing.offsetHeight; // reflow
+            clickRing.style.animation = 'clickRingPulse 0.5s ease-out forwards';
+
+            // Add city to sidebar list
+            const li = document.createElement('li');
+            li.className = 'mock-geo-city';
+            li.innerHTML = '<div class="mock-geo-city-dot" style="background:' + color + ';"></div> ' + c.name + ' <i class="material-icons" style="margin-left:auto;color:#bbb;">close</i>';
+            cityList.appendChild(li);
+            requestAnimationFrame(() => li.classList.add('visible'));
+
+            cityCount.textContent = (i + 1).toString();
+            await wait(400);
+        }
+
+        hideCursor(cursor);
+        await wait(3000);
+    }
+}
+
+// ==================== INIT ====================
+const nav = document.getElementById('landingNav');
+window.addEventListener('scroll', () => nav.classList.toggle('scrolled', window.scrollY > 50));
+
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); } });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => { e.preventDefault(); const t = document.querySelector(a.getAttribute('href')); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+});
+
+// Start animations when visible
+const animObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting && !entry.target.dataset.started) {
+            entry.target.dataset.started = 'true';
+            const id = entry.target.id;
+            if (id === 'planningFrame') animatePlanning();
+            if (id === 'bdcFrame') animateBdc();
+            if (id === 'prestaFrame') animatePrestation();
+            if (id === 'geoFrame') animateGeo();
+        }
+    });
+}, { threshold: 0.3 });
+
+['planningFrame', 'bdcFrame', 'prestaFrame', 'geoFrame'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) animObserver.observe(el);
+});
+</script>
+
+</body>
+</html>
