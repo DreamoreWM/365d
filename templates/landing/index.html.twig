@@ -161,7 +161,7 @@
         .mock-cal-header span { text-align: center; font-size: 0.68rem; font-weight: 500; color: var(--text-muted); padding: 4px; }
         .mock-cal-body { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
         .mock-cal-cell { background: var(--bg-light); border-radius: 6px; padding: 4px; min-height: 70px; transition: background 0.3s; }
-        .mock-cal-cell.highlighted { background: rgba(63,81,181,0.08); outline: 2px solid var(--primary); outline-offset: -2px; }
+        .mock-cal-cell.highlighted { background: rgba(63,81,181,0.08); box-shadow: inset 0 0 0 2px var(--primary); }
         .mock-cal-event { padding: 3px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 500; margin-bottom: 3px; color: white; overflow: hidden; white-space: nowrap; transition: opacity 0.3s; }
         .mock-cal-event.new-event { animation: eventAppear 0.4s ease; }
         @keyframes eventAppear { 0% { opacity: 0; transform: scaleY(0); } 100% { opacity: 1; transform: scaleY(1); } }
