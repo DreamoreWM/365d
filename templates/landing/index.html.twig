@@ -876,6 +876,7 @@ async function animatePlanning() {
         document.getElementById('wBadge4').classList.add('visible');
 
         // Add event to calendar
+        document.getElementById('cell3').classList.remove('highlighted');
         const ev = document.createElement('div');
         ev.className = 'mock-cal-event new-event';
         ev.style.background = '#e91e63';
