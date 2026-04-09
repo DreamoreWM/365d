@@ -39,7 +39,7 @@
 
         /* ========== HERO ========== */
         .hero { min-height: 100vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 120px 24px 60px; position: relative; }
-        .hero::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 60%; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); z-index: 0; }
+        .hero::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); z-index: 0; }
         .hero-inner { position: relative; z-index: 1; max-width: 1100px; width: 100%; }
         .hero-text { color: white; margin-bottom: 48px; }
         .hero-text h1 { font-size: 2.8rem; font-weight: 400; margin-bottom: 12px; }
@@ -82,16 +82,8 @@
         @keyframes rippleOut { 0% { transform: scale(0); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
 
         /* ========== PDF MOCKUP ========== */
-        .mock-pdf-layout { display: flex; gap: 12px; padding: 16px; background: #f0f2f5; align-items: flex-start; min-height: 340px; }
-        .mock-pdf-sidebar { width: 155px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
-        .mock-pdf-info { background: white; border-radius: 8px; padding: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
-        .mock-pdf-info-label { font-size: 0.6rem; font-weight: 700; color: #9e9e9e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
-        .mock-pdf-info-value { font-size: 0.78rem; font-weight: 500; color: var(--text-light); margin-bottom: 2px; }
-        .mock-pdf-info-sub { font-size: 0.68rem; color: var(--text-muted); }
-        .mock-pdf-dl-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 12px; background: #e53935; color: white; border-radius: 6px; font-size: 0.75rem; font-weight: 500; cursor: default; transition: transform 0.1s, opacity 0.1s; }
-        .mock-pdf-dl-btn .material-icons { font-size: 16px; }
-        .mock-pdf-dl-btn.pulse { transform: scale(0.96); opacity: 0.85; }
-        .mock-pdf-doc-wrap { flex: 1; overflow: hidden; }
+        .mock-pdf-layout { padding: 16px; background: #f0f2f5; }
+        .mock-pdf-doc-wrap { overflow: hidden; }
         .mock-pdf-doc { background: white; box-shadow: 0 2px 14px rgba(0,0,0,0.18); padding: 12px 14px; font-family: Arial, Helvetica, sans-serif; font-size: 0.6rem; color: #000; opacity: 0; transform: translateY(10px); transition: opacity 0.5s, transform 0.5s; }
         .mock-pdf-doc.visible { opacity: 1; transform: translateY(0); }
         .mock-pdf-doc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 7px; }
@@ -565,26 +557,7 @@
                         <div class="frame-url">services4d.app/admin/prestation/234/rapport</div>
                     </div>
                     <div class="mock-pdf-layout">
-                        <div class="mock-pdf-sidebar">
-                            <div class="mock-pdf-info">
-                                <div class="mock-pdf-info-label">Prestation</div>
-                                <div class="mock-pdf-info-value">Copropriete Haussmann</div>
-                                <div class="mock-pdf-info-sub">06/04/2026 - 09:00</div>
-                                <div style="margin-top:10px;">
-                                    <div class="mock-pdf-info-label">Technicien</div>
-                                    <div class="mock-pdf-info-value">J. Dupont</div>
-                                </div>
-                                <div style="margin-top:10px;">
-                                    <div class="mock-pdf-info-label">Statut</div>
-                                    <div style="margin-top:4px;"><span class="mock-status done" style="font-size:0.65rem;"><i class="material-icons">check_circle</i> Terminee</span></div>
-                                </div>
-                            </div>
-                            <div class="mock-pdf-dl-btn" id="pdfDlBtn">
-                                <i class="material-icons">picture_as_pdf</i>
-                                Telecharger PDF
-                            </div>
-                        </div>
-                        <div class="mock-pdf-doc-wrap">
+                        <div class="mock-pdf-doc-wrap" style="width:100%;">
                             <div class="mock-pdf-doc" id="pdfDoc">
                                 <!-- HEADER -->
                                 <div class="mock-pdf-doc-header">
@@ -1234,24 +1207,12 @@ async function animateGeo() {
 
 // ==================== PDF ANIMATION ====================
 async function animatePdf() {
-    const dlBtn = document.getElementById('pdfDlBtn');
     const doc = document.getElementById('pdfDoc');
     while (true) {
         doc.classList.remove('visible');
-        dlBtn.classList.remove('pulse');
-        await wait(1500);
-        // Simulate click on button
-        dlBtn.classList.add('pulse');
-        await wait(300);
-        dlBtn.classList.remove('pulse');
-        await wait(150);
-        dlBtn.classList.add('pulse');
-        await wait(300);
-        dlBtn.classList.remove('pulse');
-        // PDF appears
-        await wait(200);
+        await wait(1200);
         doc.classList.add('visible');
-        await wait(5000);
+        await wait(6000);
     }
 }
 
