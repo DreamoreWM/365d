@@ -1165,6 +1165,29 @@ async function animateGeo() {
     }
 }
 
+// ==================== PDF ANIMATION ====================
+async function animatePdf() {
+    const dlBtn = document.getElementById('pdfDlBtn');
+    const doc = document.getElementById('pdfDoc');
+    while (true) {
+        doc.classList.remove('visible');
+        dlBtn.classList.remove('pulse');
+        await wait(1500);
+        // Simulate click on button
+        dlBtn.classList.add('pulse');
+        await wait(300);
+        dlBtn.classList.remove('pulse');
+        await wait(150);
+        dlBtn.classList.add('pulse');
+        await wait(300);
+        dlBtn.classList.remove('pulse');
+        // PDF appears
+        await wait(200);
+        doc.classList.add('visible');
+        await wait(5000);
+    }
+}
+
 // ==================== INIT ====================
 const nav = document.getElementById('landingNav');
 window.addEventListener('scroll', () => nav.classList.toggle('scrolled', window.scrollY > 50));
@@ -1188,11 +1211,12 @@ const animObserver = new IntersectionObserver((entries) => {
             if (id === 'bdcFrame') animateBdc();
             if (id === 'prestaFrame') animatePrestation();
             if (id === 'geoFrame') animateGeo();
+            if (id === 'pdfFrame') animatePdf();
         }
     });
 }, { threshold: 0.3 });
 
-['planningFrame', 'bdcFrame', 'prestaFrame', 'geoFrame'].forEach(id => {
+['planningFrame', 'bdcFrame', 'prestaFrame', 'geoFrame', 'pdfFrame'].forEach(id => {
     const el = document.getElementById(id);
     if (el) animObserver.observe(el);
 });
