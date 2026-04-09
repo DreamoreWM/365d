@@ -73,18 +73,35 @@
         }
         @keyframes rippleOut { 0% { transform: scale(0); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
 
-        /* ========== MOCKUP DASHBOARD ========== */
-        .mock-app-layout { display: flex; min-height: 420px; position: relative; }
-        .mock-sidebar { width: 220px; background: var(--card-light); border-right: 1px solid var(--border-light); flex-shrink: 0; }
-        .mock-sidebar-header { height: 56px; background: var(--primary); color: white; display: flex; align-items: center; padding: 0 16px; font-size: 1.1rem; font-weight: 500; gap: 8px; }
-        .mock-menu-item { display: flex; align-items: center; gap: 12px; padding: 11px 16px; font-size: 0.85rem; color: var(--text-light); border-left: 3px solid transparent; transition: all 0.3s; cursor: default; }
-        .mock-menu-item.active { background: rgba(63,81,181,0.1); color: var(--primary); font-weight: 500; border-left-color: var(--primary); }
-        .mock-menu-item.hover-effect { background: rgba(63,81,181,0.06); }
-        .mock-menu-item .material-icons { font-size: 20px; }
-        .mock-menu-divider { height: 1px; background: var(--border-light); margin: 6px 0; }
-        .mock-submenu-item { display: flex; align-items: center; gap: 10px; padding: 9px 16px 9px 48px; font-size: 0.82rem; color: var(--text-muted); }
-        .mock-submenu-item .material-icons { font-size: 18px; }
-        .mock-content { flex: 1; padding: 20px; background: var(--bg-light); overflow: hidden; position: relative; }
+        /* ========== PDF MOCKUP ========== */
+        .mock-pdf-layout { display: flex; gap: 12px; padding: 16px; background: #f0f2f5; min-height: 360px; }
+        .mock-pdf-sidebar { width: 180px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; }
+        .mock-pdf-info { background: white; border-radius: 8px; padding: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        .mock-pdf-info-label { font-size: 0.65rem; font-weight: 700; color: #9e9e9e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .mock-pdf-info-value { font-size: 0.82rem; font-weight: 500; color: var(--text-light); margin-bottom: 2px; }
+        .mock-pdf-info-sub { font-size: 0.72rem; color: var(--text-muted); }
+        .mock-pdf-dl-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 14px; background: #e53935; color: white; border-radius: 6px; font-size: 0.8rem; font-weight: 500; cursor: default; transition: transform 0.1s, opacity 0.1s; }
+        .mock-pdf-dl-btn .material-icons { font-size: 18px; }
+        .mock-pdf-dl-btn.pulse { transform: scale(0.96); opacity: 0.85; }
+        .mock-pdf-doc-wrap { flex: 1; }
+        .mock-pdf-doc { background: white; border-radius: 4px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); padding: 18px 20px; opacity: 0; transform: translateY(10px); transition: opacity 0.5s, transform 0.5s; }
+        .mock-pdf-doc.visible { opacity: 1; transform: translateY(0); }
+        .mock-pdf-doc-header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; margin: -18px -20px 14px; padding: 12px 20px; border-radius: 4px 4px 0 0; display: flex; justify-content: space-between; align-items: center; }
+        .mock-pdf-doc-title { font-size: 0.88rem; font-weight: 600; letter-spacing: 0.5px; }
+        .mock-pdf-doc-ref { font-size: 0.65rem; opacity: 0.85; margin-top: 2px; }
+        .mock-pdf-doc-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin-bottom: 12px; }
+        .mock-pdf-doc-meta-label { font-size: 0.62rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+        .mock-pdf-doc-meta-value { font-size: 0.72rem; font-weight: 500; color: var(--text-light); }
+        .mock-pdf-section-title { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 0.5px; border-bottom: 1px solid var(--border-light); padding-bottom: 3px; margin: 10px 0 6px; }
+        .mock-pdf-cr-text { font-size: 0.7rem; color: var(--text-light); line-height: 1.5; background: #fafafa; border-radius: 4px; padding: 7px 9px; }
+        .mock-pdf-checks { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+        .mock-pdf-check { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: var(--text-light); }
+        .mock-pdf-checkbox { width: 12px; height: 12px; border: 1.5px solid var(--primary); border-radius: 2px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--primary); }
+        .mock-pdf-checkbox .material-icons { font-size: 9px; color: white; }
+        .mock-pdf-checkbox.unchecked { background: none; border-color: #ccc; }
+        .mock-pdf-sig-area { border: 1px dashed var(--border-light); border-radius: 4px; height: 38px; display: flex; align-items: center; padding: 0 8px; margin-top: 4px; }
+        .mock-pdf-sig-area svg { width: 100%; height: 100%; }
+        .mock-pdf-footer-bar { border-top: 1px solid var(--border-light); margin: 10px -20px -18px; padding: 5px 20px; background: #fafafa; display: flex; justify-content: space-between; font-size: 0.6rem; color: var(--text-muted); border-radius: 0 0 4px 4px; }
 
         /* Dashboard screens */
         .mock-screen { transition: opacity 0.3s, transform 0.3s; }
@@ -98,24 +115,6 @@
         .mock-welcome h2 { font-size: 1.3rem; font-weight: 400; margin-bottom: 4px; position: relative; }
         .mock-welcome p { font-size: 0.85rem; opacity: 0.9; position: relative; }
 
-        .mock-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
-        .mock-stat-card { background: white; border-radius: 8px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); position: relative; overflow: hidden; }
-        .mock-stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--primary); }
-        .mock-stat-card .stat-row { display: flex; justify-content: space-between; align-items: flex-start; }
-        .mock-stat-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-        .mock-stat-value { font-size: 1.6rem; font-weight: 600; }
-        .mock-stat-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
-        .mock-stat-icon .material-icons { font-size: 22px; }
-        .mock-stat-footer { display: flex; align-items: center; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-light); font-size: 0.75rem; color: var(--text-muted); }
-        .mock-stat-footer .material-icons { font-size: 16px; }
-
-        .mock-actions-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-        .mock-action-card { background: white; border-radius: 8px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 14px; border: 2px solid transparent; transition: border-color 0.3s; }
-        .mock-action-card.hover-effect { border-color: var(--primary); }
-        .mock-action-icon { width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .mock-action-icon .material-icons { font-size: 24px; }
-        .mock-action-title { font-size: 0.95rem; font-weight: 500; margin-bottom: 2px; }
-        .mock-action-desc { font-size: 0.78rem; color: var(--text-muted); }
 
         /* Prestations screen */
         .mock-presta-list-item { display: flex; align-items: center; gap: 14px; padding: 14px; background: rgba(63,81,181,0.03); border-radius: 8px; margin-bottom: 10px; border-left: 4px solid var(--primary); }
@@ -323,14 +322,6 @@
             .showcase-row.reverse { direction: ltr; }
             /* App frames */
             .app-frame { max-width: 100%; overflow: hidden; }
-            /* Dashboard */
-            .mock-app-layout { flex-direction: column; min-height: auto; }
-            .mock-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-light); }
-            .mock-sidebar-header { height: 48px; }
-            .mock-menu-item, .mock-submenu-item { display: none; }
-            .mock-content { padding: 12px; }
-            .mock-stats-grid { grid-template-columns: repeat(2, 1fr); }
-            .mock-actions-grid { grid-template-columns: 1fr; }
             /* Planning: calendrier + wizard empilés, emp-panel masqué */
             .mock-planning-layout { grid-template-columns: 1fr; min-height: auto; gap: 8px; }
             .mock-emp-panel { display: none; }
@@ -365,12 +356,6 @@
             .hero-text h1 { font-size: 1.6rem; }
             .hero-text p { font-size: 1rem; }
             .hero-buttons { flex-direction: column; align-items: center; }
-            .mock-welcome h2 { font-size: 1.1rem; }
-            .mock-stat-value { font-size: 1.2rem; }
-            .mock-stat-card { padding: 10px; }
-            .mock-action-card { padding: 10px; gap: 10px; }
-            .mock-action-icon { width: 38px; height: 38px; }
-            .mock-action-title { font-size: 0.85rem; }
             .landing-cta h2 { font-size: 1.5rem; }
             .landing-cta { padding: 50px 16px; }
         }
@@ -382,9 +367,9 @@
 <nav class="landing-nav" id="landingNav">
     <a href="#" class="landing-nav-logo"><i class="material-icons">dashboard</i> Services 4D</a>
     <ul class="landing-nav-links">
-        <li><a href="#dashboard">Dashboard</a></li>
         <li><a href="#planning">Planning</a></li>
         <li><a href="#terrain">Terrain</a></li>
+        <li><a href="#rapport">Rapport PDF</a></li>
         <li><a href="#commandes">Commandes</a></li>
         <li><a href="#zones">Zones</a></li>
         <li><a href="{{ path('app_login') }}" class="btn-login"><i class="material-icons" style="font-size:18px;">login</i> Connexion</a></li>
@@ -403,39 +388,6 @@
             </div>
         </div>
 
-        <div class="app-frame fade-up" id="dashboardFrame">
-            <div class="app-frame-bar">
-                <div class="frame-dot r"></div><div class="frame-dot y"></div><div class="frame-dot g"></div>
-                <div class="frame-url">services4d.app/dashboard</div>
-            </div>
-            <div class="mock-app-layout">
-                <div class="mock-sidebar">
-                    <div class="mock-sidebar-header"><i class="material-icons" style="font-size:20px;">dashboard</i> Services 4D</div>
-                    <div class="mock-menu-item active"><i class="material-icons">home</i> Dashboard</div>
-                    <div class="mock-menu-item"><i class="material-icons">description</i> Mes Prestations</div>
-                    <div class="mock-menu-divider"></div>
-                    <div class="mock-menu-item"><i class="material-icons">admin_panel_settings</i> Administration</div>
-                    <div class="mock-submenu-item"><i class="material-icons">receipt_long</i> Bons de commande</div>
-                    <div class="mock-submenu-item"><i class="material-icons">event_note</i> Prestations</div>
-                    <div class="mock-submenu-item"><i class="material-icons">calendar_today</i> Planning</div>
-                    <div class="mock-menu-divider"></div>
-                    <div class="mock-menu-item"><i class="material-icons">account_circle</i> Mon Compte</div>
-                </div>
-                <div class="mock-content">
-                    <div class="mock-welcome"><h2>Bienvenue, Jean Dupont !</h2><p>Voici un apercu de votre activite</p></div>
-                    <div class="mock-stats-grid">
-                        <div class="mock-stat-card"><div class="stat-row"><div><div class="mock-stat-label">Prestations</div><div class="mock-stat-value">247</div></div><div class="mock-stat-icon" style="background:rgba(33,150,243,0.1);"><i class="material-icons" style="color:#2196F3;">event_note</i></div></div><div class="mock-stat-footer"><i class="material-icons">info</i> Total assignees</div></div>
-                        <div class="mock-stat-card"><div class="stat-row"><div><div class="mock-stat-label">En cours</div><div class="mock-stat-value">18</div></div><div class="mock-stat-icon" style="background:rgba(255,152,0,0.1);"><i class="material-icons" style="color:#FF9800;">pending</i></div></div><div class="mock-stat-footer"><i class="material-icons">trending_up</i> A realiser</div></div>
-                        <div class="mock-stat-card"><div class="stat-row"><div><div class="mock-stat-label">Terminees</div><div class="mock-stat-value">203</div></div><div class="mock-stat-icon" style="background:rgba(76,175,80,0.1);"><i class="material-icons" style="color:#4CAF50;">check_circle</i></div></div><div class="mock-stat-footer"><i class="material-icons">done_all</i> Completees</div></div>
-                        <div class="mock-stat-card"><div class="stat-row"><div><div class="mock-stat-label">Programmees</div><div class="mock-stat-value">26</div></div><div class="mock-stat-icon" style="background:rgba(156,39,176,0.1);"><i class="material-icons" style="color:#9C27B0;">schedule</i></div></div><div class="mock-stat-footer"><i class="material-icons">calendar_today</i> A venir</div></div>
-                    </div>
-                    <div class="mock-actions-grid">
-                        <div class="mock-action-card"><div class="mock-action-icon"><i class="material-icons">event_note</i></div><div><div class="mock-action-title">Mes prestations</div><div class="mock-action-desc">Consulter et gerer vos prestations du jour</div></div></div>
-                        <div class="mock-action-card"><div class="mock-action-icon"><i class="material-icons">receipt_long</i></div><div><div class="mock-action-title">Bons de commande</div><div class="mock-action-desc">Gerer les bons de commande et clients</div></div></div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 </section>
 
@@ -561,6 +513,101 @@
                         </div>
                     </div>
                     <div class="phone-home-bar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ==================== RAPPORT PDF ==================== -->
+<section class="landing-section alt" id="rapport">
+    <div class="landing-container">
+        <div class="showcase-row">
+            <div class="showcase-text fade-up">
+                <h3><i class="material-icons">picture_as_pdf</i> Rapports PDF automatiques</h3>
+                <p>A l'issue de chaque intervention, generez en un clic un rapport PDF complet incluant le compte rendu, les constatations et la signature digitale du client.</p>
+                <ul class="showcase-list">
+                    <li><i class="material-icons">check_circle</i> PDF genere depuis le compte rendu terrain</li>
+                    <li><i class="material-icons">check_circle</i> Signature client integree</li>
+                    <li><i class="material-icons">check_circle</i> Mise en page professionnelle</li>
+                    <li><i class="material-icons">check_circle</i> Telechargement et archivage instantane</li>
+                </ul>
+            </div>
+            <div class="fade-up">
+                <div class="app-frame" id="pdfFrame">
+                    <div class="app-frame-bar">
+                        <div class="frame-dot r"></div><div class="frame-dot y"></div><div class="frame-dot g"></div>
+                        <div class="frame-url">services4d.app/admin/prestation/234/rapport</div>
+                    </div>
+                    <div class="mock-pdf-layout">
+                        <div class="mock-pdf-sidebar">
+                            <div class="mock-pdf-info">
+                                <div class="mock-pdf-info-label">Prestation</div>
+                                <div class="mock-pdf-info-value">Copropriete Haussmann</div>
+                                <div class="mock-pdf-info-sub">06/04/2026 - 09:00</div>
+                                <div style="margin-top:10px;">
+                                    <div class="mock-pdf-info-label">Technicien</div>
+                                    <div class="mock-pdf-info-value">J. Dupont</div>
+                                </div>
+                                <div style="margin-top:10px;">
+                                    <div class="mock-pdf-info-label">Statut</div>
+                                    <div style="margin-top:4px;"><span class="mock-status done" style="font-size:0.68rem;"><i class="material-icons">check_circle</i> Terminee</span></div>
+                                </div>
+                            </div>
+                            <div class="mock-pdf-dl-btn" id="pdfDlBtn">
+                                <i class="material-icons">picture_as_pdf</i>
+                                Telecharger PDF
+                            </div>
+                        </div>
+                        <div class="mock-pdf-doc-wrap">
+                            <div class="mock-pdf-doc" id="pdfDoc">
+                                <div class="mock-pdf-doc-header">
+                                    <div>
+                                        <div class="mock-pdf-doc-title">RAPPORT D'INTERVENTION</div>
+                                        <div class="mock-pdf-doc-ref">Ref. PRESTA-2026-0234</div>
+                                    </div>
+                                    <div style="font-size:0.65rem;opacity:0.85;text-align:right;">Services 4D<br>06/04/2026</div>
+                                </div>
+                                <div class="mock-pdf-doc-meta">
+                                    <div class="mock-pdf-doc-meta-item">
+                                        <span class="mock-pdf-doc-meta-label">Client</span>
+                                        <span class="mock-pdf-doc-meta-value">Copropriete Haussmann</span>
+                                    </div>
+                                    <div class="mock-pdf-doc-meta-item">
+                                        <span class="mock-pdf-doc-meta-label">Adresse</span>
+                                        <span class="mock-pdf-doc-meta-value">12 Rue Haussmann, Paris</span>
+                                    </div>
+                                    <div class="mock-pdf-doc-meta-item">
+                                        <span class="mock-pdf-doc-meta-label">Technicien</span>
+                                        <span class="mock-pdf-doc-meta-value">Jean Dupont</span>
+                                    </div>
+                                    <div class="mock-pdf-doc-meta-item">
+                                        <span class="mock-pdf-doc-meta-label">Type</span>
+                                        <span class="mock-pdf-doc-meta-value">Deratisation - RDC</span>
+                                    </div>
+                                </div>
+                                <div class="mock-pdf-section-title">Compte rendu</div>
+                                <div class="mock-pdf-cr-text">Traitement effectue dans l'ensemble des parties communes du RDC et sous-sol. Pose de boites appats en zones de passage. Aucune resistance constatee.</div>
+                                <div class="mock-pdf-section-title">Constatations</div>
+                                <div class="mock-pdf-checks">
+                                    <div class="mock-pdf-check"><div class="mock-pdf-checkbox"><i class="material-icons">check</i></div><span>Presence constatee</span></div>
+                                    <div class="mock-pdf-check"><div class="mock-pdf-checkbox"><i class="material-icons">check</i></div><span>Logement propre</span></div>
+                                    <div class="mock-pdf-check"><div class="mock-pdf-checkbox unchecked"></div><span>Encombrement</span></div>
+                                </div>
+                                <div class="mock-pdf-section-title">Signature client</div>
+                                <div class="mock-pdf-sig-area">
+                                    <svg viewBox="0 0 300 36" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M 10 28 Q 30 8, 50 26 T 90 20 T 130 28 T 170 16 T 210 24 T 250 13 T 280 22" fill="none" stroke="#3949ab" stroke-width="1.5" stroke-linecap="round"/>
+                                    </svg>
+                                </div>
+                                <div class="mock-pdf-footer-bar">
+                                    <span>Services 4D &mdash; services4d.app</span>
+                                    <span>Page 1 / 1</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1118,6 +1165,29 @@ async function animateGeo() {
     }
 }
 
+// ==================== PDF ANIMATION ====================
+async function animatePdf() {
+    const dlBtn = document.getElementById('pdfDlBtn');
+    const doc = document.getElementById('pdfDoc');
+    while (true) {
+        doc.classList.remove('visible');
+        dlBtn.classList.remove('pulse');
+        await wait(1500);
+        // Simulate click on button
+        dlBtn.classList.add('pulse');
+        await wait(300);
+        dlBtn.classList.remove('pulse');
+        await wait(150);
+        dlBtn.classList.add('pulse');
+        await wait(300);
+        dlBtn.classList.remove('pulse');
+        // PDF appears
+        await wait(200);
+        doc.classList.add('visible');
+        await wait(5000);
+    }
+}
+
 // ==================== INIT ====================
 const nav = document.getElementById('landingNav');
 window.addEventListener('scroll', () => nav.classList.toggle('scrolled', window.scrollY > 50));
@@ -1141,11 +1211,12 @@ const animObserver = new IntersectionObserver((entries) => {
             if (id === 'bdcFrame') animateBdc();
             if (id === 'prestaFrame') animatePrestation();
             if (id === 'geoFrame') animateGeo();
+            if (id === 'pdfFrame') animatePdf();
         }
     });
 }, { threshold: 0.3 });
 
-['planningFrame', 'bdcFrame', 'prestaFrame', 'geoFrame'].forEach(id => {
+['planningFrame', 'bdcFrame', 'prestaFrame', 'geoFrame', 'pdfFrame'].forEach(id => {
     const el = document.getElementById(id);
     if (el) animObserver.observe(el);
 });
