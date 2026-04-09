@@ -88,7 +88,9 @@
 
         /* Dashboard screens */
         .mock-screen { transition: opacity 0.3s, transform 0.3s; }
-        .mock-screen.hidden { opacity: 0; transform: translateX(20px); position: absolute; top: 20px; left: 20px; right: 20px; pointer-events: none; }
+        .mock-screen.hidden { opacity: 0; transform: translateX(20px); position: absolute; top: 0; left: 0; right: 0; pointer-events: none; }
+        /* BDC: both screens absolutely stacked so the frame height never changes */
+        .mock-bdc-layout .mock-screen.visible { position: absolute; top: 0; left: 0; right: 0; }
         .mock-screen.visible { opacity: 1; transform: translateX(0); }
 
         .mock-welcome { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 24px 20px; border-radius: 8px; margin-bottom: 16px; position: relative; overflow: hidden; }
@@ -220,7 +222,7 @@
         @keyframes drawSignature { to { stroke-dashoffset: 0; } }
 
         /* ========== BDC MOCKUP ========== */
-        .mock-bdc-layout { padding: 16px; background: var(--bg-light); }
+        .mock-bdc-layout { padding: 16px; background: var(--bg-light); position: relative; min-height: 440px; overflow: hidden; }
         .mock-page-header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
         .mock-page-header h2 { margin: 0; font-size: 1.25rem; font-weight: 400; display: flex; align-items: center; gap: 10px; }
         .mock-page-header .material-icons { font-size: 28px; }
@@ -329,9 +331,9 @@
             .mock-content { padding: 12px; }
             .mock-stats-grid { grid-template-columns: repeat(2, 1fr); }
             .mock-actions-grid { grid-template-columns: 1fr; }
-            /* Planning */
-            .mock-planning-layout { grid-template-columns: 1fr; min-height: auto; }
-            .mock-emp-panel, .mock-wizard-panel { display: none; }
+            /* Planning: calendrier + wizard empilés, emp-panel masqué */
+            .mock-planning-layout { grid-template-columns: 1fr; min-height: auto; gap: 8px; }
+            .mock-emp-panel { display: none; }
             /* BDC: hide columns that don't fit, remove fixed min-width */
             .mock-bdc-layout { padding: 10px; }
             .mock-page-header { flex-direction: column; gap: 10px; align-items: flex-start; padding: 14px; }
@@ -352,7 +354,6 @@
             /* General */
             .landing-nav-links { display: none; }
             .hero-text h1 { font-size: 2rem; }
-            .fake-cursor { display: none !important; }
             .landing-section { padding: 50px 16px; }
             .showcase-text h3 { font-size: 1.25rem; }
         }
@@ -370,7 +371,6 @@
             .mock-action-card { padding: 10px; gap: 10px; }
             .mock-action-icon { width: 38px; height: 38px; }
             .mock-action-title { font-size: 0.85rem; }
-            #bdcDetailScreen > div:nth-child(2) { grid-template-columns: 1fr !important; }
             .landing-cta h2 { font-size: 1.5rem; }
             .landing-cta { padding: 50px 16px; }
         }
