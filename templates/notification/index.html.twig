@@ -1,0 +1,90 @@
+{% extends 'dashboard/layout.html.twig' %}
+
+{% block title %}Mes notifications{% endblock %}
+
+{% block content %}
+<div class="mdl-grid">
+    <div class="mdl-cell mdl-cell--12-col">
+
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+            <h4 style="margin: 0;">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 8px;">notifications</i>
+                Mes notifications
+            </h4>
+        </div>
+
+        {% if notifications is empty %}
+            <div class="mdl-card mdl-shadow--2dp" style="width: 100%; padding: 40px; text-align: center;">
+                <i class="material-icons" style="font-size: 64px; color: #bdbdbd;">notifications_none</i>
+                <p style="color: #9e9e9e; margin-top: 16px; font-size: 1.1rem;">Aucune notification pour le moment</p>
+            </div>
+        {% else %}
+            <div class="mdl-card mdl-shadow--2dp" style="width: 100%;">
+                {% for notification in notifications %}
+                    <div class="notification-item {% if not notification.isRead %}notification-unread{% endif %}"
+                         style="
+                            display: flex;
+                            align-items: flex-start;
+                            gap: 16px;
+                            padding: 16px 24px;
+                            border-bottom: 1px solid var(--border-light, #e0e0e0);
+                            {% if not notification.isRead %}background: rgba(63, 81, 181, 0.05);{% endif %}
+                         ">
+                        <div style="flex-shrink: 0; margin-top: 2px;">
+                            {% if notification.type == 'prestation_annulee' %}
+                                <i class="material-icons" style="color: #ef5350; font-size: 28px;">cancel</i>
+                            {% else %}
+                                <i class="material-icons" style="color: #3f51b5; font-size: 28px;">notifications</i>
+                            {% endif %}
+                        </div>
+
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                {% if not notification.isRead %}
+                                    <span style="
+                                        display: inline-block;
+                                        width: 8px; height: 8px;
+                                        background: #3f51b5;
+                                        border-radius: 50%;
+                                        flex-shrink: 0;
+                                    "></span>
+                                {% endif %}
+                                <span style="font-weight: {% if not notification.isRead %}500{% else %}400{% endif %}; font-size: 0.95rem;">
+                                    {{ notification.message }}
+                                </span>
+                            </div>
+
+                            <div style="display: flex; align-items: center; gap: 16px;">
+                                <span style="font-size: 0.8rem; color: #9e9e9e;">
+                                    <i class="material-icons" style="font-size: 14px; vertical-align: middle;">schedule</i>
+                                    {{ notification.createdAt|date('d/m/Y à H:i') }}
+                                </span>
+
+                                {% if notification.data and notification.data.prestation_id is defined %}
+                                    <a href="{{ path('admin_prestation_show', {id: notification.data.prestation_id}) }}"
+                                       style="font-size: 0.8rem; color: #3f51b5; text-decoration: none;">
+                                        Voir la prestation →
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<style>
+    .notification-item:last-child {
+        border-bottom: none !important;
+    }
+    body.dark-mode .notification-item {
+        border-color: var(--border-dark) !important;
+    }
+    body.dark-mode .notification-unread {
+        background: rgba(63, 81, 181, 0.1) !important;
+    }
+</style>
+{% endblock %}

@@ -455,6 +455,39 @@
         from { opacity: 0; transform: translateY(-10px); }
         to { opacity: 1; transform: translateY(0); }
     }
+
+    /* ==================== NOTIFICATION BADGE ==================== */
+    .notif-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: #ef5350;
+        color: white;
+        font-size: 0.65rem;
+        font-weight: 700;
+        min-width: 18px;
+        height: 18px;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 4px;
+        line-height: 1;
+        pointer-events: none;
+    }
+
+    .notif-badge--topbar {
+        top: 4px;
+        right: 4px;
+        min-width: 16px;
+        height: 16px;
+        font-size: 0.6rem;
+    }
+
+    body.sidebar-collapsed .notif-badge {
+        top: 4px;
+        right: 4px;
+    }
     </style>
 </head>
 
@@ -518,6 +551,14 @@
 
         <div class="menu-divider"></div>
 
+        <a href="{{ path('app_notifications_index') }}" class="menu-item {{ app.request.get('_route') starts with 'app_notification' ? 'active' : '' }}" style="position: relative;">
+            <i class="material-icons">notifications</i>
+            <span>Notifications</span>
+            {% set unread = unread_notifications_count(app.user) %}
+            {% if unread > 0 %}
+                <span class="notif-badge">{{ unread > 99 ? '99+' : unread }}</span>
+            {% endif %}
+        </a>
         <a href="{{ path('app_user_profil') }}" class="menu-item {{ app.request.get('_route') == 'app_user_profil' ? 'active' : '' }}">
             <i class="material-icons">account_circle</i>
             <span>Mon Compte</span>
@@ -543,6 +584,13 @@
     <div class="sidebar-header">
         <span class="sidebar-title">Services 4D</span>
     </div>
+    <a href="{{ path('app_notifications_index') }}" class="icon-button" style="position: relative; text-decoration: none; color: white;">
+        <i class="material-icons">notifications</i>
+        {% set unread = unread_notifications_count(app.user) %}
+        {% if unread > 0 %}
+            <span class="notif-badge notif-badge--topbar">{{ unread > 99 ? '99+' : unread }}</span>
+        {% endif %}
+    </a>
     <button class="icon-button" id="theme-toggle-mobile">
         <i class="material-icons">brightness_4</i>
     </button>
@@ -607,6 +655,14 @@
 
         <div class="menu-divider"></div>
 
+        <a href="{{ path('app_notifications_index') }}" class="menu-item {{ app.request.get('_route') starts with 'app_notification' ? 'active' : '' }}" style="position: relative;">
+            <i class="material-icons">notifications</i>
+            <span>Notifications</span>
+            {% set unread = unread_notifications_count(app.user) %}
+            {% if unread > 0 %}
+                <span class="notif-badge">{{ unread > 99 ? '99+' : unread }}</span>
+            {% endif %}
+        </a>
         <a href="{{ path('app_user_profil') }}" class="menu-item {{ app.request.get('_route') == 'app_user_profil' ? 'active' : '' }}">
             <i class="material-icons">account_circle</i>
             <span>Mon Compte</span>
