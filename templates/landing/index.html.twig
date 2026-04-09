@@ -319,7 +319,35 @@
         @media (max-width: 900px) {
             .showcase-row { grid-template-columns: 1fr; gap: 32px; }
             .showcase-row.reverse { direction: ltr; }
-            /* Phone frame stays centered */
+            /* App frames */
+            .app-frame { max-width: 100%; overflow: hidden; }
+            /* Dashboard */
+            .mock-app-layout { flex-direction: column; min-height: auto; }
+            .mock-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-light); }
+            .mock-sidebar-header { height: 48px; }
+            .mock-menu-item, .mock-submenu-item { display: none; }
+            .mock-content { padding: 12px; }
+            .mock-stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .mock-actions-grid { grid-template-columns: 1fr; }
+            /* Planning */
+            .mock-planning-layout { grid-template-columns: 1fr; min-height: auto; }
+            .mock-emp-panel, .mock-wizard-panel { display: none; }
+            /* BDC: hide columns that don't fit, remove fixed min-width */
+            .mock-bdc-layout { padding: 10px; }
+            .mock-page-header { flex-direction: column; gap: 10px; align-items: flex-start; padding: 14px; }
+            .mock-page-header h2 { font-size: 1rem; }
+            .mock-filter-card { flex-wrap: wrap; }
+            .mock-table th:nth-child(2), .mock-table td:nth-child(2),
+            .mock-table th:nth-child(3), .mock-table td:nth-child(3),
+            .mock-table th:nth-child(6), .mock-table td:nth-child(6) { display: none; }
+            .mock-table table { min-width: 0; }
+            .mock-table th, .mock-table td { padding: 8px 10px; }
+            /* Geo */
+            .mock-geo-layout { grid-template-columns: 1fr; }
+            .mock-geo-sidebar { border-right: none; border-bottom: 1px solid var(--border-light); }
+            .mock-geo-map { min-height: 250px; }
+            .mock-geo-other-groups { display: none; }
+            /* Phone */
             .phone-frame { max-width: 280px; margin: 0 auto; }
             /* General */
             .landing-nav-links { display: none; }
@@ -329,22 +357,20 @@
             .showcase-text h3 { font-size: 1.25rem; }
         }
 
-        /* Mockup frames: scale down to show full desktop layout on mobile */
-        @media (max-width: 640px) {
-            /* Expand frame width before zoom so the zoomed result fills the container */
-            .app-frame {
-                zoom: 0.58;
-                width: calc(100% / 0.58);
-                max-width: calc(100% / 0.58);
-            }
-        }
-
         @media (max-width: 600px) {
+            .mock-stats-grid { grid-template-columns: 1fr; }
             .landing-nav { padding: 10px 16px; }
             .hero { padding: 100px 16px 40px; }
             .hero-text h1 { font-size: 1.6rem; }
             .hero-text p { font-size: 1rem; }
             .hero-buttons { flex-direction: column; align-items: center; }
+            .mock-welcome h2 { font-size: 1.1rem; }
+            .mock-stat-value { font-size: 1.2rem; }
+            .mock-stat-card { padding: 10px; }
+            .mock-action-card { padding: 10px; gap: 10px; }
+            .mock-action-icon { width: 38px; height: 38px; }
+            .mock-action-title { font-size: 0.85rem; }
+            #bdcDetailScreen > div:nth-child(2) { grid-template-columns: 1fr !important; }
             .landing-cta h2 { font-size: 1.5rem; }
             .landing-cta { padding: 50px 16px; }
         }
