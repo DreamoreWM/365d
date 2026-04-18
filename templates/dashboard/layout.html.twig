@@ -514,6 +514,10 @@
                 <i class="material-icons">picture_as_pdf</i>
                 <span>Configs PDF Bailleurs</span>
             </a>
+            <a href="{{ path('admin_parametre_index') }}" class="submenu-item {{ app.request.get('_route') starts with 'admin_parametre' ? 'active' : '' }}">
+                <i class="material-icons">settings</i>
+                <span>Paramètres</span>
+            </a>
         </div>
 
         <div class="menu-divider"></div>
@@ -602,6 +606,10 @@
             <a href="{{ path('admin_pdf_config_index') }}" class="submenu-item {{ app.request.get('_route') starts with 'admin_pdf_config' ? 'active' : '' }}">
                 <i class="material-icons">picture_as_pdf</i>
                 <span>Configs PDF Bailleurs</span>
+            </a>
+            <a href="{{ path('admin_parametre_index') }}" class="submenu-item {{ app.request.get('_route') starts with 'admin_parametre' ? 'active' : '' }}">
+                <i class="material-icons">settings</i>
+                <span>Paramètres</span>
             </a>
         </div>
 

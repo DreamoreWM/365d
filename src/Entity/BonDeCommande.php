@@ -105,6 +105,32 @@ class BonDeCommande
     #[Groups(['bon:read', 'bon:write'])]
     private ?\DateTimeImmutable $dateLimiteExecution = null;
 
+    #[ORM\Column(type: 'decimal', precision: 10, scale: 7, nullable: true)]
+    #[Groups(['bon:read'])]
+    private ?string $latitude = null;
+
+    #[ORM\Column(type: 'decimal', precision: 10, scale: 7, nullable: true)]
+    #[Groups(['bon:read'])]
+    private ?string $longitude = null;
+
+    /** Cached "address that was geocoded" — used to detect when a re-geocode is needed. */
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $adresseGeocodee = null;
+
+    public function getLatitude(): ?string { return $this->latitude; }
+    public function setLatitude(?string $latitude): self { $this->latitude = $latitude; return $this; }
+
+    public function getLongitude(): ?string { return $this->longitude; }
+    public function setLongitude(?string $longitude): self { $this->longitude = $longitude; return $this; }
+
+    public function getAdresseGeocodee(): ?string { return $this->adresseGeocodee; }
+    public function setAdresseGeocodee(?string $adresseGeocodee): self { $this->adresseGeocodee = $adresseGeocodee; return $this; }
+
+    public function hasCoordonnees(): bool
+    {
+        return $this->latitude !== null && $this->longitude !== null;
+    }
+
 
     public function __construct()
     {
