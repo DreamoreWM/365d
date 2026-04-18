@@ -679,6 +679,7 @@ body.dark-mode .ev-pop-row { color: #aaa; }
                 <input type="hidden" name="employe"     id="fEmp">
                 <input type="hidden" name="date"        id="fDate">
                 <input type="hidden" name="heure"       id="fHeure">
+                <input type="hidden" name="creneau"     id="fCreneau">
                 <input type="hidden" name="description" id="fNote">
                 <button type="submit" class="btn-create" id="btnCreate" disabled>
                     <i class="material-icons">add_circle</i>
@@ -941,12 +942,14 @@ function updateCalendarPreview() {
     const date  = document.getElementById('dateInp').value;
     const heure = document.getElementById('timeInp').value;
     if (!date || !heure || !calendar) return;
+    const dur   = (selBon?.dureeMinutes ?? selBon?.typePrestation?.dureeMinutes ?? 30);
     const [h, m] = heure.split(':').map(Number);
-    const endH = String(h + 1).padStart(2, '0');
-    const endM = String(m).padStart(2, '0');
+    const endTotal = h * 60 + m + dur;
+    const endH = String(Math.floor(endTotal / 60)).padStart(2, '0');
+    const endM = String(endTotal % 60).padStart(2, '0');
     previewEvent = calendar.addEvent({
         id:         '__preview__',
-        title:      '📍 Nouvelle intervention',
+        title:      '📍 Nouvelle intervention (' + dur + ' min)',
         start:      `${date}T${heure}`,
         end:        `${date}T${endH}:${endM}`,
         color:      '#ff9800',
@@ -1062,11 +1065,12 @@ function setToday() {
 function refreshSummary() {
     const date  = document.getElementById('dateInp').value;
     const heure = document.getElementById('timeInp').value;
-    document.getElementById('fBon').value   = selBon?.id ?? '';
-    document.getElementById('fEmp').value   = selEmpId ?? '';
-    document.getElementById('fDate').value  = date;
-    document.getElementById('fHeure').value = heure;
-    document.getElementById('fNote').value  = document.getElementById('noteInp')?.value ?? '';
+    document.getElementById('fBon').value     = selBon?.id ?? '';
+    document.getElementById('fEmp').value     = selEmpId ?? '';
+    document.getElementById('fDate').value    = date;
+    document.getElementById('fHeure').value   = heure;
+    document.getElementById('fCreneau').value = currentSlot ?? 'fixe';
+    document.getElementById('fNote').value    = document.getElementById('noteInp')?.value ?? '';
     updateCalendarPreview();
 
     const ready = selBon && selEmpId && date && heure;
@@ -1203,9 +1207,15 @@ function showPop(event, el, jsEvent) {
     document.getElementById('popTitle').textContent = event.title;
     const time = event.start?.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }) ?? '';
     const sc = 's-' + (p.statut || '').replace(/ /g, '-');
+    const dureeStr = p.dureeMinutes ? `${p.dureeMinutes} min` : '';
+    const trajetStr = (p.dureeTrajetMinutes != null && p.dureeTrajetMinutes > 0)
+        ? `Trajet : ${p.dureeTrajetMinutes} min`
+        : '';
     document.getElementById('popBody').innerHTML = `
         <div class="ev-pop-row"><i class="material-icons">engineering</i>${esc(p.employeNom)}</div>
-        <div class="ev-pop-row"><i class="material-icons">schedule</i>${esc(time)}</div>
+        <div class="ev-pop-row"><i class="material-icons">schedule</i>${esc(time)}${dureeStr ? ' · ' + esc(dureeStr) : ''}</div>
+        ${trajetStr ? `<div class="ev-pop-row"><i class="material-icons">directions_car</i>${esc(trajetStr)}</div>` : ''}
+        ${p.creneauLabel ? `<div class="ev-pop-row"><i class="material-icons">light_mode</i>${esc(p.creneauLabel)}</div>` : ''}
         ${p.clientAdresse ? `<div class="ev-pop-row"><i class="material-icons">place</i>${esc(p.clientAdresse)}</div>` : ''}
         ${p.typePrestation ? `<div class="ev-pop-row"><i class="material-icons">category</i>${esc(p.typePrestation)}</div>` : ''}
         <div class="ev-pop-row"><i class="material-icons">circle</i><span class="s-badge ${sc}">${esc(p.statutLabel || p.statut)}</span></div>`;

@@ -1,0 +1,127 @@
+{% extends 'dashboard/layout.html.twig' %}
+
+{% block title %}Paramètres{% endblock %}
+
+{% block content %}
+<style>
+    .params-container { max-width: 900px; margin: 0 auto; }
+    .page-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white; padding: 32px 24px; border-radius: 8px;
+        margin-bottom: 24px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .page-header h1 { margin: 0; font-size: 1.75rem; font-weight: 400; display: flex; align-items: center; gap: 12px; }
+    .params-card {
+        background: var(--card-light); border-radius: 8px; padding: 28px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    body.dark-mode .params-card { background: var(--card-dark); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+    .params-section-title {
+        font-size: 0.85rem; font-weight: 600; text-transform: uppercase; color: #757575;
+        letter-spacing: 0.5px; margin: 24px 0 12px; padding-bottom: 8px;
+        border-bottom: 1px solid var(--border-light);
+    }
+    body.dark-mode .params-section-title { color: #b0b0b0; border-bottom-color: var(--border-dark); }
+    .params-section-title:first-child { margin-top: 0; }
+    .param-row {
+        display: grid; grid-template-columns: 280px 1fr; gap: 20px;
+        align-items: center; padding: 12px 0;
+    }
+    .param-label { font-size: 0.95rem; color: var(--text-light); font-weight: 500; }
+    body.dark-mode .param-label { color: var(--text-dark); }
+    .param-input {
+        width: 100%; padding: 10px 12px; border: 1.5px solid var(--border-light);
+        border-radius: 6px; font-size: 0.95rem; background: transparent;
+        color: var(--text-light); font-family: inherit;
+    }
+    body.dark-mode .param-input { border-color: var(--border-dark); color: var(--text-dark); }
+    .param-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(63,81,181,0.15); }
+    .param-input[readonly] { background: rgba(0,0,0,0.04); cursor: not-allowed; }
+    body.dark-mode .param-input[readonly] { background: rgba(255,255,255,0.04); }
+    .form-actions { margin-top: 28px; display: flex; gap: 12px; justify-content: flex-end; }
+    .btn-save {
+        background: var(--primary); color: white; border: none; padding: 12px 28px;
+        border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.95rem;
+        display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-save:hover { background: var(--primary-dark); }
+    .flash-msg {
+        padding: 12px 16px; border-radius: 6px; margin-bottom: 16px;
+        display: flex; align-items: center; gap: 8px; font-weight: 500;
+    }
+    .flash-success { background: #e8f5e9; color: #2e7d32; }
+    .flash-warning { background: #fff8e1; color: #f57f17; }
+    .flash-danger  { background: #ffebee; color: #c62828; }
+    body.dark-mode .flash-success { background: rgba(46,125,50,0.18); color: #a5d6a7; }
+    body.dark-mode .flash-warning { background: rgba(245,127,23,0.18); color: #ffd54f; }
+    body.dark-mode .flash-danger  { background: rgba(198,40,40,0.18); color: #ef9a9a; }
+    .help-text { font-size: 0.82rem; color: #757575; margin-top: 4px; }
+    body.dark-mode .help-text { color: #999; }
+    @media (max-width: 768px) {
+        .param-row { grid-template-columns: 1fr; gap: 6px; }
+    }
+</style>
+
+<div class="params-container">
+    <div class="page-header">
+        <h1>
+            <i class="material-icons">settings</i>
+            Paramètres de l'application
+        </h1>
+    </div>
+
+    {% for label, messages in app.flashes %}
+        {% for msg in messages %}
+            <div class="flash-msg flash-{{ label }}">
+                <i class="material-icons">{% if label == 'success' %}check_circle{% elseif label == 'warning' %}warning{% else %}info{% endif %}</i>
+                {{ msg }}
+            </div>
+        {% endfor %}
+    {% endfor %}
+
+    <form method="post" action="{{ path('admin_parametre_save') }}">
+        <div class="params-card">
+
+            {% set sections = {
+                'Société': ['company_address', 'company_latitude', 'company_longitude'],
+                'Horaires de la journée': ['heure_debut_journee', 'heure_premiere_prestation', 'heure_pause_debut', 'heure_pause_fin', 'heure_fin_journee'],
+                'Prestations': ['duree_defaut_minutes'],
+                'Trajets': ['vitesse_moyenne_kmh', 'trajet_facteur_detour']
+            } %}
+
+            {% for section, keys in sections %}
+                <div class="params-section-title">{{ section }}</div>
+                {% for p in parametres if p.cle in keys %}
+                    <div class="param-row">
+                        <label class="param-label" for="p_{{ p.cle }}">{{ p.libelle ?: p.cle }}</label>
+                        <div>
+                            {% if p.type == 'time' %}
+                                <input type="time" class="param-input" id="p_{{ p.cle }}" name="p[{{ p.cle }}]" value="{{ p.valeur }}">
+                            {% elseif p.type == 'integer' %}
+                                <input type="number" min="1" step="1" class="param-input" id="p_{{ p.cle }}" name="p[{{ p.cle }}]" value="{{ p.valeur }}">
+                            {% elseif p.type == 'float' %}
+                                <input type="number" min="1" step="0.1" class="param-input" id="p_{{ p.cle }}" name="p[{{ p.cle }}]" value="{{ p.valeur }}">
+                            {% elseif p.type == 'address' %}
+                                <input type="text" class="param-input" id="p_{{ p.cle }}" name="p[{{ p.cle }}]" value="{{ p.valeur }}" placeholder="Ex : 12 rue de la Paix 75002 Paris">
+                                <div class="help-text">Géolocalisée automatiquement à l'enregistrement (OpenStreetMap / Nominatim).</div>
+                            {% elseif p.type == 'readonly' %}
+                                <input type="text" class="param-input" id="p_{{ p.cle }}" value="{{ p.valeur ?: '—' }}" readonly>
+                            {% else %}
+                                <input type="text" class="param-input" id="p_{{ p.cle }}" name="p[{{ p.cle }}]" value="{{ p.valeur }}">
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endfor %}
+
+            <div class="form-actions">
+                <button type="submit" class="btn-save">
+                    <i class="material-icons">save</i>
+                    Enregistrer
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

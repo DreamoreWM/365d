@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Prestation;
 use App\Entity\User;
 use App\Entity\BonDeCommande;
+use App\Enum\CreneauPrestation;
 use App\Enum\StatutBonDeCommande;
 use App\Enum\StatutPrestation;
 use App\Repository\PrestationRepository;
@@ -12,7 +13,10 @@ use App\Repository\UserRepository;
 use App\Repository\BonDeCommandeRepository;
 use App\Repository\GroupeGeographiqueRepository;
 use App\Repository\TypePrestationRepository;
+use App\Service\GeocodingService;
+use App\Service\ParametreService;
 use App\Service\PrestationManager;
+use App\Service\TourneeOptimizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -30,7 +34,10 @@ class PlanningController extends AbstractController
         private BonDeCommandeRepository $bonRepo,
         private GroupeGeographiqueRepository $groupeGeoRepo,
         private TypePrestationRepository $typePrestationRepo,
-        private PrestationManager $prestationManager
+        private PrestationManager $prestationManager,
+        private GeocodingService $geocoder,
+        private TourneeOptimizer $optimizer,
+        private ParametreService $parametres,
     ) {}
 
     // =====================================================
@@ -95,6 +102,7 @@ class PlanningController extends AbstractController
         $employeId = $request->request->get('employe');
         $date = $request->request->get('date');
         $heure = $request->request->get('heure', '09:00');
+        $creneauStr = $request->request->get('creneau');
 
         // Validation
         if (!$bonId || !$employeId || !$date) {
@@ -126,11 +134,32 @@ class PlanningController extends AbstractController
             return $this->redirectToRoute('admin_planning_index');
         }
 
+        // Créneau (matin/aprem/fixe) — defaults to fixe so manual hours are respected
+        $creneau = CreneauPrestation::tryFrom($creneauStr ?? '') ?? CreneauPrestation::FIXE;
+        $prestation->setCreneau($creneau);
+
+        // Snapshot duration: type's théorique → fallback to default param
+        $type = $bon->getTypePrestation();
+        $duree = $type?->getDureeTheoriqueMinutes()
+            ?? $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES);
+        $prestation->setDureeMinutes($duree);
+
         // Mettre à jour le statut
         $this->prestationManager->updatePrestationStatut($prestation);
 
         $this->em->persist($prestation);
         $this->em->flush();
+
+        // Geocode bon if needed (best-effort)
+        $this->geocoder->ensureGeocoded($bon);
+        $this->em->flush();
+
+        // Re-optimize the day's tour for this employee (skip if creneau=fixe — anchor only)
+        try {
+            $this->optimizer->optimizeDay($dateTime, $employe);
+        } catch (\Throwable $e) {
+            // Optimization is best-effort — never block creation
+        }
 
         // Mettre à jour le bon de commande
         $this->prestationManager->updateBonDeCommande($bon);
@@ -293,7 +322,10 @@ class PlanningController extends AbstractController
                 'typePrestation' => $bon->getTypePrestation() ? [
                     'id' => $bon->getTypePrestation()->getId(),
                     'nom' => $bon->getTypePrestation()->getNom(),
+                    'dureeMinutes' => $bon->getTypePrestation()->getDureeTheoriqueMinutes(),
                 ] : null,
+                'dureeMinutes' => $bon->getTypePrestation()?->getDureeTheoriqueMinutes()
+                    ?? $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES),
             ];
         }
 
@@ -428,7 +460,10 @@ class PlanningController extends AbstractController
                 'typePrestation' => $bon->getTypePrestation() ? [
                     'id' => $bon->getTypePrestation()->getId(),
                     'nom' => $bon->getTypePrestation()->getNom(),
+                    'dureeMinutes' => $bon->getTypePrestation()->getDureeTheoriqueMinutes(),
                 ] : null,
+                'dureeMinutes' => $bon->getTypePrestation()?->getDureeTheoriqueMinutes()
+                    ?? $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES),
             ];
         }
 
@@ -595,7 +630,10 @@ class PlanningController extends AbstractController
             $color = $defaultColors[($employe?->getId() ?? 0) % count($defaultColors)];
 
             $startDt = $p->getDatePrestation();
-            $endDt = $startDt->modify('+1 hour');
+            $duree = $p->getDureeMinutes()
+                ?? $type?->getDureeTheoriqueMinutes()
+                ?? $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES);
+            $endDt = $startDt->modify('+' . $duree . ' minutes');
 
             $events[] = [
                 'id' => $p->getId(),
@@ -616,6 +654,10 @@ class PlanningController extends AbstractController
                     'bonId' => $bon?->getId(),
                     'numeroCommande' => $bon?->getNumeroCommande(),
                     'prestationId' => $p->getId(),
+                    'creneau' => $p->getCreneau()?->value,
+                    'creneauLabel' => $p->getCreneau()?->label(),
+                    'dureeMinutes' => $duree,
+                    'dureeTrajetMinutes' => $p->getDureeTrajetMinutes(),
                 ],
             ];
         }

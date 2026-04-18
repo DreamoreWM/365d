@@ -11,6 +11,7 @@ use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
+use App\Enum\CreneauPrestation;
 use App\Enum\StatutPrestation;
 use App\Repository\PrestationRepository;
 use App\State\MyPrestationsProvider;
@@ -124,6 +125,28 @@ class Prestation
     #[ORM\Column(type: 'json', nullable: true)]
     #[Groups(['prestation:read', 'prestation:write'])]
     private ?array $boitesRats = null;
+
+    #[ORM\Column(length: 20, nullable: true, enumType: CreneauPrestation::class)]
+    #[Groups(['prestation:read', 'prestation:write', 'bon:read'])]
+    private ?CreneauPrestation $creneau = null;
+
+    #[ORM\Column(type: 'integer', nullable: true)]
+    #[Groups(['prestation:read', 'prestation:write', 'bon:read'])]
+    private ?int $dureeMinutes = null;
+
+    /** Travel time (minutes) from the previous stop in the optimized tour. */
+    #[ORM\Column(type: 'integer', nullable: true)]
+    #[Groups(['prestation:read'])]
+    private ?int $dureeTrajetMinutes = null;
+
+    public function getCreneau(): ?CreneauPrestation { return $this->creneau; }
+    public function setCreneau(?CreneauPrestation $creneau): static { $this->creneau = $creneau; return $this; }
+
+    public function getDureeMinutes(): ?int { return $this->dureeMinutes; }
+    public function setDureeMinutes(?int $dureeMinutes): static { $this->dureeMinutes = $dureeMinutes; return $this; }
+
+    public function getDureeTrajetMinutes(): ?int { return $this->dureeTrajetMinutes; }
+    public function setDureeTrajetMinutes(?int $dureeTrajetMinutes): static { $this->dureeTrajetMinutes = $dureeTrajetMinutes; return $this; }
 
     public function getBoitesRats(): ?array
     {
