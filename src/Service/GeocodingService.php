@@ -129,7 +129,9 @@ class GeocodingService
      */
     public function ensureGeocoded(BonDeCommande $bon): bool
     {
-        $address = $bon->getAdresseGps() ?: $bon->getClientAdresse();
+        // Priority: admin-curated override → cleaned-up adresseGps helper → raw clientAdresse
+        $address = $bon->getAdresseGpsOverride()
+            ?: ($bon->getAdresseGps() ?: $bon->getClientAdresse());
         if (!$address) return false;
 
         if ($bon->hasCoordonnees() && $bon->getAdresseGeocodee() === $address) {

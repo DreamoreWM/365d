@@ -1253,6 +1253,9 @@ function showPop(event, el, jsEvent) {
     const geoRow = (p.geocoded === false)
         ? `<div class="ev-pop-row" style="color:#d32f2f"><i class="material-icons" style="color:#d32f2f">location_off</i>Adresse non géolocalisée</div>`
         : (p.geocoded === true ? `<div class="ev-pop-row" style="color:#2e7d32"><i class="material-icons" style="color:#2e7d32">location_on</i>Adresse géolocalisée</div>` : '');
+    const overrideRow = p.adresseOverride
+        ? `<div class="ev-pop-row" style="color:#f57f17"><i class="material-icons" style="color:#f57f17">edit_location</i>GPS corrigé : ${esc(p.adresseOverride)}</div>`
+        : '';
     document.getElementById('popBody').innerHTML = `
         <div class="ev-pop-row"><i class="material-icons">engineering</i>${esc(p.employeNom)}</div>
         <div class="ev-pop-row"><i class="material-icons">schedule</i>${esc(time)}${dureeStr ? ' · ' + esc(dureeStr) : ''}</div>
@@ -1260,10 +1263,12 @@ function showPop(event, el, jsEvent) {
         ${p.creneauLabel ? `<div class="ev-pop-row"><i class="material-icons">light_mode</i>${esc(p.creneauLabel)}</div>` : ''}
         ${p.clientAdresse ? `<div class="ev-pop-row"><i class="material-icons">place</i>${esc(p.clientAdresse)}</div>` : ''}
         ${geoRow}
+        ${overrideRow}
         ${p.typePrestation ? `<div class="ev-pop-row"><i class="material-icons">category</i>${esc(p.typePrestation)}</div>` : ''}
         <div class="ev-pop-row"><i class="material-icons">circle</i><span class="s-badge ${sc}">${esc(p.statutLabel || p.statut)}</span></div>`;
+    const prefill = (p.adresseOverride || p.clientAdresse || '').replace(/'/g, "\\'");
     const regeocodeBtn = p.bonId
-        ? `<button onclick="regeocodeBon(${p.bonId})" class="ev-pop-btn btn-view" title="Forcer le géocodage"><i class="material-icons">my_location</i>Géocoder</button>`
+        ? `<button onclick="regeocodeBon(${p.bonId}, '${prefill}')" class="ev-pop-btn btn-view" title="Corriger l'adresse pour le géocodage"><i class="material-icons">my_location</i>Géocoder</button>`
         : '';
     document.getElementById('popActions').innerHTML = `
         <a href="/admin/bon-commande/${p.bonId}" class="ev-pop-btn btn-view"><i class="material-icons">open_in_new</i>Voir bon</a>
@@ -1290,17 +1295,27 @@ function delPrestation(id) {
     f.submit();
 }
 
-async function regeocodeBon(bonId) {
+async function regeocodeBon(bonId, currentAddr) {
     if (!bonId) return;
+    // Offer to correct the address (e.g. "rue" → "avenue") without modifying the bon itself.
+    const typed = prompt(
+        'Adresse à géocoder (laissez vide pour utiliser celle du bon) :\n'
+        + 'Ex : « 45 avenue Jean Jaurès 59000 Lille »',
+        currentAddr || ''
+    );
+    if (typed === null) return; // cancelled
+    const fd = new FormData();
+    fd.append('override_address', typed);
     try {
-        const r = await fetch(`/admin/planning/geocode-bon/${bonId}`, { method: 'POST' });
+        const r = await fetch(`/admin/planning/geocode-bon/${bonId}`, { method: 'POST', body: fd });
         const data = await r.json();
         if (data.ok) {
-            alert('Adresse géocodée : ' + data.latitude + ', ' + data.longitude);
+            alert('Adresse géocodée : ' + data.latitude + ', ' + data.longitude
+                + (data.adresseOverride ? `\n(Override enregistré : ${data.adresseOverride})` : ''));
             closePop();
             calendar.refetchEvents();
         } else {
-            alert('Géocodage impossible pour cette adresse : ' + (data.adresse || ''));
+            alert('Géocodage impossible. Vérifiez l\'orthographe (rue/avenue/bd) et le code postal.');
         }
     } catch (e) {
         alert('Erreur de géocodage : ' + e.message);
