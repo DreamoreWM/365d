@@ -407,6 +407,7 @@ body.dark-mode .field-inp.filled { background: rgba(63,81,181,0.12); }
 }
 body.dark-mode .quick-btn { border-color: var(--border-dark); }
 .quick-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+.quick-btn.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 2px 6px rgba(63,81,181,0.25); }
 
 /* Footer */
 .wizard-footer {
@@ -649,13 +650,13 @@ body.dark-mode .ev-pop-row { color: #aaa; }
                         </div>
                         <div>
                             <div class="field-lbl">Heure</div>
-                            <input type="time" class="field-inp" id="timeInp" value="09:00" onchange="refreshSummary()">
+                            <input type="time" class="field-inp" id="timeInp" value="09:00" onchange="onTimeChange()">
                         </div>
                     </div>
                     <div class="quick-btns">
-                        <button class="quick-btn" onclick="setTime('08:00')">8h00</button>
-                        <button class="quick-btn" onclick="setTime('09:00')">9h00</button>
-                        <button class="quick-btn" onclick="setTime('14:00')">14h00</button>
+                        <button class="quick-btn" id="slotMatin"  onclick="setSlot('matin')">Matin (9h–12h)</button>
+                        <button class="quick-btn" id="slotAprem"  onclick="setSlot('aprem')">Après-midi (12h–15h)</button>
+                        <button class="quick-btn" id="slotFixe"   onclick="setSlot('fixe')">Heure fixe</button>
                         <button class="quick-btn" onclick="setToday()">Aujourd'hui</button>
                     </div>
                     <div style="margin-top:12px;">
@@ -924,7 +925,15 @@ function pickEmp(id, nom) {
     document.getElementById('wStep2').classList.replace('active','done');
     document.getElementById('wStep3').classList.add('active');
     document.querySelector('.wizard-body').scrollTop = 999;
-    refreshSummary();
+    // If user already chose a half-day, re-queue after this employee's existing prestations.
+    if (currentSlot === 'matin' || currentSlot === 'aprem') {
+        computeNextSlotTime(currentSlot).then(next => {
+            document.getElementById('timeInp').value = next;
+            refreshSummary();
+        });
+    } else {
+        refreshSummary();
+    }
 }
 
 function updateCalendarPreview() {
@@ -952,9 +961,98 @@ function onDateChange() {
     const d = inp.value;
     inp.classList.toggle('filled', !!d);
     if (d) { loadStats(d); calendar?.gotoDate(d); }
+    // Keep the auto-queued hour in sync when the day changes.
+    if (d && selEmpId && (currentSlot === 'matin' || currentSlot === 'aprem')) {
+        computeNextSlotTime(currentSlot).then(next => {
+            document.getElementById('timeInp').value = next;
+            refreshSummary();
+        });
+    } else {
+        refreshSummary();
+    }
+}
+// ====== SLOT HANDLING (Matin 9-12 / Après-midi 12-15 / Heure fixe) ======
+// currentSlot reflects which half-day the user is placing the intervention in.
+// null means no preference yet; 'fixe' means manual entry.
+let currentSlot = null;
+const SLOT_RANGES = {
+    matin: { start: '09:00', end: '12:00' },
+    aprem: { start: '12:00', end: '15:00' },
+};
+
+function updateSlotButtons() {
+    ['matin','aprem','fixe'].forEach(s => {
+        const el = document.getElementById('slot' + s.charAt(0).toUpperCase() + s.slice(1));
+        if (el) el.classList.toggle('active', currentSlot === s);
+    });
+}
+
+function hmToMin(hm) { const [h,m] = hm.split(':').map(Number); return h*60 + m; }
+function minToHm(mn) { const h = Math.floor(mn/60), m = mn%60; return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0'); }
+
+function setSlot(slot) {
+    currentSlot = slot;
+    updateSlotButtons();
+    if (slot === 'fixe') {
+        const t = document.getElementById('timeInp');
+        t.focus();
+        if (typeof t.showPicker === 'function') { try { t.showPicker(); } catch(_) {} }
+        return;
+    }
+    computeNextSlotTime(slot).then(next => {
+        document.getElementById('timeInp').value = next;
+        refreshSummary();
+    });
+}
+
+// Finds the next free start time in the chosen half-day for the selected date/employee,
+// placing the new intervention right after the last one in that range.
+// Falls back to the range start when no date/employee yet or the fetch fails.
+function computeNextSlotTime(slot) {
+    const range = SLOT_RANGES[slot];
+    const date  = document.getElementById('dateInp').value;
+    if (!date || !selEmpId) return Promise.resolve(range.start);
+
+    const url = `/admin/planning/events?start=${date}T00:00:00&end=${date}T23:59:59&employes[]=${encodeURIComponent(selEmpId)}`;
+    return fetch(url)
+        .then(r => r.ok ? r.json() : [])
+        .then(evs => {
+            const rangeStartMin = hmToMin(range.start);
+            const rangeEndMin   = hmToMin(range.end);
+            let cursor = rangeStartMin;
+            (evs || []).forEach(e => {
+                const s = (e.start || '').slice(11,16);
+                const en = (e.end   || '').slice(11,16);
+                if (!s) return;
+                const sMin = hmToMin(s);
+                const eMin = en ? hmToMin(en) : sMin + 60;
+                if (sMin >= rangeStartMin && sMin < rangeEndMin && eMin > cursor) {
+                    cursor = eMin;
+                }
+            });
+            if (cursor >= rangeEndMin) {
+                showToast('info', slot === 'matin'
+                    ? 'Le créneau du matin est complet — ajustez l\'heure manuellement.'
+                    : 'Le créneau de l\'après-midi est complet — ajustez l\'heure manuellement.');
+                cursor = rangeEndMin;
+            }
+            return minToHm(cursor);
+        })
+        .catch(() => range.start);
+}
+
+function onTimeChange() {
+    const hm = document.getElementById('timeInp').value;
+    if (hm) {
+        const m = hmToMin(hm);
+        if      (m >= hmToMin(SLOT_RANGES.matin.start) && m < hmToMin(SLOT_RANGES.matin.end)) currentSlot = 'matin';
+        else if (m >= hmToMin(SLOT_RANGES.aprem.start) && m < hmToMin(SLOT_RANGES.aprem.end)) currentSlot = 'aprem';
+        else currentSlot = 'fixe';
+        updateSlotButtons();
+    }
     refreshSummary();
 }
-function setTime(t) { document.getElementById('timeInp').value = t; refreshSummary(); }
+
 function setToday() {
     const t = new Date().toISOString().slice(0,10);
     document.getElementById('dateInp').value = t;
@@ -1066,13 +1164,23 @@ function initCalendar() {
 
         dateClick: function(info) {
             const dateStr = info.dateStr.slice(0,10);
-            const timeStr = info.dateStr.includes('T') ? info.dateStr.slice(11,16) : '09:00';
+            const clickedTime = info.dateStr.includes('T') ? info.dateStr.slice(11,16) : null;
             const di = document.getElementById('dateInp');
             di.value = dateStr;
             di.classList.add('filled');
-            document.getElementById('timeInp').value = timeStr;
             loadStats(dateStr);
-            refreshSummary();
+
+            // If a half-day slot is active, queue after existing prestations instead of
+            // taking the raw clicked time. Otherwise honor the clicked time (heure fixe).
+            if (currentSlot === 'matin' || currentSlot === 'aprem') {
+                computeNextSlotTime(currentSlot).then(next => {
+                    document.getElementById('timeInp').value = next;
+                    refreshSummary();
+                });
+            } else {
+                document.getElementById('timeInp').value = clickedTime || '09:00';
+                refreshSummary();
+            }
             // Open step 1 if bon not yet selected
             if (!selBon) {
                 document.getElementById('wizSearch').focus();
