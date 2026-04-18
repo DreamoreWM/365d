@@ -40,6 +40,29 @@ class PlanningController extends AbstractController
         private ParametreService $parametres,
     ) {}
 
+    private function hmToMin(?string $hm): int
+    {
+        if (!$hm) return 0;
+        [$h, $m] = array_pad(explode(':', $hm), 2, 0);
+        return ((int) $h) * 60 + ((int) $m);
+    }
+
+    /**
+     * Derives a flexible creneau from a prestation's start time using the admin parameters.
+     * Used when the form didn't pass an explicit slot — falls back to FIXE for off-hour times.
+     */
+    private function inferCreneau(\DateTimeImmutable $dateTime): CreneauPrestation
+    {
+        $pauseDeb = $this->hmToMin($this->parametres->get(ParametreService::HEURE_PAUSE_DEBUT));
+        $pauseFin = $this->hmToMin($this->parametres->get(ParametreService::HEURE_PAUSE_FIN));
+        $finJour  = $this->hmToMin($this->parametres->get(ParametreService::HEURE_FIN_JOURNEE));
+        $debutJ   = $this->hmToMin($this->parametres->get(ParametreService::HEURE_PREMIERE));
+        $tMin     = (int) $dateTime->format('H') * 60 + (int) $dateTime->format('i');
+        if ($tMin >= $debutJ && $tMin < $pauseDeb)      return CreneauPrestation::MATIN;
+        if ($tMin >= $pauseFin && $tMin < $finJour)     return CreneauPrestation::APREM;
+        return CreneauPrestation::FIXE;
+    }
+
     // =====================================================
     // PAGE PRINCIPALE DU PLANNING
     // =====================================================
@@ -134,8 +157,9 @@ class PlanningController extends AbstractController
             return $this->redirectToRoute('admin_planning_index');
         }
 
-        // Créneau (matin/aprem/fixe) — defaults to fixe so manual hours are respected
-        $creneau = CreneauPrestation::tryFrom($creneauStr ?? '') ?? CreneauPrestation::FIXE;
+        // Créneau (matin/aprem/fixe) — when the form leaves it empty, infer from the chosen
+        // time so the prestation is flexible and eligible for tour optimization.
+        $creneau = CreneauPrestation::tryFrom($creneauStr ?? '') ?? $this->inferCreneau($dateTime);
         $prestation->setCreneau($creneau);
 
         // Snapshot duration: type's théorique → fallback to default param
@@ -156,7 +180,19 @@ class PlanningController extends AbstractController
 
         // Re-optimize the day's tour for this employee (skip if creneau=fixe — anchor only)
         try {
-            $this->optimizer->optimizeDay($dateTime, $employe);
+            $diag = $this->optimizer->optimizeDay($dateTime, $employe);
+            if ($diag['depotMissing']) {
+                $this->addFlash('warning',
+                    'Adresse de la société non géolocalisée — les tournées ne peuvent pas être optimisées. Renseignez-la dans Paramètres.');
+            }
+            if (!empty($diag['notGeocoded'])) {
+                $noms = implode(', ', array_slice($diag['notGeocoded'], 0, 5));
+                $reste = count($diag['notGeocoded']) - 5;
+                $this->addFlash('warning', sprintf(
+                    'Géocodage impossible pour %d bon(s) : %s%s. Les trajets de ces bons sont ignorés par l\'optimiseur.',
+                    count($diag['notGeocoded']), $noms, $reste > 0 ? " (+$reste autres)" : ''
+                ));
+            }
         } catch (\Throwable $e) {
             // Optimization is best-effort — never block creation
         }
@@ -169,6 +205,101 @@ class PlanningController extends AbstractController
         return $this->redirectToRoute('admin_planning_index', [
             'date' => $date,
             'employe' => $employeId
+        ]);
+    }
+
+    // =====================================================
+    // RE-OPTIMISER UNE JOURNÉE (recalcule ordre + trajets)
+    // =====================================================
+    #[Route('/reoptimize', name: 'admin_planning_reoptimize', methods: ['POST'])]
+    public function reoptimize(Request $request): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $dateStr   = $request->request->get('date');
+        $employeId = $request->request->get('employe');
+        $reclass   = $request->request->get('reclasser') === '1';
+
+        if (!$dateStr || !$employeId) {
+            $this->addFlash('danger', 'Date et employé obligatoires');
+            return $this->redirectToRoute('admin_planning_index');
+        }
+
+        $employe = $this->userRepo->find($employeId);
+        if (!$employe) {
+            $this->addFlash('danger', 'Employé introuvable');
+            return $this->redirectToRoute('admin_planning_index');
+        }
+
+        try {
+            $date = new \DateTimeImmutable($dateStr);
+        } catch (\Throwable) {
+            $this->addFlash('danger', 'Date invalide');
+            return $this->redirectToRoute('admin_planning_index');
+        }
+
+        // Option: convert existing FIXE prestations (created before the inference fix)
+        // into MATIN/APREM based on time so the optimizer can reorder them.
+        if ($reclass) {
+            $start = $date->setTime(0, 0, 0);
+            $end   = $date->setTime(23, 59, 59);
+            $ps = $this->prestationRepo->createQueryBuilder('p')
+                ->where('p.datePrestation >= :s')->andWhere('p.datePrestation <= :e')
+                ->andWhere('p.employe = :emp')
+                ->setParameter('s', $start)->setParameter('e', $end)
+                ->setParameter('emp', $employe)
+                ->getQuery()->getResult();
+            foreach ($ps as $p) {
+                if ($p->getCreneau() === CreneauPrestation::FIXE || $p->getCreneau() === null) {
+                    $p->setCreneau($this->inferCreneau($p->getDatePrestation()));
+                }
+            }
+            $this->em->flush();
+        }
+
+        try {
+            $diag = $this->optimizer->optimizeDay($date, $employe);
+            if ($diag['depotMissing']) {
+                $this->addFlash('warning',
+                    'Adresse de la société non géolocalisée — optimisation limitée. Renseignez-la dans Paramètres.');
+            }
+            if (!empty($diag['notGeocoded'])) {
+                $this->addFlash('warning', sprintf(
+                    'Géocodage impossible pour %d bon(s). Leurs trajets seront ignorés.',
+                    count($diag['notGeocoded'])
+                ));
+            } else {
+                $this->addFlash('success', 'Tournée recalculée.');
+            }
+        } catch (\Throwable $e) {
+            $this->addFlash('danger', 'Erreur lors de l\'optimisation : ' . $e->getMessage());
+        }
+
+        return $this->redirectToRoute('admin_planning_index', [
+            'date' => $dateStr,
+            'employe' => $employeId,
+        ]);
+    }
+
+    // =====================================================
+    // FORCER LE GÉOCODAGE D'UN BON (AJAX)
+    // =====================================================
+    #[Route('/geocode-bon/{id}', name: 'admin_planning_geocode_bon', methods: ['POST'])]
+    public function geocodeBon(BonDeCommande $bon): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        // Force a re-lookup even if coords are already cached
+        $bon->setAdresseGeocodee(null);
+        $ok = $this->geocoder->ensureGeocoded($bon);
+        $this->em->flush();
+
+        return $this->json([
+            'ok' => $ok && $bon->hasCoordonnees(),
+            'geocoded' => $bon->hasCoordonnees(),
+            'latitude' => $bon->getLatitude(),
+            'longitude' => $bon->getLongitude(),
+            'adresse' => $bon->getClientAdresse(),
         ]);
     }
 
@@ -245,6 +376,14 @@ class PlanningController extends AbstractController
                 // Date + heure
                 $dateTime = \DateTimeImmutable::createFromFormat('Y-m-d H:i', $date . ' ' . $heure);
                 $prestation->setDatePrestation($dateTime);
+
+                // Infer creneau from time so batch prestations are eligible for optimization
+                $prestation->setCreneau($this->inferCreneau($dateTime));
+                $type = $bon->getTypePrestation();
+                $prestation->setDureeMinutes(
+                    $type?->getDureeTheoriqueMinutes()
+                    ?? $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES)
+                );
 
                 // Mettre à jour le statut
                 $this->prestationManager->updatePrestationStatut($prestation);
@@ -326,6 +465,7 @@ class PlanningController extends AbstractController
                 ] : null,
                 'dureeMinutes' => $bon->getTypePrestation()?->getDureeTheoriqueMinutes()
                     ?? $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES),
+                'geocoded' => $bon->hasCoordonnees(),
             ];
         }
 
@@ -464,6 +604,7 @@ class PlanningController extends AbstractController
                 ] : null,
                 'dureeMinutes' => $bon->getTypePrestation()?->getDureeTheoriqueMinutes()
                     ?? $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES),
+                'geocoded' => $bon->hasCoordonnees(),
             ];
         }
 
@@ -658,6 +799,7 @@ class PlanningController extends AbstractController
                     'creneauLabel' => $p->getCreneau()?->label(),
                     'dureeMinutes' => $duree,
                     'dureeTrajetMinutes' => $p->getDureeTrajetMinutes(),
+                    'geocoded' => $bon ? $bon->hasCoordonnees() : false,
                 ],
             ];
         }

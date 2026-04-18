@@ -26,8 +26,11 @@ class TourneeOptimizer
     /**
      * Optimize all flexible prestations for the given employee on the given day.
      * Persists changes (datePrestation + dureeTrajetMinutes) and flushes.
+     *
+     * @return array{depotMissing: bool, notGeocoded: array<int, string>}
+     *         Diagnostic info for the caller (to surface warnings to the admin).
      */
-    public function optimizeDay(\DateTimeImmutable $date, User $employe): void
+    public function optimizeDay(\DateTimeImmutable $date, User $employe): array
     {
         $start = $date->setTime(0, 0, 0);
         $end   = $date->setTime(23, 59, 59);
@@ -44,12 +47,19 @@ class TourneeOptimizer
             ->orderBy('p.datePrestation', 'ASC')
             ->getQuery()->getResult();
 
-        if (empty($prestations)) return;
+        if (empty($prestations)) {
+            return ['depotMissing' => false, 'notGeocoded' => []];
+        }
 
         // Make sure every bon used today is geocoded — best effort.
+        $notGeocoded = [];
         foreach ($prestations as $p) {
             $bon = $p->getBonDeCommande();
-            if ($bon) $this->geocoder->ensureGeocoded($bon);
+            if (!$bon) continue;
+            $this->geocoder->ensureGeocoded($bon);
+            if (!$bon->hasCoordonnees()) {
+                $notGeocoded[$bon->getId()] = $bon->getClientNom() ?: ('Bon #' . $bon->getId());
+            }
         }
 
         $depotLat = $this->parametres->get(ParametreService::COMPANY_LATITUDE);
@@ -57,6 +67,7 @@ class TourneeOptimizer
         $depotCoords = ($depotLat !== '' && $depotLng !== null && $depotLng !== '')
             ? ['lat' => (float) $depotLat, 'lng' => (float) $depotLng]
             : null;
+        $depotMissing = $depotCoords === null;
 
         $heurePremiere = $this->parametres->get(ParametreService::HEURE_PREMIERE);
         $heurePauseDeb = $this->parametres->get(ParametreService::HEURE_PAUSE_DEBUT);
@@ -72,13 +83,16 @@ class TourneeOptimizer
             $startMin = (int)$p->getDatePrestation()->format('H') * 60 + (int)$p->getDatePrestation()->format('i');
             $isMorning = $startMin < $pauseDebMin;
 
-            // Legacy prestations (no creneau) are treated as anchors so they don't move.
-            if ($creneau === null || $creneau === CreneauPrestation::FIXE) {
+            // Only explicit FIXE acts as an anchor. MATIN/APREM/null are all flex —
+            // null (legacy) is bucketed by time-of-day so older prestations reorder too.
+            if ($creneau === CreneauPrestation::FIXE) {
                 if ($isMorning) $matinFixed[] = $p; else $apremFixed[] = $p;
+            } elseif ($creneau === CreneauPrestation::APREM) {
+                $apremFlex[] = $p;
             } elseif ($creneau === CreneauPrestation::MATIN) {
                 $matinFlex[] = $p;
-            } else { // APREM
-                $apremFlex[] = $p;
+            } else {
+                if ($isMorning) $matinFlex[] = $p; else $apremFlex[] = $p;
             }
         }
 
@@ -96,6 +110,8 @@ class TourneeOptimizer
         );
 
         $this->em->flush();
+
+        return ['depotMissing' => $depotMissing, 'notGeocoded' => array_values($notGeocoded)];
     }
 
     /**
@@ -132,17 +148,15 @@ class TourneeOptimizer
 
         $cursorMin   = $this->hmToMin($startTime);
         $endWindow   = $this->hmToMin($endTime);
+
+        // Build an initial tour via nearest-neighbor, then improve with 2-opt.
+        $ordered = $this->nearestNeighborOrder($startCoords, $flex);
+        $ordered = $this->twoOptImprove($startCoords, $ordered, $speed, $detour);
+
         $cursorCoords = $startCoords;
-        $remaining   = $flex;
-        $isFirstFlex = true;
+        $isFirstFlex  = true;
 
-        while (!empty($remaining)) {
-            // Pick the nearest unscheduled flex prestation from current position
-            $nextIdx = $this->pickNearest($cursorCoords, $remaining);
-            $next = $remaining[$nextIdx];
-            unset($remaining[$nextIdx]);
-            $remaining = array_values($remaining);
-
+        foreach ($ordered as $next) {
             $nextCoords = $this->coordsOf($next);
             $duration   = $this->durationOf($next, $defDur);
             $travel     = $this->travelMinutes($cursorCoords, $nextCoords, $speed, $detour);
@@ -193,19 +207,94 @@ class TourneeOptimizer
     }
 
     /**
-     * @param array<int, Prestation> $candidates
+     * Builds an initial tour by repeatedly picking the nearest unscheduled prestation.
+     * Prestations without coordinates are appended at the end (they don't participate in distance).
+     *
+     * @param array<int, Prestation> $flex
+     * @return array<int, Prestation>
      */
-    private function pickNearest(?array $fromCoords, array $candidates): int
+    private function nearestNeighborOrder(?array $startCoords, array $flex): array
     {
-        if ($fromCoords === null) return 0; // depot unknown → keep current order
-        $best = 0; $bestDist = PHP_FLOAT_MAX;
-        foreach ($candidates as $i => $p) {
-            $c = $this->coordsOf($p);
-            if ($c === null) continue;
-            $d = GeocodingService::haversineKm($fromCoords['lat'], $fromCoords['lng'], $c['lat'], $c['lng']);
-            if ($d < $bestDist) { $bestDist = $d; $best = $i; }
+        [$withCoords, $withoutCoords] = [[], []];
+        foreach ($flex as $p) {
+            $this->coordsOf($p) === null ? $withoutCoords[] = $p : $withCoords[] = $p;
         }
-        return $best;
+
+        $ordered = [];
+        $cursor  = $startCoords;
+        while (!empty($withCoords)) {
+            $bestIdx = 0;
+            if ($cursor !== null) {
+                $bestDist = PHP_FLOAT_MAX;
+                foreach ($withCoords as $i => $p) {
+                    $c = $this->coordsOf($p);
+                    $d = GeocodingService::haversineKm($cursor['lat'], $cursor['lng'], $c['lat'], $c['lng']);
+                    if ($d < $bestDist) { $bestDist = $d; $bestIdx = $i; }
+                }
+            }
+            $ordered[] = $withCoords[$bestIdx];
+            $cursor = $this->coordsOf($withCoords[$bestIdx]);
+            array_splice($withCoords, $bestIdx, 1);
+        }
+
+        return array_merge($ordered, $withoutCoords);
+    }
+
+    /**
+     * Applies 2-opt swaps until no improvement is found. Reduces crossings like R-L-R → R-R-L.
+     * Only swaps among prestations that have coordinates (others stay pinned at the end).
+     *
+     * @param array<int, Prestation> $tour
+     * @return array<int, Prestation>
+     */
+    private function twoOptImprove(?array $startCoords, array $tour, float $speed, float $detour): array
+    {
+        if ($startCoords === null || count($tour) < 3) return $tour;
+
+        // Separate the geocoded head from the uncoded tail (tail order is preserved)
+        $head = []; $tail = [];
+        foreach ($tour as $p) {
+            $this->coordsOf($p) === null ? $tail[] = $p : $head[] = $p;
+        }
+        $n = count($head);
+        if ($n < 3) return array_merge($head, $tail);
+
+        $cost = fn(?array $a, ?array $b) => $a && $b
+            ? GeocodingService::haversineKm($a['lat'], $a['lng'], $b['lat'], $b['lng'])
+            : 0.0;
+
+        $tourCost = function (array $seq) use ($startCoords, $cost) {
+            $total = 0.0;
+            $prev = $startCoords;
+            foreach ($seq as $p) {
+                $c = $this->coordsOf($p);
+                $total += $cost($prev, $c);
+                $prev = $c ?? $prev;
+            }
+            return $total;
+        };
+
+        $improved = true;
+        $guard = 0;
+        while ($improved && $guard++ < 50) {
+            $improved = false;
+            $best = $tourCost($head);
+            for ($i = 0; $i < $n - 1; $i++) {
+                for ($j = $i + 1; $j < $n; $j++) {
+                    $candidate = $head;
+                    $slice = array_reverse(array_slice($candidate, $i, $j - $i + 1));
+                    array_splice($candidate, $i, $j - $i + 1, $slice);
+                    $c = $tourCost($candidate);
+                    if ($c + 1e-9 < $best) {
+                        $head = $candidate;
+                        $best = $c;
+                        $improved = true;
+                    }
+                }
+            }
+        }
+
+        return array_merge($head, $tail);
     }
 
     private function travelMinutes(?array $from, ?array $to, float $speed, float $detour): int
