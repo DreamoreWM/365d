@@ -285,9 +285,17 @@ class PlanningController extends AbstractController
     // FORCER LE GÉOCODAGE D'UN BON (AJAX)
     // =====================================================
     #[Route('/geocode-bon/{id}', name: 'admin_planning_geocode_bon', methods: ['POST'])]
-    public function geocodeBon(BonDeCommande $bon): JsonResponse
+    public function geocodeBon(BonDeCommande $bon, Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        // Optional admin-typed override (e.g. "avenue" instead of "rue").
+        // Empty string clears a previous override; `null` leaves it untouched.
+        $override = $request->request->get('override_address');
+        if ($override !== null) {
+            $override = trim($override);
+            $bon->setAdresseGpsOverride($override === '' ? null : $override);
+        }
 
         // Force a re-lookup even if coords are already cached
         $bon->setAdresseGeocodee(null);
@@ -300,6 +308,7 @@ class PlanningController extends AbstractController
             'latitude' => $bon->getLatitude(),
             'longitude' => $bon->getLongitude(),
             'adresse' => $bon->getClientAdresse(),
+            'adresseOverride' => $bon->getAdresseGpsOverride(),
         ]);
     }
 
@@ -800,6 +809,7 @@ class PlanningController extends AbstractController
                     'dureeMinutes' => $duree,
                     'dureeTrajetMinutes' => $p->getDureeTrajetMinutes(),
                     'geocoded' => $bon ? $bon->hasCoordonnees() : false,
+                    'adresseOverride' => $bon?->getAdresseGpsOverride(),
                 ],
             ];
         }

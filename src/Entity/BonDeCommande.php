@@ -117,6 +117,15 @@ class BonDeCommande
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $adresseGeocodee = null;
 
+    /**
+     * Admin-curated correction of the address used for geocoding only.
+     * `clientAdresse` stays untouched (factured/displayed as-is); this is the
+     * string sent to Nominatim when the original fails (e.g. "rue" → "avenue").
+     */
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['bon:read'])]
+    private ?string $adresseGpsOverride = null;
+
     public function getLatitude(): ?string { return $this->latitude; }
     public function setLatitude(?string $latitude): self { $this->latitude = $latitude; return $this; }
 
@@ -125,6 +134,9 @@ class BonDeCommande
 
     public function getAdresseGeocodee(): ?string { return $this->adresseGeocodee; }
     public function setAdresseGeocodee(?string $adresseGeocodee): self { $this->adresseGeocodee = $adresseGeocodee; return $this; }
+
+    public function getAdresseGpsOverride(): ?string { return $this->adresseGpsOverride; }
+    public function setAdresseGpsOverride(?string $v): self { $this->adresseGpsOverride = $v; return $this; }
 
     public function hasCoordonnees(): bool
     {
