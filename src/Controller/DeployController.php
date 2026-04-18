@@ -13,52 +13,87 @@ class DeployController extends AbstractController
     public function deploy(Request $request): Response
     {
         $secret = $_ENV['DEPLOY_SECRET'] ?? '';
-        $output = [];
-        $output[] = '[' . date('Y-m-d H:i:s') . '] Webhook reçu';
+        $projectDir = dirname(__DIR__, 2);
+        $logFile = $projectDir . '/var/log/deploy.log';
+
+        $log = function (string $line) use ($logFile): void {
+            @file_put_contents(
+                $logFile,
+                '[' . date('Y-m-d H:i:s') . '] ' . $line . "\n",
+                FILE_APPEND
+            );
+        };
+
+        $log('Webhook reçu');
 
         // Vérification signature GitHub
         $signature = $request->headers->get('X-Hub-Signature-256');
         if (!$signature) {
-            $output[] = 'ERREUR: Signature manquante';
-            return new Response(implode("\n", $output), 401);
+            $log('ERREUR: Signature manquante');
+            return new Response("ERREUR: Signature manquante\n", 401);
         }
 
         $payload = $request->getContent();
         $expected = 'sha256=' . hash_hmac('sha256', $payload, $secret);
 
         if (!hash_equals($expected, $signature)) {
-            $output[] = 'ERREUR: Signature invalide';
-            $output[] = 'Expected: ' . substr($expected, 0, 20) . '...';
-            $output[] = 'Received: ' . substr($signature, 0, 20) . '...';
-            return new Response(implode("\n", $output), 401);
+            $log('ERREUR: Signature invalide');
+            return new Response("ERREUR: Signature invalide\n", 401);
         }
 
-        $output[] = 'Signature valide ✓';
+        $log('Signature valide, déploiement en arrière-plan');
 
-        $projectDir = dirname(__DIR__, 2);
-        $output[] = 'Project dir: ' . $projectDir;
+        // Réponse immédiate à GitHub (timeout webhook = 10s)
+        // Le déploiement (git pull + cache:clear) continue après la réponse.
+        $response = new Response("Webhook accepté, déploiement lancé\n", 202);
+        $response->headers->set('Content-Length', (string) strlen($response->getContent()));
+        $response->sendHeaders();
+        $response->sendContent();
 
-        // Git pull (compatible Windows)
-        $gitCommand = 'cd /d "' . $projectDir . '" && git pull --rebase --autostash 2>&1';
-        $output[] = 'Commande: ' . $gitCommand;
+        if (\function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        } elseif (\function_exists('litespeed_finish_request')) {
+            litespeed_finish_request();
+        } else {
+            // Fallback: vider les buffers pour libérer le client
+            while (ob_get_level() > 0) {
+                @ob_end_flush();
+            }
+            @flush();
+        }
 
+        // À partir d'ici, GitHub a déjà reçu sa réponse.
+        @ignore_user_abort(true);
+        @set_time_limit(600);
+
+        $this->runDeploy($projectDir, $log);
+
+        return $response;
+    }
+
+    private function runDeploy(string $projectDir, callable $log): void
+    {
+        $isWindows = \DIRECTORY_SEPARATOR === '\\';
+        $cdCommand = $isWindows
+            ? 'cd /d "' . $projectDir . '"'
+            : 'cd ' . escapeshellarg($projectDir);
+
+        // Git pull
+        $gitCommand = $cdCommand . ' && git pull --rebase --autostash 2>&1';
         exec($gitCommand, $gitLines, $gitCode);
-        $output[] = '--- GIT PULL (code: ' . $gitCode . ') ---';
-        $output[] = implode("\n", $gitLines);
+        $log('GIT PULL (code ' . $gitCode . ')');
+        foreach ($gitLines as $line) {
+            $log('  ' . $line);
+        }
 
         // Cache clear
         $cacheCommand = 'php "' . $projectDir . '/bin/console" cache:clear --no-warmup 2>&1';
-        $output[] = '--- CACHE CLEAR ---';
-
         exec($cacheCommand, $cacheLines, $cacheCode);
-        $output[] = 'Code retour: ' . $cacheCode;
-        $output[] = implode("\n", $cacheLines);
+        $log('CACHE CLEAR (code ' . $cacheCode . ')');
+        foreach ($cacheLines as $line) {
+            $log('  ' . $line);
+        }
 
-        // Log dans un fichier
-        $logFile = $projectDir . '/var/log/deploy.log';
-        $logContent = implode("\n", $output) . "\n\n";
-        @file_put_contents($logFile, $logContent, FILE_APPEND);
-
-        return new Response(implode("\n", $output), 200);
+        $log('Déploiement terminé');
     }
 }
