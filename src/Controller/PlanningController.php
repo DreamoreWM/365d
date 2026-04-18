@@ -282,6 +282,28 @@ class PlanningController extends AbstractController
     }
 
     // =====================================================
+    // FORCER LE GÉOCODAGE D'UN BON (AJAX)
+    // =====================================================
+    #[Route('/geocode-bon/{id}', name: 'admin_planning_geocode_bon', methods: ['POST'])]
+    public function geocodeBon(BonDeCommande $bon): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        // Force a re-lookup even if coords are already cached
+        $bon->setAdresseGeocodee(null);
+        $ok = $this->geocoder->ensureGeocoded($bon);
+        $this->em->flush();
+
+        return $this->json([
+            'ok' => $ok && $bon->hasCoordonnees(),
+            'geocoded' => $bon->hasCoordonnees(),
+            'latitude' => $bon->getLatitude(),
+            'longitude' => $bon->getLongitude(),
+            'adresse' => $bon->getClientAdresse(),
+        ]);
+    }
+
+    // =====================================================
     // SUPPRIMER UNE PRESTATION DEPUIS LE PLANNING
     // =====================================================
     #[Route('/delete-prestation/{id}', name: 'admin_planning_delete_prestation', methods: ['POST'])]
@@ -443,6 +465,7 @@ class PlanningController extends AbstractController
                 ] : null,
                 'dureeMinutes' => $bon->getTypePrestation()?->getDureeTheoriqueMinutes()
                     ?? $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES),
+                'geocoded' => $bon->hasCoordonnees(),
             ];
         }
 
@@ -581,6 +604,7 @@ class PlanningController extends AbstractController
                 ] : null,
                 'dureeMinutes' => $bon->getTypePrestation()?->getDureeTheoriqueMinutes()
                     ?? $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES),
+                'geocoded' => $bon->hasCoordonnees(),
             ];
         }
 
@@ -775,6 +799,7 @@ class PlanningController extends AbstractController
                     'creneauLabel' => $p->getCreneau()?->label(),
                     'dureeMinutes' => $duree,
                     'dureeTrajetMinutes' => $p->getDureeTrajetMinutes(),
+                    'geocoded' => $bon ? $bon->hasCoordonnees() : false,
                 ],
             ];
         }

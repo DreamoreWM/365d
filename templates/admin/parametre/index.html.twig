@@ -92,7 +92,7 @@
 
             {% for section, keys in sections %}
                 <div class="params-section-title">{{ section }}</div>
-                {% for p in parametres if p.cle in keys %}
+                {% for p in parametres|filter(p => p.cle in keys) %}
                     <div class="param-row">
                         <label class="param-label" for="p_{{ p.cle }}">{{ p.libelle ?: p.cle }}</label>
                         <div>
