@@ -72,13 +72,16 @@ class TourneeOptimizer
             $startMin = (int)$p->getDatePrestation()->format('H') * 60 + (int)$p->getDatePrestation()->format('i');
             $isMorning = $startMin < $pauseDebMin;
 
-            // Legacy prestations (no creneau) are treated as anchors so they don't move.
-            if ($creneau === null || $creneau === CreneauPrestation::FIXE) {
+            // Only explicit FIXE acts as an anchor. MATIN/APREM/null are all flex —
+            // null (legacy) is bucketed by time-of-day so older prestations reorder too.
+            if ($creneau === CreneauPrestation::FIXE) {
                 if ($isMorning) $matinFixed[] = $p; else $apremFixed[] = $p;
+            } elseif ($creneau === CreneauPrestation::APREM) {
+                $apremFlex[] = $p;
             } elseif ($creneau === CreneauPrestation::MATIN) {
                 $matinFlex[] = $p;
-            } else { // APREM
-                $apremFlex[] = $p;
+            } else {
+                if ($isMorning) $matinFlex[] = $p; else $apremFlex[] = $p;
             }
         }
 
