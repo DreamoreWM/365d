@@ -686,6 +686,19 @@ body.dark-mode .ev-pop-row { color: #aaa; }
                     Créer l'intervention
                 </button>
             </form>
+
+            <form method="post" action="{{ path('admin_planning_reoptimize') }}" style="margin-top: 12px;"
+                  onsubmit="return onReoptimize(this)">
+                <input type="hidden" name="date"    id="rDate">
+                <input type="hidden" name="employe" id="rEmp">
+                <input type="hidden" name="reclasser" value="1">
+                <button type="submit" class="btn-reoptimize" id="btnReoptimize" disabled
+                        title="Reclasse les heures fixes en matin/aprem selon l'heure, puis recalcule l'ordre optimal et les temps de trajet."
+                        style="width: 100%; padding: 10px; background: transparent; border: 1.5px dashed var(--border-light); color: var(--text-light); border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem;">
+                    <i class="material-icons" style="font-size: 18px;">auto_awesome</i>
+                    Recalculer la tournée du jour
+                </button>
+            </form>
         </div>
     </aside>
 
@@ -921,6 +934,7 @@ function resetBon() {
 function pickEmp(id, nom) {
     if (selEmpId) document.getElementById(`eb${selEmpId}`)?.classList.remove('selected');
     selEmpId = id; selEmpNom = nom;
+    updateReoptimizeBtn && updateReoptimizeBtn();
     document.getElementById(`eb${id}`)?.classList.add('selected');
     document.getElementById('s2text').textContent = nom;
     document.getElementById('wStep2').classList.replace('active','done');
@@ -1069,7 +1083,9 @@ function refreshSummary() {
     document.getElementById('fEmp').value     = selEmpId ?? '';
     document.getElementById('fDate').value    = date;
     document.getElementById('fHeure').value   = heure;
-    document.getElementById('fCreneau').value = currentSlot ?? 'fixe';
+    // Empty means "infer from time" server-side — only send an explicit value
+    // when the user actually clicked a slot button (or its equivalent).
+    document.getElementById('fCreneau').value = currentSlot ?? '';
     document.getElementById('fNote').value    = document.getElementById('noteInp')?.value ?? '';
     updateCalendarPreview();
 
@@ -1124,6 +1140,26 @@ function onSubmit(e) {
     document.getElementById('btnCreate').disabled = true;
     document.getElementById('btnCreate').innerHTML = '<i class="material-icons">hourglass_empty</i> Création…';
     return true;
+}
+
+function onReoptimize(form) {
+    const date = document.getElementById('dateInp').value;
+    if (!date || !selEmpId) {
+        showToast && showToast('warning', 'Sélectionnez une date et un employé d\'abord.');
+        return false;
+    }
+    document.getElementById('rDate').value = date;
+    document.getElementById('rEmp').value  = selEmpId;
+    const btn = document.getElementById('btnReoptimize');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="material-icons" style="font-size: 18px;">hourglass_empty</i> Calcul…';
+    return true;
+}
+
+function updateReoptimizeBtn() {
+    const date = document.getElementById('dateInp')?.value;
+    const btn  = document.getElementById('btnReoptimize');
+    if (btn) btn.disabled = !(date && selEmpId);
 }
 
 // ====== FULLCALENDAR ======

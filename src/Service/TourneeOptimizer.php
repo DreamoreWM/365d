@@ -26,8 +26,11 @@ class TourneeOptimizer
     /**
      * Optimize all flexible prestations for the given employee on the given day.
      * Persists changes (datePrestation + dureeTrajetMinutes) and flushes.
+     *
+     * @return array{depotMissing: bool, notGeocoded: array<int, string>}
+     *         Diagnostic info for the caller (to surface warnings to the admin).
      */
-    public function optimizeDay(\DateTimeImmutable $date, User $employe): void
+    public function optimizeDay(\DateTimeImmutable $date, User $employe): array
     {
         $start = $date->setTime(0, 0, 0);
         $end   = $date->setTime(23, 59, 59);
@@ -44,12 +47,19 @@ class TourneeOptimizer
             ->orderBy('p.datePrestation', 'ASC')
             ->getQuery()->getResult();
 
-        if (empty($prestations)) return;
+        if (empty($prestations)) {
+            return ['depotMissing' => false, 'notGeocoded' => []];
+        }
 
         // Make sure every bon used today is geocoded — best effort.
+        $notGeocoded = [];
         foreach ($prestations as $p) {
             $bon = $p->getBonDeCommande();
-            if ($bon) $this->geocoder->ensureGeocoded($bon);
+            if (!$bon) continue;
+            $this->geocoder->ensureGeocoded($bon);
+            if (!$bon->hasCoordonnees()) {
+                $notGeocoded[$bon->getId()] = $bon->getClientNom() ?: ('Bon #' . $bon->getId());
+            }
         }
 
         $depotLat = $this->parametres->get(ParametreService::COMPANY_LATITUDE);
@@ -57,6 +67,7 @@ class TourneeOptimizer
         $depotCoords = ($depotLat !== '' && $depotLng !== null && $depotLng !== '')
             ? ['lat' => (float) $depotLat, 'lng' => (float) $depotLng]
             : null;
+        $depotMissing = $depotCoords === null;
 
         $heurePremiere = $this->parametres->get(ParametreService::HEURE_PREMIERE);
         $heurePauseDeb = $this->parametres->get(ParametreService::HEURE_PAUSE_DEBUT);
@@ -99,6 +110,8 @@ class TourneeOptimizer
         );
 
         $this->em->flush();
+
+        return ['depotMissing' => $depotMissing, 'notGeocoded' => array_values($notGeocoded)];
     }
 
     /**
