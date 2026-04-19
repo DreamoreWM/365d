@@ -877,7 +877,7 @@ function showResults(bons) {
     el.innerHTML = bons.slice(0, 40).map(b => {
         const progText = b.nombrePrestationsNecessaires > 0 ? `${b.nombrePrestations}/${b.nombrePrestationsNecessaires}` : '';
         const geoIcon = (b.geocoded === false)
-            ? `<i class="material-icons" title="Adresse non géolocalisée — optimisation imprécise" style="font-size:13px;vertical-align:middle;color:#d32f2f">location_off</i>`
+            ? `<i class="material-icons" title="Adresse non géolocalisée" style="font-size:13px;vertical-align:middle;color:#d32f2f">location_off</i>`
             : (b.geocoded === true ? `<i class="material-icons" title="Adresse géolocalisée" style="font-size:13px;vertical-align:middle;color:#2e7d32">location_on</i>` : '');
         return `<div class="bon-card" onclick="pickBon(${b.id})">
             <div class="bon-name">${esc(b.clientNom)} ${geoIcon}</div>
