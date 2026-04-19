@@ -52,7 +52,7 @@ class ParametreController extends AbstractController
             } else {
                 $this->parametres->set(ParametreService::COMPANY_LATITUDE,  '');
                 $this->parametres->set(ParametreService::COMPANY_LONGITUDE, '');
-                $this->addFlash('warning', 'Paramètres enregistrés mais impossible de géolocaliser l\'adresse société (Nominatim).');
+                $this->addFlash('warning', 'Paramètres enregistrés mais impossible de géolocaliser l\'adresse société.');
             }
         } else {
             $this->addFlash('success', 'Paramètres enregistrés.');
