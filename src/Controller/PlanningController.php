@@ -162,6 +162,31 @@ class PlanningController extends AbstractController
         $creneau = CreneauPrestation::tryFrom($creneauStr ?? '') ?? $this->inferCreneau($dateTime);
         $prestation->setCreneau($creneau);
 
+        // Deux rendez-vous à heure fixe à la même heure pour le même employé seraient
+        // nécessairement en conflit — l'optimiseur les utilise comme ancres immuables.
+        if ($creneau === CreneauPrestation::FIXE) {
+            $clash = $this->prestationRepo->createQueryBuilder('p')
+                ->andWhere('p.employe = :emp')
+                ->andWhere('p.datePrestation = :dt')
+                ->andWhere('p.creneau = :cr')
+                ->setParameter('emp', $employe)
+                ->setParameter('dt', $dateTime)
+                ->setParameter('cr', CreneauPrestation::FIXE)
+                ->setMaxResults(1)
+                ->getQuery()->getOneOrNullResult();
+            if ($clash !== null) {
+                $this->addFlash('danger', sprintf(
+                    'Impossible : un rendez-vous à heure fixe est déjà programmé à %s pour %s.',
+                    $dateTime->format('H:i'),
+                    $employe->getNom()
+                ));
+                return $this->redirectToRoute('admin_planning_index', [
+                    'date' => $date,
+                    'employe' => $employeId,
+                ]);
+            }
+        }
+
         // Snapshot duration: type's théorique → fallback to default param
         $type = $bon->getTypePrestation();
         $duree = $type?->getDureeTheoriqueMinutes()
