@@ -9,18 +9,18 @@ use Psr\Log\NullLogger;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * Geocodes addresses using OpenStreetMap Nominatim and caches the result on BonDeCommande.
- * Nominatim's usage policy requires a meaningful User-Agent and ≤ 1 req/s; both are honored.
+ * Geocodes French addresses using the official BAN (Base Adresse Nationale)
+ * API at api-adresse.data.gouv.fr — free, no key, no strict rate limit, and
+ * specialized for French addresses (better fuzzy matching for typos like
+ * "rue" → "allée" than OpenStreetMap Nominatim).
+ *
+ * The canonical label returned by BAN is stored on the bon as an override
+ * so that both the map link and the optimizer use the verified address.
  */
 class GeocodingService
 {
-    private const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
-    private const TIMEOUT_S     = 6;
-    private const MIN_INTERVAL_US = 1_100_000; // 1.1 s between calls — Nominatim policy
-    private const USER_AGENT    = '365d-planning/1.0 (admin@365d.local)';
-
-    /** Timestamp (microseconds) of the last Nominatim call in this PHP process. */
-    private float $lastCallAt = 0.0;
+    private const BAN_URL   = 'https://api-adresse.data.gouv.fr/search/';
+    private const TIMEOUT_S = 6;
 
     /**
      * @var array<string, string> Addresses already attempted in this request,
@@ -38,215 +38,64 @@ class GeocodingService
 
     /**
      * Returns ['lat' => float, 'lng' => float] or null on failure.
-     * Tries a restricted FR lookup first, then falls back to an open lookup.
+     * Kept for callers that only need coordinates and don't care about the
+     * normalized label (e.g. ad-hoc distance calculations).
      */
     public function geocode(string $address): ?array
     {
-        $address = trim($address);
-        if ($address === '') return null;
-
-        if (isset($this->failedAttempts[$address])) return null;
-
-        $result = $this->queryNominatim($address, ['countrycodes' => 'fr']);
-        if ($result !== null) return $result;
-
-        // Fallback: sometimes Nominatim's FR filter misses addresses — retry unconstrained
-        $result = $this->queryNominatim($address, []);
-        if ($result !== null) return $result;
-
-        $this->failedAttempts[$address] = 'no_result';
-        return null;
+        $r = $this->geocodeWithFallbacks($address);
+        return $r ? $r['coords'] : null;
     }
 
     /**
-     * Like geocode() but resilient to address mistakes: "45 rue Jean Jaurès" might not
-     * exist but "45 avenue Jean Jaurès" does. We try the original first, then strip the
-     * voie type (often enough on its own), then substitute it with common alternatives.
+     * Geocodes via BAN and returns both the coordinates and the canonical
+     * address label. BAN returns the best match by relevance, so we trust
+     * the first result — it already handles voie-type typos ("rue" vs
+     * "allée") and municipality ambiguity natively.
      *
-     * Uses Nominatim's *structured* search when a postcode is present — that anchors the
-     * lookup to the right municipality, so a street that exists in another city won't
-     * win over a typo in the right one.
+     * If BAN matches only at the street level (no housenumber) but the
+     * user's query started with a number, we prepend that number to the
+     * label so Google Maps / the optimizer still target the right building.
      *
      * @return array{coords: array{lat:float,lng:float}, matched: string}|null
-     *         `matched` is the variant that Nominatim accepted (to cache as an override).
      */
     public function geocodeWithFallbacks(string $address): ?array
     {
         $address = trim($address);
         if ($address === '') return null;
 
-        $parts = $this->parseAddress($address);
-        $streetVariants = $this->buildStreetVariants($parts['street']);
+        if (isset($this->failedAttempts[$address])) return null;
 
-        // Build a "must-contain" hint regex from postcode and/or city. This rejects
-        // matches in the wrong municipality (e.g. "rue Léon Blum" exists in Wattrelos
-        // and Hellemmes — without a hint we'd silently accept Wattrelos).
-        $hintRegex = $this->buildLocationHintRegex($parts['postcode'], $parts['city']);
-
-        // Try structured search first (anchors postcode + city)
-        if ($parts['postcode'] !== null || $parts['city'] !== null) {
-            foreach ($streetVariants as $street) {
-                $coords = $this->queryNominatim('', [
-                    'street'     => $street,
-                    'postalcode' => $parts['postcode'] ?? '',
-                    'city'       => $parts['city'] ?? '',
-                    'country'    => 'France',
-                ], $hintRegex);
-                if ($coords !== null) {
-                    $matched = $this->rebuildAddress($street, $parts['postcode'], $parts['city']);
-                    return ['coords' => $coords, 'matched' => $matched];
-                }
-            }
+        // Pull the leading house number from the original query ("89 bis" etc.)
+        // so we can restore it if BAN returns a street-level match.
+        $userHousenumber = null;
+        if (preg_match('/^\s*(\d+\s*(?:bis|ter|quater|[A-Za-z])?)\s+/u', $address, $m)) {
+            $userHousenumber = preg_replace('/\s+/', '', $m[1]);
         }
 
-        // Fallback: free-form variants of the whole address — covers addresses without
-        // a postcode and edge cases where structured search returns nothing.
-        // We still pass the hint so the wrong-city matches get rejected.
-        $variants = $this->buildAddressVariants($address);
-        foreach ($variants as $v) {
-            if (isset($this->failedAttempts[$v])) continue;
-            $coords = $this->queryNominatim($v, ['countrycodes' => 'fr'], $hintRegex)
-                   ?? $this->queryNominatim($v, [], $hintRegex);
-            if ($coords !== null) {
-                return ['coords' => $coords, 'matched' => $v];
-            }
-            $this->failedAttempts[$v] = 'no_result';
+        $feature = $this->queryBan($address);
+        if ($feature === null) {
+            $this->failedAttempts[$address] = 'no_result';
+            return null;
         }
-        return null;
-    }
 
-    /**
-     * Returns a case-insensitive regex matching either the postcode or the city in a
-     * Nominatim `display_name`, or null if neither is known. The city regex is loose
-     * (allows accents, "-" or " " separators) so "Hellemmes" matches "Hellemmes-Lille".
-     */
-    private function buildLocationHintRegex(?string $postcode, ?string $city): ?string
-    {
-        $alts = [];
-        if ($postcode) $alts[] = preg_quote($postcode, '/');
-        if ($city) {
-            // Strip accents, lowercase, then build a permissive pattern
-            $norm = $this->stripAccents(mb_strtolower($city));
-            $alts[] = preg_quote($norm, '/');
+        $props  = $feature['properties'] ?? [];
+        $coords = $feature['geometry']['coordinates'] ?? null;
+        if (!is_array($coords) || count($coords) < 2) {
+            $this->failedAttempts[$address] = 'no_coords';
+            return null;
         }
-        if (empty($alts)) return null;
-        return '/(' . implode('|', $alts) . ')/iu';
-    }
+        // BAN uses [lng, lat]
+        $lng = (float) $coords[0];
+        $lat = (float) $coords[1];
 
-    private function stripAccents(string $s): string
-    {
-        return strtr($s,
-            ['à'=>'a','á'=>'a','â'=>'a','ä'=>'a','ã'=>'a','å'=>'a',
-             'ç'=>'c',
-             'è'=>'e','é'=>'e','ê'=>'e','ë'=>'e',
-             'ì'=>'i','í'=>'i','î'=>'i','ï'=>'i',
-             'ò'=>'o','ó'=>'o','ô'=>'o','ö'=>'o','õ'=>'o',
-             'ù'=>'u','ú'=>'u','û'=>'u','ü'=>'u',
-             'ý'=>'y','ÿ'=>'y','ñ'=>'n']);
-    }
+        // Build the canonical label, re-inserting the housenumber if BAN dropped it
+        $label = $this->buildLabel($props, $userHousenumber);
 
-    /**
-     * Splits a full address into street / postcode / city.
-     * Tolerant: works whether the postcode is present or not, with or without comma.
-     *
-     * @return array{street:string, postcode:?string, city:?string}
-     */
-    private function parseAddress(string $address): array
-    {
-        $address = preg_replace('/\s+/', ' ', trim($address));
-        $address = trim($address, " ,;");
-
-        // "<street>, <postcode> <city>" or "<street> <postcode> <city>"
-        if (preg_match('/^(.+?)[\s,]+(\d{5})\s+(.+)$/u', $address, $m)) {
-            return ['street' => trim($m[1], " ,"), 'postcode' => $m[2], 'city' => trim($m[3])];
-        }
-        // "<street> <postcode>"
-        if (preg_match('/^(.+?)[\s,]+(\d{5})$/u', $address, $m)) {
-            return ['street' => trim($m[1], " ,"), 'postcode' => $m[2], 'city' => null];
-        }
-        // No postcode: heuristically split off the last 1–2 capitalised words as the city
-        // ("89 rue Léon Blum Hellemmes" → street="89 rue Léon Blum", city="Hellemmes").
-        // We only do this if the address contains a voie type — otherwise we don't know
-        // where the street ends.
-        if (preg_match($this->voieTypePattern(), $address)
-            && preg_match('/^(.+?\b\p{L}+\b)[\s,]+(\p{Lu}[\p{L}\-\']+(?:\s+\p{Lu}[\p{L}\-\']+)?)$/u', $address, $m)) {
-            // Make sure the "city" candidate isn't itself part of a proper noun street name
-            // by checking the street part still ends with a recognisable word (>2 chars).
-            $street = trim($m[1], " ,");
-            $city   = trim($m[2]);
-            if (mb_strlen($city) >= 3) {
-                return ['street' => $street, 'postcode' => null, 'city' => $city];
-            }
-        }
-        return ['street' => $address, 'postcode' => null, 'city' => null];
-    }
-
-    private function rebuildAddress(string $street, ?string $postcode, ?string $city): string
-    {
-        return trim($street . ' ' . ($postcode ?? '') . ' ' . ($city ?? ''));
-    }
-
-    /**
-     * Generates street-only variants (voie type substitutions) keeping postcode/city anchored.
-     * @return string[]
-     */
-    private function buildStreetVariants(string $street): array
-    {
-        $variants = [$street];
-        $pattern = $this->voieTypePattern();
-        if (!preg_match($pattern, $street)) {
-            return $variants;
-        }
-        $stripped = trim(preg_replace($pattern, '', $street, 1));
-        if ($stripped !== '' && $stripped !== $street) $variants[] = $stripped;
-
-        $common = ['avenue', 'rue', 'boulevard', 'place', 'allée', 'chemin', 'route', 'impasse', 'cours', 'square'];
-        foreach ($common as $sub) {
-            $candidate = trim(preg_replace($pattern, $sub . ' ', $street, 1));
-            if ($candidate !== '' && !in_array($candidate, $variants, true)) {
-                $variants[] = $candidate;
-            }
-        }
-        return $variants;
-    }
-
-    /**
-     * Free-form variants of a whole address — used as a last-resort fallback when
-     * structured search fails (e.g. addresses with no postcode).
-     * @return string[]
-     */
-    private function buildAddressVariants(string $address): array
-    {
-        $variants = [$address];
-        $pattern = $this->voieTypePattern();
-        if (!preg_match($pattern, $address)) return $variants;
-
-        $stripped = trim(preg_replace($pattern, '', $address, 1));
-        if ($stripped !== '' && $stripped !== $address) $variants[] = $stripped;
-
-        $common = ['avenue', 'rue', 'boulevard', 'place', 'allée', 'chemin', 'route', 'impasse', 'cours'];
-        foreach ($common as $sub) {
-            $candidate = trim(preg_replace($pattern, $sub . ' ', $address, 1));
-            if ($candidate !== '' && !in_array($candidate, $variants, true)) {
-                $variants[] = $candidate;
-            }
-        }
-        return $variants;
-    }
-
-    /**
-     * Regex that matches a French "voie type" word (rue, avenue, bd, …) anchored at a
-     * word boundary and followed by whitespace. Also matches abbreviations like "av."
-     */
-    private function voieTypePattern(): string
-    {
-        $voieTypes = [
-            'rue', 'avenue', 'av', 'boulevard', 'bd', 'bld', 'blvd',
-            'place', 'allée', 'allee', 'chemin', 'impasse', 'imp',
-            'route', 'rte', 'chaussée', 'chaussee', 'square', 'cours',
-            'quai', 'passage', 'voie', 'esplanade', 'mail', 'parvis',
+        return [
+            'coords'  => ['lat' => $lat, 'lng' => $lng],
+            'matched' => $label,
         ];
-        return '/\b(' . implode('|', array_map(fn($t) => preg_quote($t, '/'), $voieTypes)) . ')\.?\s+/iu';
     }
 
     /**
@@ -257,30 +106,26 @@ class GeocodingService
         return $this->failedAttempts;
     }
 
-    private function queryNominatim(string $address, array $extraQuery, ?string $hintRegex = null): ?array
+    /**
+     * Calls BAN's /search endpoint and returns the top feature, or null on failure.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function queryBan(string $address): ?array
     {
-        $this->respectRateLimit();
         try {
-            // When a hint regex is provided we ask for several results and pick the
-            // first one whose display_name matches the hint (right city/postcode).
-            $base = [
-                'format' => 'json',
-                'limit' => $hintRegex ? 5 : 1,
-                'addressdetails' => 0,
-            ];
-            if ($address !== '') $base['q'] = $address;
-            $resp = $this->httpClient->request('GET', self::NOMINATIM_URL, [
-                'query' => array_merge($base, array_filter($extraQuery, fn($v) => $v !== '')),
-                'headers' => [
-                    'User-Agent' => self::USER_AGENT,
-                    'Accept-Language' => 'fr',
+            $resp = $this->httpClient->request('GET', self::BAN_URL, [
+                'query'   => [
+                    'q'            => $address,
+                    'limit'        => 1,
+                    'autocomplete' => 0,
                 ],
                 'timeout' => self::TIMEOUT_S,
             ]);
 
             $status = $resp->getStatusCode();
             if ($status !== 200) {
-                $this->logger->warning('Nominatim non-200', ['status' => $status, 'addr' => $address]);
+                $this->logger->warning('BAN non-200', ['status' => $status, 'addr' => $address]);
                 if ($status === 429 || $status >= 500) {
                     $this->failedAttempts[$address] = "http_{$status}";
                 }
@@ -288,44 +133,38 @@ class GeocodingService
             }
 
             $data = json_decode($resp->getContent(false), true);
-            if (!is_array($data) || empty($data)) {
+            if (!is_array($data) || empty($data['features'])) {
                 return null;
             }
-
-            // Pick the first result that satisfies the hint (or the very first if no hint)
-            $pick = null;
-            if ($hintRegex) {
-                foreach ($data as $row) {
-                    $dn = $this->stripAccents(mb_strtolower($row['display_name'] ?? ''));
-                    if (preg_match($hintRegex, $dn)) { $pick = $row; break; }
-                }
-            } else {
-                $pick = $data[0];
-            }
-            if (!$pick || empty($pick['lat']) || empty($pick['lon'])) return null;
-
-            return [
-                'lat' => (float) $pick['lat'],
-                'lng' => (float) $pick['lon'],
-            ];
+            return $data['features'][0];
         } catch (\Throwable $e) {
-            $this->logger->warning('Nominatim error: ' . $e->getMessage(), ['addr' => $address]);
+            $this->logger->warning('BAN error: ' . $e->getMessage(), ['addr' => $address]);
             $this->failedAttempts[$address] = 'exception';
             return null;
         }
     }
 
-    private function respectRateLimit(): void
+    /**
+     * Rebuilds a usable address label from BAN's properties. If the match
+     * type is "street" (no housenumber in the match), prepend the user's
+     * original number — otherwise links like Google Maps land at the start
+     * of the street instead of the correct building.
+     *
+     * @param array<string, mixed> $props
+     */
+    private function buildLabel(array $props, ?string $userHousenumber): string
     {
-        if ($this->lastCallAt === 0.0) {
-            $this->lastCallAt = microtime(true);
-            return;
+        $label = trim((string) ($props['label'] ?? ''));
+        if ($label === '') return '';
+
+        $type = $props['type'] ?? '';
+        $labelHasNumber = (bool) preg_match('/^\s*\d/', $label);
+
+        if ($userHousenumber !== null && $type !== 'housenumber' && !$labelHasNumber) {
+            $label = $userHousenumber . ' ' . $label;
         }
-        $elapsedUs = (microtime(true) - $this->lastCallAt) * 1_000_000;
-        if ($elapsedUs < self::MIN_INTERVAL_US) {
-            usleep((int) (self::MIN_INTERVAL_US - $elapsedUs));
-        }
-        $this->lastCallAt = microtime(true);
+
+        return $label;
     }
 
     /**
@@ -335,9 +174,10 @@ class GeocodingService
      */
     public function ensureGeocoded(BonDeCommande $bon): bool
     {
-        // Priority: admin-curated override → cleaned-up adresseGps helper → raw clientAdresse
-        $address = $bon->getAdresseGpsOverride()
-            ?: ($bon->getAdresseGps() ?: $bon->getClientAdresse());
+        // Priority: admin-curated override → raw clientAdresse.
+        // We deliberately bypass the getAdresseGps() cleaner when no override is
+        // set — BAN handles noise better than our regex.
+        $address = $bon->getAdresseGpsOverride() ?: $bon->getClientAdresse();
         if (!$address) return false;
 
         if ($bon->hasCoordonnees() && $bon->getAdresseGeocodee() === $address) {
@@ -351,14 +191,14 @@ class GeocodingService
 
         $bon->setLatitude((string) $result['coords']['lat']);
         $bon->setLongitude((string) $result['coords']['lng']);
-        $bon->setAdresseGeocodee($result['matched']);
+        $bon->setAdresseGeocodee($address);
 
-        // Auto-save the successful variant as an override so subsequent lookups
-        // are instant and the correction is visible in the UI. Only if it differs
-        // from the original address (don't overwrite a hand-typed override with
-        // the same thing).
-        if ($result['matched'] !== $address && $bon->getAdresseGpsOverride() === null) {
-            $bon->setAdresseGpsOverride($result['matched']);
+        // Always store BAN's canonical label as the override when it differs from
+        // what we queried — used by the GPS link AND as a cache key for next time.
+        $matched = $result['matched'];
+        if ($matched !== '' && $matched !== $address) {
+            $bon->setAdresseGpsOverride($matched);
+            $bon->setAdresseGeocodee($matched);
         }
 
         $this->em->persist($bon);

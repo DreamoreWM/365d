@@ -203,12 +203,18 @@ class BonDeCommande
     }
 
     /**
-     * Retourne l'adresse nettoyée pour la recherche Google Maps.
-     * Extrait : [numéro] [rue] [code postal] [ville]
-     * Supprime : nom de résidence/bâtiment, infos logement/porte/étage.
+     * Retourne l'adresse à utiliser pour un lien Google Maps / géocodage.
+     * Priorité : override admin (BAN-corrigée) → nettoyage heuristique de clientAdresse.
      */
     public function getAdresseGps(): ?string
     {
+        // An admin-curated / BAN-corrected override takes precedence over the raw
+        // bon address — the GPS link should open on the verified location, not the
+        // original typo'd address.
+        if ($this->adresseGpsOverride !== null && $this->adresseGpsOverride !== '') {
+            return $this->adresseGpsOverride;
+        }
+
         $adresse = $this->clientAdresse;
         if (!$adresse) {
             return null;
