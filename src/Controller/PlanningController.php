@@ -48,6 +48,128 @@ class PlanningController extends AbstractController
     }
 
     /**
+     * Vérifie qu'un nouveau rdv à heure fixe ne chevauche aucun rdv fixe existant
+     * pour l'employé — ni sa durée, ni le temps de trajet requis avant/après.
+     *
+     * @return array{ok: bool, message?: string, earliestMin?: int|null, latestEndMin?: int|null, blocker?: Prestation}
+     */
+    private function fixeSlotAvailability(
+        \DateTimeImmutable $dateTime,
+        int $dureeMinutes,
+        BonDeCommande $bon,
+        User $employe,
+        ?int $excludePrestationId = null,
+    ): array {
+        $dayStart = $dateTime->setTime(0, 0, 0);
+        $dayEnd   = $dateTime->setTime(23, 59, 59);
+
+        $qb = $this->prestationRepo->createQueryBuilder('p')
+            ->leftJoin('p.bonDeCommande', 'b')->addSelect('b')
+            ->andWhere('p.employe = :emp')
+            ->andWhere('p.datePrestation >= :start')
+            ->andWhere('p.datePrestation <= :end')
+            ->andWhere('p.creneau = :fixe')
+            ->setParameter('emp', $employe)
+            ->setParameter('start', $dayStart)
+            ->setParameter('end', $dayEnd)
+            ->setParameter('fixe', CreneauPrestation::FIXE);
+        if ($excludePrestationId) {
+            $qb->andWhere('p.id != :excluded')->setParameter('excluded', $excludePrestationId);
+        }
+        /** @var Prestation[] $others */
+        $others = $qb->getQuery()->getResult();
+        if (empty($others)) return ['ok' => true];
+
+        $this->geocoder->ensureGeocoded($bon);
+        $newCoords = $bon->hasCoordonnees()
+            ? ['lat' => (float) $bon->getLatitude(), 'lng' => (float) $bon->getLongitude()]
+            : null;
+
+        $speed  = $this->parametres->getFloat(ParametreService::VITESSE_MOYENNE_KMH);
+        $detour = $this->parametres->getFloat(ParametreService::TRAJET_FACTEUR_DETOUR);
+        $defDur = $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES);
+
+        $newStartMin = (int) $dateTime->format('H') * 60 + (int) $dateTime->format('i');
+        $newEndMin   = $newStartMin + $dureeMinutes;
+
+        foreach ($others as $other) {
+            $otherStart = (int) $other->getDatePrestation()->format('H') * 60
+                         + (int) $other->getDatePrestation()->format('i');
+            $otherDur = $other->getDureeMinutes()
+                ?? $other->getTypePrestation()?->getDureeTheoriqueMinutes()
+                ?? $defDur;
+            $otherEnd = $otherStart + $otherDur;
+
+            $otherBon = $other->getBonDeCommande();
+            $otherCoords = ($otherBon && $otherBon->hasCoordonnees())
+                ? ['lat' => (float) $otherBon->getLatitude(), 'lng' => (float) $otherBon->getLongitude()]
+                : null;
+
+            $travel = 0;
+            if ($newCoords && $otherCoords) {
+                $km = GeocodingService::haversineKm(
+                    $otherCoords['lat'], $otherCoords['lng'],
+                    $newCoords['lat'],   $newCoords['lng'],
+                );
+                $travel = GeocodingService::travelMinutes($km, $speed, $detour);
+            }
+
+            // Chevauchement direct
+            if ($newStartMin < $otherEnd && $newEndMin > $otherStart) {
+                return [
+                    'ok' => false,
+                    'blocker' => $other,
+                    'earliestMin' => $otherEnd + $travel,
+                    'message' => sprintf(
+                        'Impossible : %s occupe %s–%s. Prochain créneau libre à partir de %s (trajet %d min inclus).',
+                        $otherBon?->getClientNom() ?? ('Bon #' . $otherBon?->getId()),
+                        $this->minToHm($otherStart), $this->minToHm($otherEnd),
+                        $this->minToHm($otherEnd + $travel), $travel,
+                    ),
+                ];
+            }
+            // Trop tôt après un fixe précédent (le trajet dépasse sur le nouveau)
+            if ($otherEnd <= $newStartMin && $newStartMin < $otherEnd + $travel) {
+                return [
+                    'ok' => false,
+                    'blocker' => $other,
+                    'earliestMin' => $otherEnd + $travel,
+                    'message' => sprintf(
+                        'Impossible : trajet de %d min depuis %s (%s). Possible à partir de %s.',
+                        $travel,
+                        $otherBon?->getClientNom() ?? ('Bon #' . $otherBon?->getId()),
+                        $this->minToHm($otherEnd),
+                        $this->minToHm($otherEnd + $travel),
+                    ),
+                ];
+            }
+            // Trop tard avant un fixe suivant (le nouveau + trajet ne tient pas avant)
+            if ($newStartMin < $otherStart && $newEndMin + $travel > $otherStart) {
+                return [
+                    'ok' => false,
+                    'blocker' => $other,
+                    'latestEndMin' => $otherStart - $travel,
+                    'message' => sprintf(
+                        'Impossible : la prestation (%d min) + trajet (%d min) déborde sur le rdv fixe de %s à %s. Le nouveau rdv doit se terminer au plus tard à %s.',
+                        $dureeMinutes, $travel,
+                        $otherBon?->getClientNom() ?? ('Bon #' . $otherBon?->getId()),
+                        $this->minToHm($otherStart),
+                        $this->minToHm($otherStart - $travel),
+                    ),
+                ];
+            }
+        }
+
+        return ['ok' => true];
+    }
+
+    private function minToHm(int $m): string
+    {
+        $m = max(0, $m);
+        return sprintf('%02d:%02d', intdiv($m, 60), $m % 60);
+    }
+
+    /**
      * Derives a flexible creneau from a prestation's start time using the admin parameters.
      * Used when the form didn't pass an explicit slot — falls back to FIXE for off-hour times.
      */
@@ -162,36 +284,24 @@ class PlanningController extends AbstractController
         $creneau = CreneauPrestation::tryFrom($creneauStr ?? '') ?? $this->inferCreneau($dateTime);
         $prestation->setCreneau($creneau);
 
-        // Deux rendez-vous à heure fixe à la même heure pour le même employé seraient
-        // nécessairement en conflit — l'optimiseur les utilise comme ancres immuables.
+        // Snapshot duration: type's théorique → fallback to default param
+        $type = $bon->getTypePrestation();
+        $duree = $type?->getDureeTheoriqueMinutes()
+            ?? $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES);
+        $prestation->setDureeMinutes($duree);
+
+        // Un créneau FIXE occupe sa plage (durée prestation) + le temps de trajet vers le
+        // rdv fixe adjacent. On refuse tant que la nouvelle prestation empiète dessus.
         if ($creneau === CreneauPrestation::FIXE) {
-            $clash = $this->prestationRepo->createQueryBuilder('p')
-                ->andWhere('p.employe = :emp')
-                ->andWhere('p.datePrestation = :dt')
-                ->andWhere('p.creneau = :cr')
-                ->setParameter('emp', $employe)
-                ->setParameter('dt', $dateTime)
-                ->setParameter('cr', CreneauPrestation::FIXE)
-                ->setMaxResults(1)
-                ->getQuery()->getOneOrNullResult();
-            if ($clash !== null) {
-                $this->addFlash('danger', sprintf(
-                    'Impossible : un rendez-vous à heure fixe est déjà programmé à %s pour %s.',
-                    $dateTime->format('H:i'),
-                    $employe->getNom()
-                ));
+            $availability = $this->fixeSlotAvailability($dateTime, $duree, $bon, $employe);
+            if (!$availability['ok']) {
+                $this->addFlash('danger', $availability['message']);
                 return $this->redirectToRoute('admin_planning_index', [
                     'date' => $date,
                     'employe' => $employeId,
                 ]);
             }
         }
-
-        // Snapshot duration: type's théorique → fallback to default param
-        $type = $bon->getTypePrestation();
-        $duree = $type?->getDureeTheoriqueMinutes()
-            ?? $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES);
-        $prestation->setDureeMinutes($duree);
 
         // Mettre à jour le statut
         $this->prestationManager->updatePrestationStatut($prestation);
@@ -842,6 +952,45 @@ class PlanningController extends AbstractController
         }
 
         return $this->json($events);
+    }
+
+    // =====================================================
+    // VÉRIFIE SI UN CRÉNEAU FIXE EST LIBRE (durée + trajet vers les rdv fixes adjacents)
+    // =====================================================
+    #[Route('/fixe-check', name: 'admin_planning_fixe_check', methods: ['GET'])]
+    public function fixeCheck(Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $bonId      = $request->query->get('bon');
+        $employeId  = $request->query->get('employe');
+        $date       = $request->query->get('date');
+        $heure      = $request->query->get('heure');
+
+        if (!$bonId || !$employeId || !$date || !$heure) {
+            return $this->json(['ok' => true]);
+        }
+
+        $bon = $this->bonRepo->find($bonId);
+        $employe = $this->userRepo->find($employeId);
+        if (!$bon || !$employe) return $this->json(['ok' => true]);
+
+        $dateTime = \DateTimeImmutable::createFromFormat('Y-m-d H:i', $date . ' ' . $heure);
+        if ($dateTime === false) return $this->json(['ok' => true]);
+
+        $duree = $bon->getTypePrestation()?->getDureeTheoriqueMinutes()
+            ?? $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES);
+
+        $res = $this->fixeSlotAvailability($dateTime, $duree, $bon, $employe);
+
+        return $this->json([
+            'ok'       => $res['ok'],
+            'message'  => $res['message'] ?? null,
+            'earliest' => isset($res['earliestMin']) && $res['earliestMin'] !== null
+                ? $this->minToHm($res['earliestMin']) : null,
+            'latestEnd' => isset($res['latestEndMin']) && $res['latestEndMin'] !== null
+                ? $this->minToHm($res['latestEndMin']) : null,
+        ]);
     }
 
     // =====================================================

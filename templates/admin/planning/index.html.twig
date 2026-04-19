@@ -1035,44 +1035,45 @@ function setSlot(slot) {
     });
 }
 
-// When currentSlot='fixe', prevent creating two fixed-hour rdvs at the same start
-// time for the same employee. Shows a warning + blocks the create button.
+// When currentSlot='fixe', delegate to the server to check whether the chosen time
+// leaves enough room (durée prestation + trajet) around the other fixed rdvs of the day.
+// Shows a warning with the earliest possible time and blocks the create button.
 let fixeConflict = false;
+let fixeCheckSeq = 0;
 function checkFixeConflict() {
     const warnEl = document.getElementById('fixeConflictWarn');
     const wasConflict = fixeConflict;
     fixeConflict = false;
     if (warnEl) warnEl.style.display = 'none';
 
-    if (currentSlot !== 'fixe') {
-        if (wasConflict) document.getElementById('btnCreate').disabled = !(selBon && selEmpId
-            && document.getElementById('dateInp').value && document.getElementById('timeInp').value);
+    const date  = document.getElementById('dateInp').value;
+    const heure = document.getElementById('timeInp').value;
+    const ready = selBon && selEmpId && date && heure;
+
+    if (currentSlot !== 'fixe' || !ready) {
+        if (wasConflict) document.getElementById('btnCreate').disabled = !ready;
         return;
     }
-    const date = document.getElementById('dateInp').value;
-    const heure = document.getElementById('timeInp').value;
-    if (!date || !heure || !selEmpId) return;
 
-    const url = `/admin/planning/events?start=${date}T00:00:00&end=${date}T23:59:59&employes[]=${encodeURIComponent(selEmpId)}`;
+    const seq = ++fixeCheckSeq;
+    const url = `/admin/planning/fixe-check?bon=${encodeURIComponent(selBon.id)}`
+              + `&employe=${encodeURIComponent(selEmpId)}`
+              + `&date=${encodeURIComponent(date)}`
+              + `&heure=${encodeURIComponent(heure)}`;
     fetch(url)
-        .then(r => r.ok ? r.json() : [])
-        .then(evs => {
-            const target = `${date}T${heure}`;
-            const clash = (evs || []).find(e => {
-                const props = e.extendedProps || {};
-                if (props.creneau !== 'fixe') return false;
-                return (e.start || '').startsWith(target);
-            });
-            if (clash) {
+        .then(r => r.ok ? r.json() : { ok: true })
+        .then(data => {
+            if (seq !== fixeCheckSeq) return; // a newer request superseded this one
+            if (data && data.ok === false) {
                 fixeConflict = true;
                 if (warnEl) {
                     warnEl.style.display = 'flex';
-                    warnEl.querySelector('.fc-warn-msg').textContent =
-                        `Un rendez-vous à heure fixe est déjà programmé à ${heure} pour ${selEmpNom || 'cet employé'} (${clash.title || 'intervention'}).`;
+                    warnEl.querySelector('.fc-warn-msg').textContent = data.message
+                        || 'Créneau indisponible à cette heure.';
                 }
                 document.getElementById('btnCreate').disabled = true;
             } else if (wasConflict) {
-                document.getElementById('btnCreate').disabled = !(selBon && selEmpId && date && heure);
+                document.getElementById('btnCreate').disabled = !ready;
             }
         })
         .catch(() => {});
