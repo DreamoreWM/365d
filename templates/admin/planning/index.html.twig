@@ -877,7 +877,7 @@ function showResults(bons) {
     el.innerHTML = bons.slice(0, 40).map(b => {
         const progText = b.nombrePrestationsNecessaires > 0 ? `${b.nombrePrestations}/${b.nombrePrestationsNecessaires}` : '';
         const geoIcon = (b.geocoded === false)
-            ? `<i class="material-icons" title="Adresse non géolocalisée — optimisation imprécise" style="font-size:13px;vertical-align:middle;color:#d32f2f">location_off</i>`
+            ? `<span onclick="event.stopPropagation();fixBonAddress(${b.id})" title="Adresse non géolocalisée — cliquez pour corriger" style="cursor:pointer;color:#d32f2f;font-weight:600"><i class="material-icons" style="font-size:13px;vertical-align:middle;color:#d32f2f">location_off</i> corriger</span>`
             : (b.geocoded === true ? `<i class="material-icons" title="Adresse géolocalisée" style="font-size:13px;vertical-align:middle;color:#2e7d32">location_on</i>` : '');
         return `<div class="bon-card" onclick="pickBon(${b.id})">
             <div class="bon-name">${esc(b.clientNom)} ${geoIcon}</div>
@@ -890,6 +890,36 @@ function showResults(bons) {
             </div>
         </div>`;
     }).join('');
+}
+
+// Corrige l'adresse GPS d'un bon (ex: "rue" → "avenue") sans modifier le bon lui-même.
+async function fixBonAddress(bonId) {
+    const b = bonCache.find(x => x.id === bonId);
+    if (!b) return;
+    const prefill = b.adresseOverride || b.clientAdresse || '';
+    const typed = prompt(
+        'Adresse corrigée pour le géocodage (le bon n\'est PAS modifié) :\n'
+        + 'Ex : « 45 avenue Jean Jaurès 59000 Lille »',
+        prefill
+    );
+    if (typed === null) return;
+    const fd = new FormData();
+    fd.append('override_address', typed);
+    try {
+        const r = await fetch(`/admin/planning/geocode-bon/${bonId}`, { method: 'POST', body: fd });
+        const data = await r.json();
+        if (data.ok) {
+            alert('Géocodé : ' + data.latitude + ', ' + data.longitude);
+            // Update local cache so the card refreshes without a full re-search
+            b.geocoded = true;
+            b.adresseOverride = data.adresseOverride;
+            showResults(bonCache);
+        } else {
+            alert('Géocodage impossible. Vérifiez l\'orthographe (rue/avenue/bd) et le code postal.');
+        }
+    } catch (e) {
+        alert('Erreur : ' + e.message);
+    }
 }
 
 // ====== WIZARD STEPS ======

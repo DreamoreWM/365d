@@ -475,6 +475,7 @@ class PlanningController extends AbstractController
                 'dureeMinutes' => $bon->getTypePrestation()?->getDureeTheoriqueMinutes()
                     ?? $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES),
                 'geocoded' => $bon->hasCoordonnees(),
+                'adresseOverride' => $bon->getAdresseGpsOverride(),
             ];
         }
 
@@ -614,6 +615,7 @@ class PlanningController extends AbstractController
                 'dureeMinutes' => $bon->getTypePrestation()?->getDureeTheoriqueMinutes()
                     ?? $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES),
                 'geocoded' => $bon->hasCoordonnees(),
+                'adresseOverride' => $bon->getAdresseGpsOverride(),
             ];
         }
 
