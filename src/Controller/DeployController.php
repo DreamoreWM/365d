@@ -54,6 +54,15 @@ class DeployController extends AbstractController
         $output[] = 'Code retour: ' . $cacheCode;
         $output[] = implode("\n", $cacheLines);
 
+        // Doctrine migrations — run only what's pending. --no-interaction so it never
+        // blocks on prompts, --allow-no-migration so an up-to-date db exits cleanly.
+        $migrationCommand = 'php "' . $projectDir . '/bin/console" '
+            . 'doctrine:migrations:migrate --no-interaction --allow-no-migration --env=' . ($_ENV['APP_ENV'] ?? 'prod') . ' 2>&1';
+        $output[] = '--- MIGRATIONS ---';
+        exec($migrationCommand, $migrationLines, $migrationCode);
+        $output[] = 'Code retour: ' . $migrationCode;
+        $output[] = implode("\n", $migrationLines);
+
         // Log dans un fichier
         $logFile = $projectDir . '/var/log/deploy.log';
         $logContent = implode("\n", $output) . "\n\n";
