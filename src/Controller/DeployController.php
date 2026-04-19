@@ -16,6 +16,8 @@ class DeployController extends AbstractController
         $projectDir = dirname(__DIR__, 2);
         $logFile = $projectDir . '/var/log/deploy.log';
 
+        @mkdir(dirname($logFile), 0775, true);
+
         $log = function (string $line) use ($logFile): void {
             @file_put_contents(
                 $logFile,
@@ -41,69 +43,73 @@ class DeployController extends AbstractController
             return new Response("ERREUR: Signature invalide\n", 401);
         }
 
-        $log('Signature valide, déploiement en arrière-plan');
+        $log('Signature valide, déploiement détaché en arrière-plan');
 
-        // Réponse immédiate à GitHub (timeout webhook = 10s)
-        // Le déploiement (git pull + cache:clear) continue après la réponse.
-        $response = new Response("Webhook accepté, déploiement lancé\n", 202);
-        $response->headers->set('Content-Length', (string) strlen($response->getContent()));
-        $response->sendHeaders();
-        $response->sendContent();
+        // Sur certains SAPI (php -S, apache en mode non-fastcgi, proxys type ngrok…)
+        // les fallbacks ob_end_flush / flush() ne coupent pas la connexion TCP : la
+        // requête reste ouverte tout le temps du déploiement (git pull + cache +
+        // migrations, ~30 s à plusieurs minutes) et ngrok finit par renvoyer 503 à
+        // GitHub. On détache donc le déploiement dans un process indépendant —
+        // la réponse HTTP part immédiatement et le déploiement tourne en parallèle
+        // en écrivant dans var/log/deploy.log.
+        $this->spawnDeploy($projectDir, $logFile);
 
-        if (\function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
-        } elseif (\function_exists('litespeed_finish_request')) {
-            litespeed_finish_request();
-        } else {
-            // Fallback: vider les buffers pour libérer le client
-            while (ob_get_level() > 0) {
-                @ob_end_flush();
-            }
-            @flush();
-        }
-
-        // À partir d'ici, GitHub a déjà reçu sa réponse.
-        @ignore_user_abort(true);
-        @set_time_limit(600);
-
-        $this->runDeploy($projectDir, $log);
-
-        return $response;
+        return new Response("Webhook accepté, déploiement lancé\n", 202);
     }
 
-    private function runDeploy(string $projectDir, callable $log): void
+    /**
+     * Lance `git pull + cache:clear + migrations` dans un processus totalement
+     * détaché (nohup … &) pour que la requête HTTP puisse rendre la main tout
+     * de suite quel que soit le SAPI.
+     */
+    private function spawnDeploy(string $projectDir, string $logFile): void
     {
-        $isWindows = \DIRECTORY_SEPARATOR === '\\';
-        $cdCommand = $isWindows
-            ? 'cd /d "' . $projectDir . '"'
-            : 'cd ' . escapeshellarg($projectDir);
-
-        // Git pull
-        $gitCommand = $cdCommand . ' && git pull --rebase --autostash 2>&1';
-        exec($gitCommand, $gitLines, $gitCode);
-        $log('GIT PULL (code ' . $gitCode . ')');
-        foreach ($gitLines as $line) {
-            $log('  ' . $line);
+        if (\DIRECTORY_SEPARATOR === '\\') {
+            // La prod tourne sous Linux — fallback inline sous Windows seulement.
+            $this->runInline($projectDir, $logFile);
+            return;
         }
 
-        // Cache clear
-        $cacheCommand = 'php "' . $projectDir . '/bin/console" cache:clear --no-warmup 2>&1';
-        exec($cacheCommand, $cacheLines, $cacheCode);
-        $log('CACHE CLEAR (code ' . $cacheCode . ')');
-        foreach ($cacheLines as $line) {
-            $log('  ' . $line);
-        }
+        $env = $_ENV['APP_ENV'] ?? 'prod';
 
-        // Doctrine migrations — run only what's pending. --no-interaction so it never
-        // blocks on prompts, --allow-no-migration so an up-to-date db exits cleanly.
-        $migrationCommand = 'php "' . $projectDir . '/bin/console" '
-            . 'doctrine:migrations:migrate --no-interaction --allow-no-migration --env=' . ($_ENV['APP_ENV'] ?? 'prod') . ' 2>&1';
-        exec($migrationCommand, $migrationLines, $migrationCode);
-        $log('MIGRATIONS (code ' . $migrationCode . ')');
-        foreach ($migrationLines as $line) {
-            $log('  ' . $line);
-        }
+        $steps = [
+            'cd ' . escapeshellarg($projectDir),
+            'echo "--- $(date \'+%Y-%m-%d %H:%M:%S\') GIT PULL ---"',
+            'git pull --rebase --autostash',
+            'echo "--- $(date \'+%Y-%m-%d %H:%M:%S\') CACHE CLEAR ---"',
+            'php bin/console cache:clear --no-warmup --env=' . escapeshellarg($env),
+            'echo "--- $(date \'+%Y-%m-%d %H:%M:%S\') MIGRATIONS ---"',
+            'php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration --env=' . escapeshellarg($env),
+            'echo "--- $(date \'+%Y-%m-%d %H:%M:%S\') DEPLOY TERMINÉ ---"',
+        ];
+        $script = implode(' && ', $steps);
 
+        $cmd = sprintf(
+            'nohup bash -c %s >> %s 2>&1 &',
+            escapeshellarg($script),
+            escapeshellarg($logFile),
+        );
+        exec($cmd);
+    }
+
+    private function runInline(string $projectDir, string $logFile): void
+    {
+        $log = function (string $line) use ($logFile): void {
+            @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . '] ' . $line . "\n", FILE_APPEND);
+        };
+        $env = $_ENV['APP_ENV'] ?? 'prod';
+        $cd = 'cd /d "' . $projectDir . '" && ';
+
+        foreach ([
+            'GIT PULL'    => $cd . 'git pull --rebase --autostash 2>&1',
+            'CACHE CLEAR' => $cd . 'php "' . $projectDir . '/bin/console" cache:clear --no-warmup --env=' . $env . ' 2>&1',
+            'MIGRATIONS'  => $cd . 'php "' . $projectDir . '/bin/console" doctrine:migrations:migrate --no-interaction --allow-no-migration --env=' . $env . ' 2>&1',
+        ] as $label => $command) {
+            $lines = [];
+            exec($command, $lines, $code);
+            $log($label . ' (code ' . $code . ')');
+            foreach ($lines as $line) $log('  ' . $line);
+        }
         $log('Déploiement terminé');
     }
 }
