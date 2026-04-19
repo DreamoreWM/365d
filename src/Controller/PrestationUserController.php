@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Prestation;
 use App\Enum\StatutPrestation;
 use App\Repository\PrestationRepository;
+use App\Service\GeocodingService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,7 +21,7 @@ use Dompdf\Options;
 class PrestationUserController extends AbstractController
 {
     #[Route('/', name: 'app_user_prestations')]
-    public function index(Request $request, PrestationRepository $repo): Response
+    public function index(Request $request, PrestationRepository $repo, GeocodingService $geocoder, EntityManagerInterface $em): Response
     {
         $user = $this->getUser();
         $date = $request->query->get('date') ? new \DateTimeImmutable($request->query->get('date')) : new \DateTimeImmutable('today');
@@ -35,6 +36,18 @@ class PrestationUserController extends AbstractController
             ->getQuery()
             ->getResult();
 
+        // Geocode bons that haven't been resolved through BAN yet, so the Google Maps
+        // link + the mini-map inside the prestation view always use the corrected label.
+        $changed = false;
+        foreach ($prestations as $p) {
+            $bon = $p->getBonDeCommande();
+            if ($bon && $bon->getAdresseGpsOverride() === null) {
+                $geocoder->ensureGeocoded($bon);
+                $changed = true;
+            }
+        }
+        if ($changed) $em->flush();
+
         return $this->render('prestation_user/index.html.twig', [
             'prestations' => $prestations,
             'selectedDate' => $date,
@@ -42,9 +55,17 @@ class PrestationUserController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_user_prestation_view')]
-    public function view(Prestation $prestation, Request $request, EntityManagerInterface $em): Response {
+    public function view(Prestation $prestation, Request $request, EntityManagerInterface $em, GeocodingService $geocoder): Response {
         if ($prestation->getEmploye() !== $this->getUser()) {
             throw $this->createAccessDeniedException();
+        }
+
+        // Make sure the bon has been geocoded through BAN (first-time visitors trigger
+        // the lookup; next page load shows the corrected address instantly).
+        $bon = $prestation->getBonDeCommande();
+        if ($bon && $bon->getAdresseGpsOverride() === null) {
+            $geocoder->ensureGeocoded($bon);
+            $em->flush();
         }
 
         $editMode = $request->query->getBoolean('edit');
