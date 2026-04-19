@@ -59,6 +59,74 @@ class GeocodingService
     }
 
     /**
+     * Like geocode() but resilient to address mistakes: "45 rue Jean Jaurès" might not
+     * exist but "45 avenue Jean Jaurès" does. We try the original first, then strip the
+     * voie type (often enough on its own), then substitute it with common alternatives.
+     *
+     * @return array{coords: array{lat:float,lng:float}, matched: string}|null
+     *         `matched` is the variant that Nominatim accepted (to cache as an override).
+     */
+    public function geocodeWithFallbacks(string $address): ?array
+    {
+        $address = trim($address);
+        if ($address === '') return null;
+
+        $variants = $this->buildAddressVariants($address);
+        foreach ($variants as $v) {
+            // Skip variants already known to fail in this request
+            if (isset($this->failedAttempts[$v])) continue;
+            $coords = $this->geocode($v);
+            if ($coords !== null) {
+                return ['coords' => $coords, 'matched' => $v];
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Generates address variants to try in order of likelihood:
+     * 1. Original
+     * 2. Same address with the voie type removed (street search often works without it)
+     * 3. Substitute common alternative voie types (rue ↔ avenue ↔ boulevard ↔ …)
+     *
+     * @return string[]
+     */
+    private function buildAddressVariants(string $address): array
+    {
+        $variants = [$address];
+
+        // French voie types — word-boundary matches, case-insensitive, also with accents
+        $voieTypes = [
+            'rue', 'avenue', 'av', 'boulevard', 'bd', 'bld', 'blvd',
+            'place', 'allée', 'allee', 'chemin', 'impasse', 'imp',
+            'route', 'rte', 'chaussée', 'chaussee', 'square', 'cours',
+            'quai', 'passage', 'voie', 'esplanade', 'mail', 'parvis',
+        ];
+        $pattern = '/\b(' . implode('|', array_map(fn($t) => preg_quote($t, '/'), $voieTypes)) . ')\.?\s+/iu';
+
+        if (!preg_match($pattern, $address)) {
+            return $variants;
+        }
+
+        // Variant: strip the voie type completely ("45 rue Jean Jaurès" → "45 Jean Jaurès")
+        $stripped = preg_replace($pattern, '', $address, 1);
+        if ($stripped && $stripped !== $address) {
+            $variants[] = trim($stripped);
+        }
+
+        // Variants: substitute with each common alternative
+        $common = ['avenue', 'rue', 'boulevard', 'place', 'chemin', 'route', 'allée', 'impasse', 'cours'];
+        foreach ($common as $sub) {
+            $candidate = preg_replace($pattern, $sub . ' ', $address, 1);
+            if ($candidate && !in_array($candidate, $variants, true)) {
+                $variants[] = $candidate;
+            }
+        }
+
+        return $variants;
+    }
+
+    /**
      * @return array<string, string> Map of address → error reason for addresses that failed this request.
      */
     public function getFailedAttempts(): array
@@ -138,14 +206,23 @@ class GeocodingService
             return true;
         }
 
-        $coords = $this->geocode($address);
-        if ($coords === null) {
+        $result = $this->geocodeWithFallbacks($address);
+        if ($result === null) {
             return $bon->hasCoordonnees();
         }
 
-        $bon->setLatitude((string) $coords['lat']);
-        $bon->setLongitude((string) $coords['lng']);
-        $bon->setAdresseGeocodee($address);
+        $bon->setLatitude((string) $result['coords']['lat']);
+        $bon->setLongitude((string) $result['coords']['lng']);
+        $bon->setAdresseGeocodee($result['matched']);
+
+        // Auto-save the successful variant as an override so subsequent lookups
+        // are instant and the correction is visible in the UI. Only if it differs
+        // from the original address (don't overwrite a hand-typed override with
+        // the same thing).
+        if ($result['matched'] !== $address && $bon->getAdresseGpsOverride() === null) {
+            $bon->setAdresseGpsOverride($result['matched']);
+        }
+
         $this->em->persist($bon);
         return true;
     }
