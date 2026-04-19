@@ -674,6 +674,10 @@ body.dark-mode .ev-pop-row { color: #aaa; }
         <!-- FOOTER -->
         <div class="wizard-footer">
             <div class="confirm-summary" id="confirmBox"></div>
+            <div id="fixeConflictWarn" style="display:none; align-items:flex-start; gap:8px; padding:10px 12px; margin-bottom:10px; background:#fff4e5; border:1px solid #ffb74d; border-radius:6px; color:#b26500; font-size:0.9rem; line-height:1.35;">
+                <i class="material-icons" style="font-size:20px; color:#b26500;">error_outline</i>
+                <span class="fc-warn-msg" style="flex:1;"></span>
+            </div>
             <form method="post" action="{{ path('admin_planning_create_prestation') }}" onsubmit="return onSubmit(event)">
                 <input type="hidden" name="bon"         id="fBon">
                 <input type="hidden" name="employe"     id="fEmp">
@@ -948,9 +952,11 @@ function pickEmp(id, nom) {
         computeNextSlotTime(currentSlot).then(next => {
             document.getElementById('timeInp').value = next;
             refreshSummary();
+            checkFixeConflict();
         });
     } else {
         refreshSummary();
+        checkFixeConflict();
     }
 }
 
@@ -986,9 +992,11 @@ function onDateChange() {
         computeNextSlotTime(currentSlot).then(next => {
             document.getElementById('timeInp').value = next;
             refreshSummary();
+            checkFixeConflict();
         });
     } else {
         refreshSummary();
+        checkFixeConflict();
     }
 }
 // ====== SLOT HANDLING (Matin 9-12 / Après-midi 12-15 / Heure fixe) ======
@@ -1017,12 +1025,58 @@ function setSlot(slot) {
         const t = document.getElementById('timeInp');
         t.focus();
         if (typeof t.showPicker === 'function') { try { t.showPicker(); } catch(_) {} }
+        checkFixeConflict();
         return;
     }
     computeNextSlotTime(slot).then(next => {
         document.getElementById('timeInp').value = next;
         refreshSummary();
+        checkFixeConflict();
     });
+}
+
+// When currentSlot='fixe', delegate to the server to check whether the chosen time
+// leaves enough room (durée prestation + trajet) around the other fixed rdvs of the day.
+// Shows a warning with the earliest possible time and blocks the create button.
+let fixeConflict = false;
+let fixeCheckSeq = 0;
+function checkFixeConflict() {
+    const warnEl = document.getElementById('fixeConflictWarn');
+    const wasConflict = fixeConflict;
+    fixeConflict = false;
+    if (warnEl) warnEl.style.display = 'none';
+
+    const date  = document.getElementById('dateInp').value;
+    const heure = document.getElementById('timeInp').value;
+    const ready = selBon && selEmpId && date && heure;
+
+    if (currentSlot !== 'fixe' || !ready) {
+        if (wasConflict) document.getElementById('btnCreate').disabled = !ready;
+        return;
+    }
+
+    const seq = ++fixeCheckSeq;
+    const url = `/admin/planning/fixe-check?bon=${encodeURIComponent(selBon.id)}`
+              + `&employe=${encodeURIComponent(selEmpId)}`
+              + `&date=${encodeURIComponent(date)}`
+              + `&heure=${encodeURIComponent(heure)}`;
+    fetch(url)
+        .then(r => r.ok ? r.json() : { ok: true })
+        .then(data => {
+            if (seq !== fixeCheckSeq) return; // a newer request superseded this one
+            if (data && data.ok === false) {
+                fixeConflict = true;
+                if (warnEl) {
+                    warnEl.style.display = 'flex';
+                    warnEl.querySelector('.fc-warn-msg').textContent = data.message
+                        || 'Créneau indisponible à cette heure.';
+                }
+                document.getElementById('btnCreate').disabled = true;
+            } else if (wasConflict) {
+                document.getElementById('btnCreate').disabled = !ready;
+            }
+        })
+        .catch(() => {});
 }
 
 // Finds the next free start time in the chosen half-day for the selected date/employee,
@@ -1064,13 +1118,18 @@ function computeNextSlotTime(slot) {
 function onTimeChange() {
     const hm = document.getElementById('timeInp').value;
     if (hm) {
-        const m = hmToMin(hm);
-        if      (m >= hmToMin(SLOT_RANGES.matin.start) && m < hmToMin(SLOT_RANGES.matin.end)) currentSlot = 'matin';
-        else if (m >= hmToMin(SLOT_RANGES.aprem.start) && m < hmToMin(SLOT_RANGES.aprem.end)) currentSlot = 'aprem';
-        else currentSlot = 'fixe';
+        // Explicit "Heure fixe" sticks — the user wants this time pinned, even if it happens
+        // to fall inside matin/aprem range. Otherwise derive slot from time-of-day.
+        if (currentSlot !== 'fixe') {
+            const m = hmToMin(hm);
+            if      (m >= hmToMin(SLOT_RANGES.matin.start) && m < hmToMin(SLOT_RANGES.matin.end)) currentSlot = 'matin';
+            else if (m >= hmToMin(SLOT_RANGES.aprem.start) && m < hmToMin(SLOT_RANGES.aprem.end)) currentSlot = 'aprem';
+            else currentSlot = 'fixe';
+        }
         updateSlotButtons();
     }
     refreshSummary();
+    checkFixeConflict();
 }
 
 function setToday() {
@@ -1093,7 +1152,7 @@ function refreshSummary() {
     updateCalendarPreview();
 
     const ready = selBon && selEmpId && date && heure;
-    document.getElementById('btnCreate').disabled = !ready;
+    document.getElementById('btnCreate').disabled = !ready || fixeConflict;
 
     const box = document.getElementById('confirmBox');
     if (ready) {
