@@ -625,7 +625,8 @@ class BonDeCommandeController extends AbstractController
             $dateLimite = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
         }
 
-        if (!$numeroCommande && preg_match('/Commande\s*n.?\s*([A-Z0-9]{4,})/iu', $text, $m)) {
+        // Supports Partenord format (H95598) and Vilogia format (LOG/N38872)
+        if (!$numeroCommande && preg_match('/Commande\s*n.?\s*:?\s*([A-Z0-9][A-Z0-9\/]{3,})/iu', $text, $m)) {
             $numeroCommande = trim($m[1]);
             $firstChar      = $numeroCommande[0] ?? '';
             if (ctype_digit($firstChar)) {
@@ -636,11 +637,23 @@ class BonDeCommandeController extends AbstractController
             }
         }
 
+        // Partenord: "Logement Occupé : MME DUPONT Marie - Portable : ..."
         if (!$nomClient && preg_match('/Logement\s+Occup.+?\s*:\s*(?:MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)?(.+?)\s*-\s*(?:Portable|T[eé]l)/isu', $text, $m)) {
             $nomClient = trim($m[1]);
         }
 
+        // Vilogia: "Occupant actuel : M. MERIMI MOHAMMED 211051/76"
+        if (!$nomClient && preg_match('/Occupant\s+actuel\s*:\s*(?:M\.?\s*|MME?\.?\s+|MR?\s+)?(.+?)(?:\s+\d{5,}\/\d+)?\s*$/im', $text, $m)) {
+            $nomClient = trim($m[1]);
+        }
+
+        // Partenord phone from "Logement Occupé" line
         if (!$telephone && preg_match('/Logement\s+Occup.+?(?:Portable|T[eé]l[eé]phone)\s*:\s*(\d[\d\s]{8,})/isu', $text, $m)) {
+            $telephone = preg_replace('/\s+/', '', trim($m[1]));
+        }
+
+        // Vilogia phone: "domicile : bureau : portable : 0695348928" near "Occupant actuel"
+        if (!$telephone && preg_match('/Occupant\s+actuel.+?portable\s*:\s*(\d[\d\s]{8,})/isu', $text, $m)) {
             $telephone = preg_replace('/\s+/', '', trim($m[1]));
         }
 
@@ -676,10 +689,11 @@ class BonDeCommandeController extends AbstractController
 
         if (!$detectedTypeId) {
             foreach ($this->em->getRepository(TypePrestation::class)->findAll() as $tp) {
-                $code = $tp->getCode();
-                if ($code && stripos($text, $code) !== false) {
-                    $detectedTypeId = $tp->getId();
-                    break;
+                foreach ($tp->getAllCodesOcr() as $code) {
+                    if (stripos($text, $code) !== false) {
+                        $detectedTypeId = $tp->getId();
+                        break 2;
+                    }
                 }
             }
         }

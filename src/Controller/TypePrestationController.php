@@ -119,7 +119,12 @@ class TypePrestationController extends AbstractController
     private function handleForm(Request $request, TypePrestation $type, bool $isNew): Response
     {
         $type->setNom($request->request->get('nom'));
-        $type->setCode($request->request->get('code') ?: null);
+
+        // Multi-code OCR field: codes_all is a JSON array of all codes
+        $codesAllJson = $request->request->get('codes_all', '[]');
+        $codesAll     = array_values(array_filter(array_map('trim', (array) (json_decode($codesAllJson, true) ?: []))));
+        $type->setCode($codesAll[0] ?? null);
+        $type->setCodesOcr(count($codesAll) > 1 ? array_slice($codesAll, 1) : null);
         $type->setNombrePrestationsNecessaires((int) $request->request->get('nombrePrestationsNecessaires', 1));
         $type->setDureeTheoriqueMinutes($request->request->get('dureeTheoriqueMinutes') ? (int) $request->request->get('dureeTheoriqueMinutes') : null);
 

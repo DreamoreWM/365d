@@ -58,6 +58,10 @@ class TypePrestation
 
     #[ORM\Column(type: 'json', nullable: true)]
     #[Groups(['type:read', 'type:write', 'bon:read'])]
+    private ?array $codesOcr = null;
+
+    #[ORM\Column(type: 'json', nullable: true)]
+    #[Groups(['type:read', 'type:write', 'bon:read'])]
     private ?array $champsPersonnalises = null;
 
     #[ORM\Column(type: 'integer', nullable: true)]
@@ -83,6 +87,32 @@ class TypePrestation
     {
         $this->code = $code;
         return $this;
+    }
+
+    public function getCodesOcr(): ?array
+    {
+        return $this->codesOcr;
+    }
+
+    public function setCodesOcr(?array $codesOcr): static
+    {
+        $this->codesOcr = $codesOcr ?: null;
+        return $this;
+    }
+
+    /** Returns all OCR codes (primary + additional). */
+    public function getAllCodesOcr(): array
+    {
+        $codes = [];
+        if ($this->code) {
+            $codes[] = $this->code;
+        }
+        foreach ($this->codesOcr ?? [] as $c) {
+            if ($c) {
+                $codes[] = $c;
+            }
+        }
+        return $codes;
     }
 
     public function getChampsPersonnalises(): ?array
