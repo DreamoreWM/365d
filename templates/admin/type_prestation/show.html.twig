@@ -312,9 +312,20 @@
             <div class="info-box">
                 <div class="info-box-label">
                     <i class="material-icons">qr_code</i>
-                    <span>Code OCR</span>
+                    <span>Codes OCR</span>
                 </div>
-                <div class="info-box-value" style="font-size: 1.5rem;">{{ type.code ?? '—' }}</div>
+                {% set allCodes = type.allCodesOcr %}
+                {% if allCodes is not empty %}
+                    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
+                        {% for code in allCodes %}
+                            <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;background:rgba(63,81,181,0.12);color:var(--primary);border-radius:16px;font-size:0.9rem;font-weight:500;">
+                                <i class="material-icons" style="font-size:14px;">qr_code</i>{{ code }}
+                            </span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="info-box-value" style="font-size: 1.5rem;">—</div>
+                {% endif %}
             </div>
 
             <div class="info-box">

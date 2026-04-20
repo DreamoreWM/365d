@@ -123,23 +123,29 @@ h2{color:#4fc3f7;margin:0 0 16px}
                     $result .= "Date limite  : NON TROUVÉE\n";
                 }
 
-                // Commande
-                if (preg_match('/Commande\s*n.?\s*([A-Z0-9]{4,})/iu', $text, $m)) {
+                // Commande (Partenord: H95598 / Vilogia: LOG/N38872)
+                if (preg_match('/Commande\s*n.?\s*:?\s*([A-Z0-9][A-Z0-9\/]{3,})/iu', $text, $m)) {
                     $result .= "N° Commande  : " . trim($m[1]) . "\n";
                 } else {
                     $result .= "N° Commande  : NON TROUVÉ\n";
                 }
 
-                // Locataire
+                // Locataire Partenord: "Logement Occupé : MME DUPONT Marie - Portable : ..."
                 if (preg_match('/Logement\s+Occup.+?\s*:\s*(?:MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)?(.+?)\s*-\s*(?:Portable|T[eé]l)/isu', $text, $m)) {
-                    $result .= "Nom locataire: " . trim($m[1]) . "\n";
+                    $result .= "Nom locataire: " . trim($m[1]) . " (Partenord)\n";
+                // Locataire Vilogia: "Occupant actuel : M. MERIMI MOHAMMED 211051/76"
+                } elseif (preg_match('/Occupant\s+actuel\s*:\s*(?:M\.?\s*|MME?\.?\s+|MR?\s+)?(.+?)(?:\s+\d{5,}\/\d+)?\s*$/im', $text, $m)) {
+                    $result .= "Nom locataire: " . trim($m[1]) . " (Vilogia)\n";
                 } else {
                     $result .= "Nom locataire: NON TROUVÉ\n";
                 }
 
-                // Téléphone locataire
+                // Téléphone Partenord
                 if (preg_match('/Logement\s+Occup.+?(?:Portable|T[eé]l[eé]phone)\s*:\s*(\d[\d\s]{8,})/isu', $text, $m)) {
-                    $result .= "Téléphone    : " . preg_replace('/\s+/', '', trim($m[1])) . "\n";
+                    $result .= "Téléphone    : " . preg_replace('/\s+/', '', trim($m[1])) . " (Partenord)\n";
+                // Téléphone Vilogia: "domicile : bureau : portable : 0695348928"
+                } elseif (preg_match('/Occupant\s+actuel.+?portable\s*:\s*(\d[\d\s]{8,})/isu', $text, $m)) {
+                    $result .= "Téléphone    : " . preg_replace('/\s+/', '', trim($m[1])) . " (Vilogia)\n";
                 } else {
                     $result .= "Téléphone    : NON TROUVÉ\n";
                 }
