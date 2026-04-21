@@ -185,6 +185,62 @@ class PlanningController extends AbstractController
         return CreneauPrestation::FIXE;
     }
 
+    /**
+     * After optimization, adds flash warnings when flexible prestations overflow their half-day
+     * window: MATIN prestations spilling into the lunch break, or APREM past end-of-day.
+     */
+    private function warnIfDayOverflows(\DateTimeImmutable $date, User $employe): void
+    {
+        $start = $date->setTime(0, 0, 0);
+        $end   = $date->setTime(23, 59, 59);
+
+        $prestations = $this->prestationRepo->createQueryBuilder('p')
+            ->leftJoin('p.bonDeCommande', 'b')->addSelect('b')
+            ->leftJoin('p.typePrestation', 't')->addSelect('t')
+            ->where('p.datePrestation >= :start')
+            ->andWhere('p.datePrestation <= :end')
+            ->andWhere('p.employe = :emp')
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->setParameter('emp', $employe)
+            ->getQuery()->getResult();
+
+        $pauseDebMin = $this->hmToMin($this->parametres->get(ParametreService::HEURE_PAUSE_DEBUT));
+        $pauseFinMin = $this->hmToMin($this->parametres->get(ParametreService::HEURE_PAUSE_FIN));
+        $finMin      = $this->hmToMin($this->parametres->get(ParametreService::HEURE_FIN_JOURNEE));
+        $defDur      = $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES);
+
+        $matinOverflow = false;
+        $apremOverflow = false;
+
+        foreach ($prestations as $p) {
+            if ($p->getCreneau() === CreneauPrestation::FIXE) continue;
+
+            $startMin = (int) $p->getDatePrestation()->format('H') * 60
+                      + (int) $p->getDatePrestation()->format('i');
+            $dur = $p->getDureeMinutes()
+                ?? $p->getTypePrestation()?->getDureeTheoriqueMinutes()
+                ?? $defDur;
+            $endMin = $startMin + $dur;
+
+            if ($startMin < $pauseDebMin && $endMin > $pauseDebMin) {
+                $matinOverflow = true;
+            }
+            if ($startMin >= $pauseFinMin && $endMin > $finMin) {
+                $apremOverflow = true;
+            }
+        }
+
+        if ($matinOverflow) {
+            $this->addFlash('warning',
+                'Une ou plusieurs prestations du matin débordent sur la pause déjeuner après optimisation de la tournée.');
+        }
+        if ($apremOverflow) {
+            $this->addFlash('warning',
+                "Une ou plusieurs prestations de l'après-midi dépassent l'heure de fin de journée après optimisation de la tournée.");
+        }
+    }
+
     // =====================================================
     // PAGE PRINCIPALE DU PLANNING
     // =====================================================
@@ -328,6 +384,7 @@ class PlanningController extends AbstractController
                     count($diag['notGeocoded']), $noms, $reste > 0 ? " (+$reste autres)" : ''
                 ));
             }
+            $this->warnIfDayOverflows($dateTime, $employe);
         } catch (\Throwable $e) {
             // Optimization is best-effort — never block creation
         }
@@ -406,6 +463,7 @@ class PlanningController extends AbstractController
             } else {
                 $this->addFlash('success', 'Tournée recalculée.');
             }
+            $this->warnIfDayOverflows($date, $employe);
         } catch (\Throwable $e) {
             $this->addFlash('danger', 'Erreur lors de l\'optimisation : ' . $e->getMessage());
         }

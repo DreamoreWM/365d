@@ -1124,6 +1124,14 @@ function computeNextSlotTime(slot) {
                     ? 'Le créneau du matin est complet — ajustez l\'heure manuellement.'
                     : 'Le créneau de l\'après-midi est complet — ajustez l\'heure manuellement.');
                 cursor = rangeEndMin;
+            } else {
+                // Warn if adding the new prestation (with its duration) would overflow the slot.
+                const newDur = selBon?.dureeMinutes ?? 30;
+                if (cursor + newDur > rangeEndMin) {
+                    showToast('warning', slot === 'matin'
+                        ? `Attention : cette prestation (${newDur} min) déborderait sur la pause déjeuner (fin estimée ${minToHm(cursor + newDur)}).`
+                        : `Attention : cette prestation (${newDur} min) dépasserait la fin de journée (fin estimée ${minToHm(cursor + newDur)}).`);
+                }
             }
             return minToHm(cursor);
         })
