@@ -659,6 +659,10 @@ body.dark-mode .ev-pop-row { color: #aaa; }
                         <button class="quick-btn" id="slotFixe"   onclick="setSlot('fixe')">Heure fixe</button>
                         <button class="quick-btn" onclick="setToday()">Aujourd'hui</button>
                     </div>
+                    <div id="slotOptInfo" style="display:none; align-items:flex-start; gap:6px; margin-top:8px; font-size:0.82rem; color:#888; line-height:1.35;">
+                        <i class="material-icons" style="font-size:15px; margin-top:1px; flex-shrink:0;">info_outline</i>
+                        <span>L'heure indiquée est une estimation. L'optimiseur ajustera l'horaire selon l'ordre de passage et les temps de trajet réels.</span>
+                    </div>
                     <div style="margin-top:12px;">
                         <div class="field-lbl">Note pour le technicien</div>
                         <textarea id="noteInp" class="field-inp" rows="3"
@@ -1013,6 +1017,8 @@ function updateSlotButtons() {
         const el = document.getElementById('slot' + s.charAt(0).toUpperCase() + s.slice(1));
         if (el) el.classList.toggle('active', currentSlot === s);
     });
+    const info = document.getElementById('slotOptInfo');
+    if (info) info.style.display = (currentSlot === 'matin' || currentSlot === 'aprem') ? 'flex' : 'none';
 }
 
 function hmToMin(hm) { const [h,m] = hm.split(':').map(Number); return h*60 + m; }
@@ -1094,6 +1100,7 @@ function computeNextSlotTime(slot) {
             const rangeStartMin = hmToMin(range.start);
             const rangeEndMin   = hmToMin(range.end);
             let cursor = rangeStartMin;
+            let lastTrajetMin = 0;
             (evs || []).forEach(e => {
                 const s = (e.start || '').slice(11,16);
                 const en = (e.end   || '').slice(11,16);
@@ -1102,8 +1109,16 @@ function computeNextSlotTime(slot) {
                 const eMin = en ? hmToMin(en) : sMin + 60;
                 if (sMin >= rangeStartMin && sMin < rangeEndMin && eMin > cursor) {
                     cursor = eMin;
+                    // Keep the travel time of the last event in the slot as a proxy for
+                    // the travel time from that location to the next (new) prestation.
+                    lastTrajetMin = e.extendedProps?.dureeTrajetMinutes ?? 0;
                 }
             });
+            // When there are existing events, add an estimated travel time to the new
+            // prestation so the pre-fill matches more closely what the optimizer will produce.
+            if (cursor > rangeStartMin) {
+                cursor += Math.max(lastTrajetMin, 5);
+            }
             if (cursor >= rangeEndMin) {
                 showToast('info', slot === 'matin'
                     ? 'Le créneau du matin est complet — ajustez l\'heure manuellement.'
