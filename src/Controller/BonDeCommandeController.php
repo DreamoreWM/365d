@@ -625,6 +625,11 @@ class BonDeCommandeController extends AbstractController
             $dateLimite = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
         }
 
+        // ICF Habitat: "COMMANDE N° RNE 15/745676/E" (multi-word number with space)
+        if (!$numeroCommande && preg_match('/Commande\s+N.?\s+([A-Z]{2,}\s+\S+)/iu', $text, $m)) {
+            $numeroCommande = trim($m[1]);
+        }
+
         // Supports Partenord format (H95598) and Vilogia format (LOG/N38872)
         if (!$numeroCommande && preg_match('/Commande\s*n.?\s*:?\s*([A-Z0-9][A-Z0-9\/]{3,})/iu', $text, $m)) {
             $numeroCommande = trim($m[1]);
@@ -678,6 +683,10 @@ class BonDeCommandeController extends AbstractController
                 }
                 if (!$codePostalVille && preg_match('/^\d{5}\s+[A-ZÉÈÊÀÂ\s-]+$/u', $line)) {
                     $codePostalVille = trim($line);
+                }
+                // ICF Habitat reversed format: "LILLE 59800"
+                if (!$codePostalVille && preg_match('/^([A-ZÉÈÊÀÂ][A-ZÉÈÊÀÂ\s-]{2,})\s+(\d{5})$/u', $line, $cp)) {
+                    $codePostalVille = trim($cp[2]) . ' ' . trim($cp[1]);
                 }
             }
             if ($codePostalVille && $adresse) {

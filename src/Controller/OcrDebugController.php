@@ -123,8 +123,10 @@ h2{color:#4fc3f7;margin:0 0 16px}
                     $result .= "Date limite  : NON TROUVÉE\n";
                 }
 
-                // Commande (Partenord: H95598 / Vilogia: LOG/N38872)
-                if (preg_match('/Commande\s*n.?\s*:?\s*([A-Z0-9][A-Z0-9\/]{3,})/iu', $text, $m)) {
+                // Commande: ICF Habitat (RNE 15/745676/E) / Vilogia (LOG/N38872) / Partenord (H95598)
+                if (preg_match('/Commande\s+N.?\s+([A-Z]{2,}\s+\S+)/iu', $text, $m)) {
+                    $result .= "N° Commande  : " . trim($m[1]) . " (ICF)\n";
+                } elseif (preg_match('/Commande\s*n.?\s*:?\s*([A-Z0-9][A-Z0-9\/]{3,})/iu', $text, $m)) {
                     $result .= "N° Commande  : " . trim($m[1]) . "\n";
                 } else {
                     $result .= "N° Commande  : NON TROUVÉ\n";
@@ -133,9 +135,9 @@ h2{color:#4fc3f7;margin:0 0 16px}
                 // Locataire Partenord: "Logement Occupé : MME DUPONT Marie - Portable : ..."
                 if (preg_match('/Logement\s+Occup.+?\s*:\s*(?:MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)?(.+?)\s*-\s*(?:Portable|T[eé]l)/isu', $text, $m)) {
                     $result .= "Nom locataire: " . trim($m[1]) . " (Partenord)\n";
-                // Locataire Vilogia: "Occupant actuel : M. MERIMI MOHAMMED 211051/76"
+                // Locataire Vilogia/ICF: "Occupant actuel : M. MERIMI MOHAMMED 211051/76"
                 } elseif (preg_match('/Occupant\s+actuel\s*:\s*(?:M\.?\s*|MME?\.?\s+|MR?\s+)?(.+?)(?:\s+\d{5,}\/\d+)?\s*$/im', $text, $m)) {
-                    $result .= "Nom locataire: " . trim($m[1]) . " (Vilogia)\n";
+                    $result .= "Nom locataire: " . trim($m[1]) . " (Vilogia/ICF)\n";
                 } else {
                     $result .= "Nom locataire: NON TROUVÉ\n";
                 }
@@ -143,9 +145,9 @@ h2{color:#4fc3f7;margin:0 0 16px}
                 // Téléphone Partenord
                 if (preg_match('/Logement\s+Occup.+?(?:Portable|T[eé]l[eé]phone)\s*:\s*(\d[\d\s]{8,})/isu', $text, $m)) {
                     $result .= "Téléphone    : " . preg_replace('/\s+/', '', trim($m[1])) . " (Partenord)\n";
-                // Téléphone Vilogia: "domicile : bureau : portable : 0695348928"
+                // Téléphone Vilogia/ICF: "portable : 0695348928" near "Occupant actuel"
                 } elseif (preg_match('/Occupant\s+actuel.+?portable\s*:\s*(\d[\d\s]{8,})/isu', $text, $m)) {
-                    $result .= "Téléphone    : " . preg_replace('/\s+/', '', trim($m[1])) . " (Vilogia)\n";
+                    $result .= "Téléphone    : " . preg_replace('/\s+/', '', trim($m[1])) . " (Vilogia/ICF)\n";
                 } else {
                     $result .= "Téléphone    : NON TROUVÉ\n";
                 }
@@ -165,11 +167,14 @@ h2{color:#4fc3f7;margin:0 0 16px}
                 }
                 if (!$found) $result .= "Adresse      : NON TROUVÉE\n";
 
-                // Code postal
+                // Code postal (standard: "59800 LILLE", ou ICF inversé: "LILLE 59800")
                 $found = false;
                 foreach (array_slice($allLines, $startIndex) as $line) {
                     if (preg_match('/^\d{5}\s+[A-ZÉÈÊÀÂ\s-]+$/u', $line)) {
                         $result .= "CP + Ville   : $line\n"; $found = true; break;
+                    }
+                    if (preg_match('/^([A-ZÉÈÊÀÂ][A-ZÉÈÊÀÂ\s-]{2,})\s+(\d{5})$/u', $line, $cp)) {
+                        $result .= "CP + Ville   : " . trim($cp[2]) . ' ' . trim($cp[1]) . " (inversé ICF)\n"; $found = true; break;
                     }
                 }
                 if (!$found) $result .= "CP + Ville   : NON TROUVÉ\n";
