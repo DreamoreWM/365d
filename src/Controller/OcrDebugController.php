@@ -143,50 +143,52 @@ h2{color:#4fc3f7;margin:0 0 16px}
                 }
 
                 // Téléphone Partenord
+                $telFound = false;
                 if (preg_match('/Logement\s+Occup.+?(?:Portable|T[eé]l[eé]phone)\s*:\s*(\d[\d\s]{8,})/isu', $text, $m)) {
                     $result .= "Téléphone    : " . preg_replace('/\s+/', '', trim($m[1])) . " (Partenord)\n";
-                // Téléphone Vilogia/ICF: "portable : 0695348928" near "Occupant actuel"
-                } elseif (preg_match('/Occupant\s+actuel.+?portable\s*:\s*(\d[\d\s]{8,})/isu', $text, $m)) {
-                    $result .= "Téléphone    : " . preg_replace('/\s+/', '', trim($m[1])) . " (Vilogia/ICF)\n";
-                } else {
-                    $result .= "Téléphone    : NON TROUVÉ\n";
+                    $telFound = true;
                 }
+                // Vilogia/ICF: portable on the line immediately after "Occupant actuel"
+                if (!$telFound) {
+                    foreach ($allLines as $i => $line) {
+                        if (preg_match('/Occupant\s+actuel\s*:/iu', $line)) {
+                            for ($j = $i + 1; $j <= min($i + 3, count($allLines) - 1); $j++) {
+                                if (preg_match('/portable\s*:\s*(\d[\d\s]{8,})/iu', $allLines[$j], $m)) {
+                                    $result .= "Téléphone    : " . preg_replace('/\s+/', '', trim($m[1])) . " (Vilogia/ICF)\n";
+                                    $telFound = true; break 2;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+                if (!$telFound) $result .= "Téléphone    : NON TROUVÉ\n";
 
-                // Adresse
+                // Adresse + CP + Complément (stop at "Gardien" to avoid picking up gardien's address)
                 $startIndex = 0;
                 foreach ($allLines as $i => $line) {
                     if (stripos($line, 'Prestation') !== false && stripos($line, 'Privatives') !== false) {
                         $startIndex = $i + 1; break;
                     }
                 }
-                $found = false;
+                $adresseFound = $cpFound = $compFound = false;
                 foreach (array_slice($allLines, $startIndex) as $line) {
-                    if (preg_match('/\d+\s+(RUE|AVENUE|AV|BOULEVARD|BD|ALL[EÉ]E|IMPASSE|CHEMIN|PLACE|ROUTE|PASSAGE|VOIE)\b/i', $line)) {
-                        $result .= "Adresse      : $line\n"; $found = true; break;
+                    if (preg_match('/^Gardien\s*:/iu', $line)) break;
+                    if (!$adresseFound && preg_match('/\d+\s+(RUE|AVENUE|AV|BOULEVARD|BD|ALL[EÉ]E|IMPASSE|CHEMIN|PLACE|ROUTE|PASSAGE|VOIE)\b/i', $line)) {
+                        $result .= "Adresse      : $line\n"; $adresseFound = true;
+                    }
+                    if (!$compFound && preg_match('/Logement\s+(?:\w+\s+)?n.?\s*\d+/iu', $line)) {
+                        $result .= "Complément   : $line\n"; $compFound = true;
+                    }
+                    if (!$cpFound && preg_match('/^\d{5}\s+[A-ZÉÈÊÀÂ\s-]+$/u', $line)) {
+                        $result .= "CP + Ville   : $line\n"; $cpFound = true;
+                    } elseif (!$cpFound && preg_match('/^([A-ZÉÈÊÀÂ][A-ZÉÈÊÀÂ\s-]{2,})\s+(\d{5})$/u', $line, $cp)) {
+                        $result .= "CP + Ville   : " . trim($cp[2]) . ' ' . trim($cp[1]) . " (inversé ICF)\n"; $cpFound = true;
                     }
                 }
-                if (!$found) $result .= "Adresse      : NON TROUVÉE\n";
-
-                // Code postal (standard: "59800 LILLE", ou ICF inversé: "LILLE 59800")
-                $found = false;
-                foreach (array_slice($allLines, $startIndex) as $line) {
-                    if (preg_match('/^\d{5}\s+[A-ZÉÈÊÀÂ\s-]+$/u', $line)) {
-                        $result .= "CP + Ville   : $line\n"; $found = true; break;
-                    }
-                    if (preg_match('/^([A-ZÉÈÊÀÂ][A-ZÉÈÊÀÂ\s-]{2,})\s+(\d{5})$/u', $line, $cp)) {
-                        $result .= "CP + Ville   : " . trim($cp[2]) . ' ' . trim($cp[1]) . " (inversé ICF)\n"; $found = true; break;
-                    }
-                }
-                if (!$found) $result .= "CP + Ville   : NON TROUVÉ\n";
-
-                // Complément
-                $found = false;
-                foreach ($allLines as $line) {
-                    if (preg_match('/LOGEMENT\s*n.?\s*\d+/iu', $line)) {
-                        $result .= "Complément   : $line\n"; $found = true; break;
-                    }
-                }
-                if (!$found) $result .= "Complément   : NON TROUVÉ\n";
+                if (!$adresseFound) $result .= "Adresse      : NON TROUVÉE\n";
+                if (!$cpFound) $result .= "CP + Ville   : NON TROUVÉ\n";
+                if (!$compFound) $result .= "Complément   : NON TROUVÉ\n";
             }
 
             @unlink($tmpPath);
