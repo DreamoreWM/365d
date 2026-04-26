@@ -6,9 +6,15 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class DeployController extends AbstractController
 {
+    public function __construct(
+        private readonly HttpClientInterface $httpClient,
+        private readonly string $discordDeployWebhook = '',
+    ) {}
+
     #[Route('/deploy', name: 'deploy_webhook', methods: ['POST'])]
     public function deploy(Request $request): Response
     {
@@ -44,6 +50,7 @@ class DeployController extends AbstractController
         }
 
         $log('Signature valide, déploiement détaché en arrière-plan');
+        $this->notifyDiscord('🚀 Déploiement lancé', 0x3498db);
 
         // Sur certains SAPI (php -S, apache en mode non-fastcgi, proxys type ngrok…)
         // les fallbacks ob_end_flush / flush() ne coupent pas la connexion TCP : la
@@ -81,15 +88,44 @@ class DeployController extends AbstractController
             'echo "--- $(date \'+%Y-%m-%d %H:%M:%S\') MIGRATIONS ---"',
             'php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration --env=' . escapeshellarg($env),
             'echo "--- $(date \'+%Y-%m-%d %H:%M:%S\') DEPLOY TERMINÉ ---"',
+            'php bin/console app:discord:deploy-status success --env=' . escapeshellarg($env),
         ];
         $script = implode(' && ', $steps);
 
+        $failScript = sprintf(
+            'php bin/console app:discord:deploy-status failed --env=%s',
+            escapeshellarg($env),
+        );
+
         $cmd = sprintf(
             'nohup bash -c %s >> %s 2>&1 &',
-            escapeshellarg($script),
+            escapeshellarg(sprintf('(%s) || (cd %s && %s)', $script, escapeshellarg($projectDir), $failScript)),
             escapeshellarg($logFile),
         );
         exec($cmd);
+    }
+
+    private function notifyDiscord(string $title, int $color): void
+    {
+        if (empty($this->discordDeployWebhook)) {
+            return;
+        }
+
+        try {
+            $this->httpClient->request('POST', $this->discordDeployWebhook, [
+                'json' => [
+                    'username' => '365d Deploy',
+                    'embeds'   => [[
+                        'title'     => $title,
+                        'color'     => $color,
+                        'timestamp' => (new \DateTimeImmutable())->format('c'),
+                        'footer'    => ['text' => '365d · ' . ($_SERVER['APP_ENV'] ?? 'prod')],
+                    ]],
+                ],
+                'timeout' => 5,
+            ]);
+        } catch (\Throwable) {
+        }
     }
 
     private function runInline(string $projectDir, string $logFile): void

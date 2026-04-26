@@ -35,3 +35,28 @@ services:
         decorates: 'api_platform.serializer.context_builder'
         arguments:
             $decorated: '@.inner'
+
+    # Monolog handlers Discord (level 400 = ERROR, level 500 = CRITICAL)
+    app.monolog.discord_errors:
+        class: App\Monolog\DiscordHandler
+        autowire: false
+        arguments:
+            - '@http_client'
+            - '%env(default::DISCORD_WEBHOOK_ERRORS)%'
+            - 400
+
+    app.monolog.discord_critical:
+        class: App\Monolog\DiscordHandler
+        autowire: false
+        arguments:
+            - '@http_client'
+            - '%env(default::DISCORD_WEBHOOK_CRITICAL)%'
+            - 500
+
+    App\Command\DiscordDeployNotifyCommand:
+        arguments:
+            $webhookUrl: '%env(default::DISCORD_WEBHOOK_DEPLOY)%'
+
+    App\Controller\DeployController:
+        arguments:
+            $discordDeployWebhook: '%env(default::DISCORD_WEBHOOK_DEPLOY)%'
