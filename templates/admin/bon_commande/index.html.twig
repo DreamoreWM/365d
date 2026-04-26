@@ -429,8 +429,12 @@
     /* ==================== ROW HIGHLIGHTING ==================== */
     tr.row-urgent { background-color: rgba(220, 53, 69, 0.08) !important; }
     tr.row-warning { background-color: rgba(255, 193, 7, 0.08) !important; }
+    tr.row-cooldown { background-color: rgba(21, 101, 192, 0.05) !important; opacity: 0.85; }
     body.dark-mode tr.row-urgent { background-color: rgba(220, 53, 69, 0.15) !important; }
     body.dark-mode tr.row-warning { background-color: rgba(255, 193, 7, 0.15) !important; }
+    body.dark-mode tr.row-cooldown { background-color: rgba(21, 101, 192, 0.1) !important; }
+    .badge-cooldown { background: #1565c0; color: white; font-size: 10px; padding: 1px 6px; border-radius: 8px; margin-left: 4px; }
+    .badge-peu-reactif { background: #6d4c41; color: white; font-size: 10px; padding: 1px 6px; border-radius: 8px; margin-left: 4px; }
 
     /* ==================== DEADLINE STYLES ==================== */
     .deadline-depassee { color: #dc3545; font-weight: 600; }
@@ -855,7 +859,7 @@
                     </thead>
                     <tbody>
                         {% for bon in bonDeCommandes %}
-                            <tr class="{{ (bon.statut.value == 'à programmer' and (bon.hasNonEffectuee() or bon.isDeadlineDepassee())) ? 'row-urgent' : ((bon.statut.value == 'à programmer' and bon.isDeadlineProche()) ? 'row-warning' : '') }}">
+                            <tr class="{{ bon.estEnCooldown() ? 'row-cooldown' : ((bon.statut.value == 'à programmer' and (bon.hasNonEffectuee() or bon.isDeadlineDepassee())) ? 'row-urgent' : ((bon.statut.value == 'à programmer' and bon.isDeadlineProche()) ? 'row-warning' : '')) }}">
                                 <td>
                                     <strong>{{ bon.numeroCommande ?? '#' ~ bon.id }}</strong>
                                 </td>
@@ -863,7 +867,11 @@
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <i class="material-icons" style="color: var(--primary); font-size: 20px;">person</i>
                                         <div>
-                                            <div style="font-weight: 500;">{{ bon.clientNom }}</div>
+                                            <div style="font-weight: 500;">
+                                                {{ bon.clientNom }}
+                                                {% if bon.estPeuReactif() %}<span class="badge-peu-reactif">Peu réactif</span>{% endif %}
+                                                {% if bon.estEnCooldown() %}<span class="badge-cooldown">⏳ En attente</span>{% endif %}
+                                            </div>
                                             <div style="font-size: 0.875rem; color: #757575;">{{ bon.clientAdresse }}</div>
                                         </div>
                                     </div>

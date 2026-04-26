@@ -113,6 +113,16 @@ class BonDeCommande
     #[Groups(['bon:read'])]
     private ?string $longitude = null;
 
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $prochainRelancePossible = null;
+
+    #[ORM\Column(type: 'integer')]
+    private int $nombreRelances = 0;
+
+    #[ORM\OneToMany(mappedBy: 'bonDeCommande', targetEntity: Relance::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['dateRelance' => 'DESC'])]
+    private Collection $relances;
+
     /** Cached "address that was geocoded" — used to detect when a re-geocode is needed. */
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $adresseGeocodee = null;
@@ -147,6 +157,7 @@ class BonDeCommande
     public function __construct()
     {
         $this->prestations = new ArrayCollection();
+        $this->relances = new ArrayCollection();
         $this->dateCommande = new \DateTimeImmutable();
         $this->statut = StatutBonDeCommande::A_PROGRAMMER;
         $this->nombrePrestations = 0;
@@ -429,5 +440,31 @@ class BonDeCommande
             return false;
         }
         return $this->dateLimiteExecution < new \DateTimeImmutable('today');
+    }
+
+    public function getProchainRelancePossible(): ?\DateTimeImmutable { return $this->prochainRelancePossible; }
+    public function setProchainRelancePossible(?\DateTimeImmutable $v): self { $this->prochainRelancePossible = $v; return $this; }
+
+    public function getNombreRelances(): int { return $this->nombreRelances; }
+    public function setNombreRelances(int $n): self { $this->nombreRelances = $n; return $this; }
+
+    /** @return Collection<int, Relance> */
+    public function getRelances(): Collection { return $this->relances; }
+
+    public function estEnCooldown(): bool
+    {
+        return $this->prochainRelancePossible !== null
+            && $this->prochainRelancePossible > new \DateTimeImmutable();
+    }
+
+    public function estPeuReactif(int $seuil = 4): bool
+    {
+        return $this->nombreRelances >= $seuil;
+    }
+
+    public function enregistrerRelance(int $cooldownHeures = 24): void
+    {
+        $this->nombreRelances++;
+        $this->prochainRelancePossible = new \DateTimeImmutable("+{$cooldownHeures} hours");
     }
 }
