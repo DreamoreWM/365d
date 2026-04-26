@@ -60,3 +60,9 @@ when@prod:
                 channels: [deprecation]
                 path: php://stderr
                 formatter: monolog.formatter.json
+            discord_errors:
+                type: service
+                id: app.monolog.discord_errors
+            discord_critical:
+                type: service
+                id: app.monolog.discord_critical
