@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\BonDeCommande;
+use App\Entity\Relance;
 use App\Entity\TypePrestation;
 use App\Enum\StatutBonDeCommande;
 use App\Enum\StatutPrestation;
@@ -90,12 +91,37 @@ class BonDeCommandeController extends AbstractController
                ->setParameter('statutTab', StatutBonDeCommande::TERMINE);
         }
 
-        // Tri prioritaire : urgents d'abord, puis deadline proche, puis date commande
-        $qb->addOrderBy('b.statut', 'ASC') // à programmer < programmé < en cours < terminé
-           ->addOrderBy('b.dateLimiteExecution', 'ASC') // deadline la plus proche d'abord
+        // Pré-tri SQL : rough ordering avant le tri PHP métier
+        $qb->addOrderBy('b.dateLimiteExecution', 'ASC')
            ->addOrderBy('b.dateCommande', 'DESC');
 
         $bonDeCommandes = $qb->getQuery()->getResult();
+
+        // Tri PHP : cooldown et réactivité client en priorité
+        $statutOrder = ['à programmer' => 0, 'programmé' => 1, 'en cours' => 2, 'terminé' => 3];
+        usort($bonDeCommandes, static function (BonDeCommande $a, BonDeCommande $b) use ($statutOrder): int {
+            // 1. Bons NON en cooldown avant ceux en cooldown
+            $cmp = (int) $a->estEnCooldown() - (int) $b->estEnCooldown();
+            if ($cmp !== 0) return $cmp;
+
+            // 2. Clients réactifs avant clients peu réactifs
+            $cmp = (int) $a->estPeuReactif() - (int) $b->estPeuReactif();
+            if ($cmp !== 0) return $cmp;
+
+            // 3. Statut (à programmer d'abord)
+            $cmp = ($statutOrder[$a->getStatut()->value] ?? 99) - ($statutOrder[$b->getStatut()->value] ?? 99);
+            if ($cmp !== 0) return $cmp;
+
+            // 4. Deadline la plus proche d'abord (null en dernier)
+            $aDate = $a->getDateLimiteExecution();
+            $bDate = $b->getDateLimiteExecution();
+            if ($aDate && $bDate) return $aDate <=> $bDate;
+            if ($aDate) return -1;
+            if ($bDate) return 1;
+
+            // 5. Commande la plus récente d'abord
+            return $b->getDateCommande() <=> $a->getDateCommande();
+        });
 
         // Compter les bons par statut en une seule requête GROUP BY
         $rows = $this->repository->createQueryBuilder('bc')
@@ -278,6 +304,36 @@ class BonDeCommandeController extends AbstractController
 
         $this->addFlash('success', "Le bon de commande a été réouvert. {$prestationsSupplementaires} prestation(s) supplémentaire(s) requise(s).");
 
+        return $this->redirectToRoute('admin_bon_commande_show', ['id' => $bon->getId()]);
+    }
+
+    // =====================================================
+    // RELANCER UN BON
+    // =====================================================
+    #[Route('/{id}/relancer', name: 'admin_bon_commande_relancer', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function relancer(Request $request, BonDeCommande $bon): Response
+    {
+        if (!$this->isCsrfTokenValid('relancer' . $bon->getId(), $request->request->get('_token'))) {
+            $this->addFlash('danger', 'Token CSRF invalide');
+            return $this->redirectToRoute('admin_bon_commande_show', ['id' => $bon->getId()]);
+        }
+
+        if ($bon->estEnCooldown()) {
+            $this->addFlash('warning', 'Une relance a déjà été enregistrée récemment pour ce bon. Attendez avant de relancer.');
+            return $this->redirectToRoute('admin_bon_commande_show', ['id' => $bon->getId()]);
+        }
+
+        $relance = new Relance();
+        $relance->setBonDeCommande($bon);
+        $relance->setNote($request->request->get('note') ?: null);
+        $relance->setAuteur($this->getUser());
+
+        $bon->enregistrerRelance();
+
+        $this->em->persist($relance);
+        $this->em->flush();
+
+        $this->addFlash('success', 'Relance enregistrée. Ce bon sera remis en tête de liste dans 24h.');
         return $this->redirectToRoute('admin_bon_commande_show', ['id' => $bon->getId()]);
     }
 
