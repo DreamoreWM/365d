@@ -463,6 +463,9 @@ class BonDeCommandeController extends AbstractController
     #[Route('/import-ocr-multi', name: 'admin_bon_commande_import_ocr_multi', methods: ['POST'])]
     public function importViaOcrMulti(Request $request): JsonResponse
     {
+        ini_set('memory_limit', '512M');
+        set_time_limit(300);
+
         $files = $request->files->get('photos') ?? [];
         if (empty($files)) {
             return new JsonResponse(['success' => false, 'error' => 'Aucun fichier reçu'], 400);
@@ -490,35 +493,53 @@ class BonDeCommandeController extends AbstractController
                 FILE_APPEND
             );
 
-            if ($ext === 'pdf') {
-                $textBrut = $this->pdfTextExtractor->extractRaw($tmpPath);
-                $engine   = 'PDF Parser';
-            } else {
-                $processedPath = $this->preprocessImageForOcr($tmpPath);
-                $textBrut      = (new TesseractOCR($processedPath))->lang('fra', 'eng')->psm(3)->run();
-                if ($processedPath !== $tmpPath) {
-                    unlink($processedPath);
+            try {
+                if ($ext === 'pdf') {
+                    $textBrut = $this->pdfTextExtractor->extractRaw($tmpPath);
+                    $engine   = 'PDF Parser';
+                } else {
+                    $processedPath = $this->preprocessImageForOcr($tmpPath);
+                    $textBrut      = (new TesseractOCR($processedPath))->lang('fra', 'eng')->psm(3)->run();
+                    if ($processedPath !== $tmpPath) {
+                        @unlink($processedPath);
+                    }
+                    $engine = 'Tesseract';
                 }
-                $engine = 'Tesseract';
+
+                $text     = $this->pdfTextExtractor->fixOcrText($textBrut);
+                $allLines = array_values(array_filter(array_map('trim', explode("\n", $text))));
+                $data     = $this->extractOcrFields($ext, $text, $allLines);
+
+                $log  = "=== $engine OCR MULTI " . date('Y-m-d H:i:s') . " ===\n";
+                $log .= "Fichier: $originalName\n";
+                $log .= "N° Commande: " . ($data['numeroCommande'] ?: 'NON TROUVÉ') . "\n";
+                $log .= "Nom client: "  . ($data['clientNom']      ?: 'NON TROUVÉ') . "\n\n";
+                file_put_contents($logPath, $log, FILE_APPEND);
+
+                $results[] = [
+                    'token'    => $token,
+                    'filename' => $originalName,
+                    'ext'      => $ext,
+                    'tmpPath'  => $tmpPath,
+                    'data'     => $data,
+                ];
+            } catch (\Throwable $e) {
+                file_put_contents($logPath,
+                    "=== ERREUR FICHIER $originalName " . date('Y-m-d H:i:s') . " ===\n" . $e->getMessage() . "\n\n",
+                    FILE_APPEND
+                );
+                $results[] = [
+                    'token'    => $token,
+                    'filename' => $originalName,
+                    'ext'      => $ext,
+                    'tmpPath'  => $tmpPath,
+                    'data'     => [],
+                    'error'    => 'Erreur lors du traitement : ' . $e->getMessage(),
+                ];
+            } finally {
+                $this->em->clear();
+                gc_collect_cycles();
             }
-
-            $text     = $this->pdfTextExtractor->fixOcrText($textBrut);
-            $allLines = array_values(array_filter(array_map('trim', explode("\n", $text))));
-            $data     = $this->extractOcrFields($ext, $text, $allLines);
-
-            $log  = "=== $engine OCR MULTI " . date('Y-m-d H:i:s') . " ===\n";
-            $log .= "Fichier: $originalName\n";
-            $log .= "N° Commande: " . ($data['numeroCommande'] ?: 'NON TROUVÉ') . "\n";
-            $log .= "Nom client: "  . ($data['clientNom']      ?: 'NON TROUVÉ') . "\n\n";
-            file_put_contents($logPath, $log, FILE_APPEND);
-
-            $results[] = [
-                'token'    => $token,
-                'filename' => $originalName,
-                'ext'      => $ext,
-                'tmpPath'  => $tmpPath,
-                'data'     => $data,
-            ];
         }
 
         $request->getSession()->set('ocr_import_results', $results);
