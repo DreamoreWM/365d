@@ -371,6 +371,80 @@ class PrestationManagerTest extends TestCase
         $this->assertEquals(StatutBonDeCommande::A_PROGRAMMER, $bon->getStatut());
     }
 
+    public function testBonDeCommandeAProgrammerSiCompteurPasCouvert()
+    {
+        $manager = $this->createManager();
+
+        $bon = new BonDeCommande();
+        $type = new TypePrestation();
+        $type->setNombrePrestationsNecessaires(3);
+        $bon->setTypePrestation($type);
+
+        // 1 seule prestation créée sur 3 nécessaires
+        $p = new Prestation();
+        $p->setStatut(StatutPrestation::PROGRAMME);
+        $bon->addPrestation($p);
+
+        $manager->updateBonDeCommande($bon);
+
+        $this->assertEquals(
+            StatutBonDeCommande::A_PROGRAMMER,
+            $bon->getStatut(),
+            'Le bon doit rester à programmer si le nombre de prestations créées est inférieur au compteur'
+        );
+    }
+
+    public function testBonDeCommandeProgrammeSiCompteurExactementAtteint()
+    {
+        $manager = $this->createManager();
+
+        $bon = new BonDeCommande();
+        $type = new TypePrestation();
+        $type->setNombrePrestationsNecessaires(3);
+        $bon->setTypePrestation($type);
+
+        $p1 = new Prestation(); $p1->setStatut(StatutPrestation::PROGRAMME);
+        $p2 = new Prestation(); $p2->setStatut(StatutPrestation::PROGRAMME);
+        $p3 = new Prestation(); $p3->setStatut(StatutPrestation::PROGRAMME);
+
+        $bon->addPrestation($p1);
+        $bon->addPrestation($p2);
+        $bon->addPrestation($p3);
+
+        $manager->updateBonDeCommande($bon);
+
+        $this->assertEquals(
+            StatutBonDeCommande::PROGRAMME,
+            $bon->getStatut(),
+            'Le bon doit être programmé si toutes les prestations nécessaires sont planifiées'
+        );
+    }
+
+    public function testBonDeCommandeAProgrammerSiPrestationsInsuffisantesMixtes()
+    {
+        $manager = $this->createManager();
+
+        $bon = new BonDeCommande();
+        $type = new TypePrestation();
+        $type->setNombrePrestationsNecessaires(3);
+        $bon->setTypePrestation($type);
+
+        // 2 prestations créées sur 3 nécessaires (1 terminée + 1 programmée)
+        $p1 = new Prestation(); $p1->setStatut(StatutPrestation::TERMINE);
+        $p2 = new Prestation(); $p2->setStatut(StatutPrestation::PROGRAMME);
+
+        $bon->addPrestation($p1);
+        $bon->addPrestation($p2);
+
+        $manager->updateBonDeCommande($bon);
+
+        $this->assertEquals(
+            StatutBonDeCommande::A_PROGRAMMER,
+            $bon->getStatut(),
+            'Le bon doit rester à programmer si le total de prestations créées ne couvre pas le compteur'
+        );
+    }
+
     public function testCronUpdateAllBonDeCommande()
     {
         $fakeRepo = $this->getMockBuilder(\Doctrine\ORM\EntityRepository::class)
