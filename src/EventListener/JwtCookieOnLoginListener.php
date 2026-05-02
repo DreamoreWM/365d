@@ -16,7 +16,7 @@ class JwtCookieOnLoginListener
     public function __construct(
         private JWTTokenManagerInterface $jwtManager,
         private JWTEncoderInterface $jwtEncoder,
-        private int $tokenTtl = 3600,
+        private int $tokenTtl = 43200,
     ) {
     }
 
