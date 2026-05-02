@@ -109,6 +109,7 @@ class PrestationManager
         // Détermination du statut du bon de commande
         // Si pas de type de prestation, on considère qu'1 prestation terminée suffit
         $needed = max(1, $bon->getNombrePrestationsNecessaires());
+        $totalPrestations = $prestations->count();
 
         if ($prestations->isEmpty()) {
             $bon->setStatut(StatutBonDeCommande::A_PROGRAMMER);
@@ -116,11 +117,11 @@ class PrestationManager
             $bon->setStatut(StatutBonDeCommande::TERMINE);
         } elseif ($hasEnCours) {
             $bon->setStatut(StatutBonDeCommande::EN_COURS);
-        } elseif ($hasProgrammee) {
+        } elseif ($hasProgrammee && $totalPrestations >= $needed) {
+            // Toutes les prestations nécessaires existent et sont planifiées
             $bon->setStatut(StatutBonDeCommande::PROGRAMME);
-        } elseif ($hasNonEffectuee) {
-            $bon->setStatut(StatutBonDeCommande::A_PROGRAMMER);
         } else {
+            // Pas assez de prestations créées ou planifiées pour couvrir le compteur
             $bon->setStatut(StatutBonDeCommande::A_PROGRAMMER);
         }
 
