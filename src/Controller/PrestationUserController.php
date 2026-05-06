@@ -212,9 +212,14 @@ public function terminer(Prestation $prestation, EntityManagerInterface $em): Re
 
         $pdfOutput = $dompdf->output();
 
+        $bon = $prestation->getBonDeCommande();
+        $rawNum = $bon?->getNumeroCommande() ?: (string) $prestation->getId();
+        $safeNum = preg_replace('/[^A-Za-z0-9_\-]/', '-', $rawNum);
+        $filename = 'bon-commande-' . $safeNum . '.pdf';
+
         $response = new Response($pdfOutput);
         $response->headers->set('Content-Type', 'application/pdf');
-        $response->headers->set('Content-Disposition', 'inline; filename="prestation-'.$prestation->getId().'.pdf"');
+        $response->headers->set('Content-Disposition', 'attachment; filename="' . $filename . '"');
 
         return $response;
     }
