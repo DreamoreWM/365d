@@ -55,6 +55,73 @@ class PrestationUserController extends AbstractController
         ]);
     }
 
+    #[Route('/pdf-journee', name: 'app_user_prestations_pdf_journee')]
+    public function pdfJournee(Request $request, PrestationRepository $repo): Response
+    {
+        $user = $this->getUser();
+        $date = $request->query->get('date')
+            ? new \DateTimeImmutable($request->query->get('date'))
+            : new \DateTimeImmutable('today');
+
+        $prestations = $repo->createQueryBuilder('p')
+            ->andWhere('p.employe = :user')
+            ->andWhere('p.datePrestation BETWEEN :start AND :end')
+            ->setParameter('user', $user)
+            ->setParameter('start', $date->setTime(0, 0))
+            ->setParameter('end', $date->setTime(23, 59, 59))
+            ->orderBy('p.datePrestation', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        if (empty($prestations)) {
+            $this->addFlash('warning', 'Aucune prestation pour cette journée.');
+            return $this->redirectToRoute('app_user_prestations', ['date' => $date->format('Y-m-d')]);
+        }
+
+        $logoPath = $this->getParameter('kernel.project_dir') . '/public/images/logo.png';
+        $logoBase64 = '';
+        if (file_exists($logoPath)) {
+            $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+        }
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'prestations_pdf_');
+        $zip = new ZipArchive();
+        $zip->open($tmpFile, ZipArchive::OVERWRITE);
+
+        foreach ($prestations as $prestation) {
+            $options = new Options();
+            $options->set('isHtml5ParserEnabled', true);
+            $options->set('isRemoteEnabled', true);
+            $options->set('isPhpEnabled', true);
+
+            $dompdf = new Dompdf($options);
+            $html = $this->renderView('prestation_user/pdf.html.twig', [
+                'prestation' => $prestation,
+                'logo_base64' => $logoBase64,
+            ]);
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4');
+            $dompdf->render();
+
+            $bon = $prestation->getBonDeCommande();
+            $rawNum = $bon?->getNumeroCommande() ?: (string) $prestation->getId();
+            $safeNum = preg_replace('/[^A-Za-z0-9_\-]/', '-', $rawNum);
+            $zip->addFromString('bon-commande-' . $safeNum . '.pdf', $dompdf->output());
+        }
+
+        $zip->close();
+
+        $zipContent = file_get_contents($tmpFile);
+        unlink($tmpFile);
+
+        $dateStr = $date->format('Y-m-d');
+        $response = new Response($zipContent);
+        $response->headers->set('Content-Type', 'application/zip');
+        $response->headers->set('Content-Disposition', 'attachment; filename="prestations-' . $dateStr . '.zip"');
+
+        return $response;
+    }
+
     #[Route('/{id}', name: 'app_user_prestation_view')]
     public function view(Prestation $prestation, Request $request, EntityManagerInterface $em, GeocodingService $geocoder): Response {
         if ($prestation->getEmploye() !== $this->getUser()) {
@@ -182,73 +249,6 @@ public function terminer(Prestation $prestation, EntityManagerInterface $em): Re
     // Rediriger vers la même page avec l'aperçu PDF
     return $this->redirectToRoute('app_user_prestation_view', ['id' => $prestation->getId()]);
 }
-
-    #[Route('/pdf-journee', name: 'app_user_prestations_pdf_journee')]
-    public function pdfJournee(Request $request, PrestationRepository $repo): Response
-    {
-        $user = $this->getUser();
-        $date = $request->query->get('date')
-            ? new \DateTimeImmutable($request->query->get('date'))
-            : new \DateTimeImmutable('today');
-
-        $prestations = $repo->createQueryBuilder('p')
-            ->andWhere('p.employe = :user')
-            ->andWhere('p.datePrestation BETWEEN :start AND :end')
-            ->setParameter('user', $user)
-            ->setParameter('start', $date->setTime(0, 0))
-            ->setParameter('end', $date->setTime(23, 59, 59))
-            ->orderBy('p.datePrestation', 'ASC')
-            ->getQuery()
-            ->getResult();
-
-        if (empty($prestations)) {
-            $this->addFlash('warning', 'Aucune prestation pour cette journée.');
-            return $this->redirectToRoute('app_user_prestations', ['date' => $date->format('Y-m-d')]);
-        }
-
-        $logoPath = $this->getParameter('kernel.project_dir') . '/public/images/logo.png';
-        $logoBase64 = '';
-        if (file_exists($logoPath)) {
-            $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
-        }
-
-        $tmpFile = tempnam(sys_get_temp_dir(), 'prestations_pdf_');
-        $zip = new ZipArchive();
-        $zip->open($tmpFile, ZipArchive::OVERWRITE);
-
-        foreach ($prestations as $prestation) {
-            $options = new Options();
-            $options->set('isHtml5ParserEnabled', true);
-            $options->set('isRemoteEnabled', true);
-            $options->set('isPhpEnabled', true);
-
-            $dompdf = new Dompdf($options);
-            $html = $this->renderView('prestation_user/pdf.html.twig', [
-                'prestation' => $prestation,
-                'logo_base64' => $logoBase64,
-            ]);
-            $dompdf->loadHtml($html);
-            $dompdf->setPaper('A4');
-            $dompdf->render();
-
-            $bon = $prestation->getBonDeCommande();
-            $rawNum = $bon?->getNumeroCommande() ?: (string) $prestation->getId();
-            $safeNum = preg_replace('/[^A-Za-z0-9_\-]/', '-', $rawNum);
-            $zip->addFromString('bon-commande-' . $safeNum . '.pdf', $dompdf->output());
-        }
-
-        $zip->close();
-
-        $zipContent = file_get_contents($tmpFile);
-        unlink($tmpFile);
-
-        $dateStr = $date->format('Y-m-d');
-        $response = new Response($zipContent);
-        $response->headers->set('Content-Type', 'application/zip');
-        $response->headers->set('Content-Disposition', 'attachment; filename="prestations-' . $dateStr . '.zip"');
-
-        return $response;
-    }
 
     #[Route('/prestation/{id}/pdf', name: 'prestation_pdf')]
     public function pdf(Prestation $prestation): Response
