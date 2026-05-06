@@ -652,6 +652,18 @@
         </a>
     </div>
 
+    <!-- Télécharger tous les PDFs -->
+    {% if prestations is not empty %}
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
+        <a href="{{ path('app_user_prestations_pdf_journee', {date: selectedDate|date('Y-m-d')}) }}"
+           class="mdl-button mdl-js-button mdl-button--raised"
+           style="background: #1565c0; color: white; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
+            <i class="material-icons" style="font-size: 18px;">download</i>
+            Télécharger tous les PDFs
+        </a>
+    </div>
+    {% endif %}
+
     <!-- Stats Row -->
     {% set totalCount = prestations|length %}
     {% set programmeCount = prestations|filter(p => p.statut.value == 'programm\u00e9')|length %}
