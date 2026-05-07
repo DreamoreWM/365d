@@ -702,6 +702,11 @@ class BonDeCommandeController extends AbstractController
             $dateLimite = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
         }
 
+        // Vilogia intervention ticket: "Compte affaire n° 334402"
+        if (!$numeroCommande && preg_match('/Compte\s+affaire\s+n.?\s*(\d+)/iu', $text, $m)) {
+            $numeroCommande = trim($m[1]);
+        }
+
         // ICF Habitat: "COMMANDE N° RNE 15/745676/E" (multi-word number with space)
         if (!$numeroCommande && preg_match('/Commande\s+N.?\s+([A-Z]{2,}\s+\S+)/iu', $text, $m)) {
             $numeroCommande = trim($m[1]);
@@ -724,6 +729,11 @@ class BonDeCommandeController extends AbstractController
             $nomClient = trim($m[1]);
         }
 
+        // Vilogia intervention ticket: "Intitulé : MME MRHANA MALIKA, Compte affaire..."
+        if (!$nomClient && preg_match('/Intitul[eé]\s*:\s*(?:M\.?\s*|MME?\.?\s+|MR?\s+|Madame\s+|Monsieur\s+)?([^,\n]+)/iu', $text, $m)) {
+            $nomClient = trim($m[1]);
+        }
+
         // Vilogia: "Occupant actuel : M. MERIMI MOHAMMED 211051/76"
         if (!$nomClient && preg_match('/Occupant\s+actuel\s*:\s*(?:M\.?\s*|MME?\.?\s+|MR?\s+)?(.+?)(?:\s+\d{5,}\/\d+)?\s*$/im', $text, $m)) {
             $nomClient = trim($m[1]);
@@ -734,8 +744,23 @@ class BonDeCommandeController extends AbstractController
             $telephone = preg_replace('/\s+/', '', trim($m[1]));
         }
 
-        // Vilogia phone: "domicile : bureau : portable : 0695348928" near "Occupant actuel"
-        if (!$telephone && preg_match('/Occupant\s+actuel.+?portable\s*:\s*(\d[\d\s]{8,})/isu', $text, $m)) {
+        // Vilogia/ICF: portable on the line(s) immediately after "Occupant actuel"
+        if (!$telephone) {
+            foreach ($allLines as $i => $line) {
+                if (preg_match('/Occupant\s+actuel\s*:/iu', $line)) {
+                    for ($j = $i + 1; $j <= min($i + 3, count($allLines) - 1); $j++) {
+                        if (preg_match('/portable\s*:\s*(\d[\d\s]{8,})/iu', $allLines[$j], $m)) {
+                            $telephone = preg_replace('/\s+/', '', trim($m[1]));
+                            break 2;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Vilogia intervention ticket: "Tel Portable : 0678097295"
+        if (!$telephone && preg_match('/Tel\s+Portable\s*:\s*(\d[\d\s]{8,})/iu', $text, $m)) {
             $telephone = preg_replace('/\s+/', '', trim($m[1]));
         }
 
@@ -752,10 +777,16 @@ class BonDeCommandeController extends AbstractController
                 }
             }
             foreach (array_slice($allLines, $startIndex) as $line) {
+                // Stop when reaching the gardien block (ICF right column) to avoid
+                // picking up the gardien's address instead of the tenant's
+                if (preg_match('/^Gardien\s*:/iu', $line)) {
+                    break;
+                }
                 if (!$adresse && preg_match('/\d+\s+(RUE|AVENUE|AV|BOULEVARD|BD|ALL[EÉ]E|IMPASSE|CHEMIN|PLACE|ROUTE|PASSAGE|VOIE)\b/i', $line)) {
                     $adresse = trim($line);
                 }
-                if (!$complement && preg_match('/LOGEMENT\s*n.?\s*\d+/iu', $line)) {
+                // Handles "LOGEMENT n°" (Partenord/Vilogia) and "Logement locatif n°" (ICF)
+                if (!$complement && preg_match('/Logement\s+(?:\w+\s+)?n.?\s*\d+/iu', $line)) {
                     $complement = trim($line);
                 }
                 if (!$codePostalVille && preg_match('/^\d{5}\s+[A-ZÉÈÊÀÂ\s-]+$/u', $line)) {
