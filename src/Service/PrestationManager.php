@@ -72,7 +72,7 @@ class PrestationManager
     /**
      * Met à jour le statut / compteurs du bon de commande.
      */
-    public function updateBonDeCommande(BonDeCommande $bon): void
+    public function updateBonDeCommande(BonDeCommande $bon, bool $flush = true): void
     {
         $prestations = $bon->getPrestations();
 
@@ -95,19 +95,15 @@ class PrestationManager
             }
         }
 
-        // Compteur : on ne compte QUE les prestations terminées
         $bon->setNombrePrestations($terminees);
 
         if ($bon->getTypePrestation()) {
             $typeCount = $bon->getTypePrestation()->getNombrePrestationsNecessaires();
-            // Ne pas réduire si la valeur a été augmentée manuellement (ex: réouverture)
             if ($bon->getNombrePrestationsNecessaires() < $typeCount) {
                 $bon->setNombrePrestationsNecessaires($typeCount);
             }
         }
 
-        // Détermination du statut du bon de commande
-        // Si pas de type de prestation, on considère qu'1 prestation terminée suffit
         $needed = max(1, $bon->getNombrePrestationsNecessaires());
         $totalPrestations = $prestations->count();
 
@@ -118,31 +114,37 @@ class PrestationManager
         } elseif ($hasEnCours) {
             $bon->setStatut(StatutBonDeCommande::EN_COURS);
         } elseif ($hasProgrammee && $totalPrestations >= $needed) {
-            // Toutes les prestations nécessaires existent et sont planifiées
             $bon->setStatut(StatutBonDeCommande::PROGRAMME);
         } else {
-            // Pas assez de prestations créées ou planifiées pour couvrir le compteur
             $bon->setStatut(StatutBonDeCommande::A_PROGRAMMER);
         }
 
         $this->em->persist($bon);
-        $this->em->flush();
+
+        if ($flush) {
+            $this->em->flush();
+        }
     }
 
     public function updateAllBonDeCommande(): void
     {
         $bons = $this->em->getRepository(BonDeCommande::class)->findAll();
 
+        $i = 0;
         foreach ($bons as $bon) {
-
-            // 1) Mettre à jour CHAQUE PRESTATION avant le bon
             foreach ($bon->getPrestations() as $p) {
                 $this->updatePrestationStatut($p);
             }
+            $this->updateBonDeCommande($bon, false); // pas de flush individuel
 
-            // 2) Puis mettre à jour le bon
-            $this->updateBonDeCommande($bon);
+            // Flush + clear par batch de 50 pour limiter la mémoire
+            if (++$i % 50 === 0) {
+                $this->em->flush();
+                $this->em->clear();
+            }
         }
+
+        $this->em->flush(); // flush final pour le reste
     }
 
 }
