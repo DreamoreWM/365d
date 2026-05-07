@@ -128,23 +128,29 @@ class PrestationManager
 
     public function updateAllBonDeCommande(): void
     {
-        $bons = $this->em->getRepository(BonDeCommande::class)->findAll();
+        // Fetch IDs only, then process in batches so that em->clear() never
+        // leaves stale (detached) entity references in the loop variables.
+        $ids = array_column(
+            $this->em->createQuery('SELECT b.id FROM App\Entity\BonDeCommande b')->getScalarResult(),
+            'id'
+        );
 
-        $i = 0;
-        foreach ($bons as $bon) {
-            foreach ($bon->getPrestations() as $p) {
-                $this->updatePrestationStatut($p);
-            }
-            $this->updateBonDeCommande($bon, false); // pas de flush individuel
+        foreach (array_chunk($ids, 50) as $chunk) {
+            foreach ($chunk as $id) {
+                $bon = $this->em->find(BonDeCommande::class, $id);
+                if ($bon === null) {
+                    continue;
+                }
 
-            // Flush + clear par batch de 50 pour limiter la mémoire
-            if (++$i % 50 === 0) {
-                $this->em->flush();
-                $this->em->clear();
+                foreach ($bon->getPrestations() as $p) {
+                    $this->updatePrestationStatut($p);
+                }
+                $this->updateBonDeCommande($bon, false);
             }
+
+            $this->em->flush();
+            $this->em->clear();
         }
-
-        $this->em->flush(); // flush final pour le reste
     }
 
 }
