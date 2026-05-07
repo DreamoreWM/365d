@@ -908,9 +908,8 @@ class BonDeCommandeController extends AbstractController
         $typePrestationId = $request->request->get('typePrestation');
         if ($typePrestationId) {
             $typePrestation = $this->em->getRepository(TypePrestation::class)->find($typePrestationId);
-            $bon->setTypePrestation($typePrestation);
-            
             if ($typePrestation) {
+                $bon->setTypePrestation($typePrestation);
                 $bon->setNombrePrestationsNecessaires($typePrestation->getNombrePrestationsNecessaires());
             }
         }
