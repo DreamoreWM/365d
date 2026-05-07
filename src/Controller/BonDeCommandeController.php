@@ -625,6 +625,11 @@ class BonDeCommandeController extends AbstractController
             $dateLimite = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
         }
 
+        // Vilogia intervention ticket: "Compte affaire n° 334402"
+        if (!$numeroCommande && preg_match('/Compte\s+affaire\s+n.?\s*(\d+)/iu', $text, $m)) {
+            $numeroCommande = trim($m[1]);
+        }
+
         // ICF Habitat: "COMMANDE N° RNE 15/745676/E" (multi-word number with space)
         if (!$numeroCommande && preg_match('/Commande\s+N.?\s+([A-Z]{2,}\s+\S+)/iu', $text, $m)) {
             $numeroCommande = trim($m[1]);
@@ -644,6 +649,11 @@ class BonDeCommandeController extends AbstractController
 
         // Partenord: "Logement Occupé : MME DUPONT Marie - Portable : ..."
         if (!$nomClient && preg_match('/Logement\s+Occup.+?\s*:\s*(?:MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)?(.+?)\s*-\s*(?:Portable|T[eé]l)/isu', $text, $m)) {
+            $nomClient = trim($m[1]);
+        }
+
+        // Vilogia intervention ticket: "Intitulé : MME MRHANA MALIKA, Compte affaire..."
+        if (!$nomClient && preg_match('/Intitul[eé]\s*:\s*(?:M\.?\s*|MME?\.?\s+|MR?\s+|Madame\s+|Monsieur\s+)?([^,\n]+)/iu', $text, $m)) {
             $nomClient = trim($m[1]);
         }
 
@@ -670,6 +680,11 @@ class BonDeCommandeController extends AbstractController
                     break;
                 }
             }
+        }
+
+        // Vilogia intervention ticket: "Tel Portable : 0678097295"
+        if (!$telephone && preg_match('/Tel\s+Portable\s*:\s*(\d[\d\s]{8,})/iu', $text, $m)) {
+            $telephone = preg_replace('/\s+/', '', trim($m[1]));
         }
 
         if (!$telephone && preg_match_all('/Portable\s*:\s*(\d[\d\s]{8,})/iu', $text, $allMatches)) {

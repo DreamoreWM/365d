@@ -123,8 +123,10 @@ h2{color:#4fc3f7;margin:0 0 16px}
                     $result .= "Date limite  : NON TROUVÉE\n";
                 }
 
-                // Commande: ICF Habitat (RNE 15/745676/E) / Vilogia (LOG/N38872) / Partenord (H95598)
-                if (preg_match('/Commande\s+N.?\s+([A-Z]{2,}\s+\S+)/iu', $text, $m)) {
+                // Commande: Vilogia ticket (Compte affaire) / ICF (RNE 15/745676/E) / Vilogia (LOG/N38872) / Partenord (H95598)
+                if (preg_match('/Compte\s+affaire\s+n.?\s*(\d+)/iu', $text, $m)) {
+                    $result .= "N° Commande  : " . trim($m[1]) . " (Vilogia ticket)\n";
+                } elseif (preg_match('/Commande\s+N.?\s+([A-Z]{2,}\s+\S+)/iu', $text, $m)) {
                     $result .= "N° Commande  : " . trim($m[1]) . " (ICF)\n";
                 } elseif (preg_match('/Commande\s*n.?\s*:?\s*([A-Z0-9][A-Z0-9\/]{3,})/iu', $text, $m)) {
                     $result .= "N° Commande  : " . trim($m[1]) . "\n";
@@ -135,6 +137,9 @@ h2{color:#4fc3f7;margin:0 0 16px}
                 // Locataire Partenord: "Logement Occupé : MME DUPONT Marie - Portable : ..."
                 if (preg_match('/Logement\s+Occup.+?\s*:\s*(?:MR?\s+(?:ET\s+MME\s+)?|MME?\s+|M\.\s+)?(.+?)\s*-\s*(?:Portable|T[eé]l)/isu', $text, $m)) {
                     $result .= "Nom locataire: " . trim($m[1]) . " (Partenord)\n";
+                // Locataire Vilogia ticket: "Intitulé : MME MRHANA MALIKA, Compte affaire..."
+                } elseif (preg_match('/Intitul[eé]\s*:\s*(?:M\.?\s*|MME?\.?\s+|MR?\s+|Madame\s+|Monsieur\s+)?([^,\n]+)/iu', $text, $m)) {
+                    $result .= "Nom locataire: " . trim($m[1]) . " (Vilogia ticket)\n";
                 // Locataire Vilogia/ICF: "Occupant actuel : M. MERIMI MOHAMMED 211051/76"
                 } elseif (preg_match('/Occupant\s+actuel\s*:\s*(?:M\.?\s*|MME?\.?\s+|MR?\s+)?(.+?)(?:\s+\d{5,}\/\d+)?\s*$/im', $text, $m)) {
                     $result .= "Nom locataire: " . trim($m[1]) . " (Vilogia/ICF)\n";
@@ -161,6 +166,11 @@ h2{color:#4fc3f7;margin:0 0 16px}
                             break;
                         }
                     }
+                }
+                // Vilogia intervention ticket: "Tel Portable : 0678097295"
+                if (!$telFound && preg_match('/Tel\s+Portable\s*:\s*(\d[\d\s]{8,})/iu', $text, $m)) {
+                    $result .= "Téléphone    : " . preg_replace('/\s+/', '', trim($m[1])) . " (Vilogia ticket)\n";
+                    $telFound = true;
                 }
                 if (!$telFound) $result .= "Téléphone    : NON TROUVÉ\n";
 
