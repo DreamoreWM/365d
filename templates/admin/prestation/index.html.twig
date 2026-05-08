@@ -55,7 +55,7 @@
 
     .filter-form {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
         gap: 16px;
         align-items: end;
     }
@@ -66,7 +66,10 @@
 
     .filter-form button {
         height: 48px;
-        grid-column: span 1;
+    }
+
+    @media (max-width: 1200px) {
+        .filter-form { grid-template-columns: 1fr 1fr 1fr; }
     }
 
     .stats-row {
@@ -250,9 +253,16 @@
     }
 
     .tab-nav { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
-    .tab-nav a { padding: 8px 16px; border-radius: 20px; text-decoration: none; font-size: 14px; font-weight: 500; color: var(--text-secondary); background: var(--surface); border: 1px solid var(--divider); transition: all 0.2s; }
-    .tab-nav a:hover { background: var(--primary-light); color: var(--primary); }
-    .tab-nav a.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .tab-nav a, .tab-nav .tab-btn { padding: 8px 16px; border-radius: 20px; text-decoration: none; font-size: 14px; font-weight: 500; color: var(--text-secondary); background: var(--surface); border: 1px solid var(--divider); transition: all 0.2s; cursor: pointer; font-family: inherit; line-height: normal; }
+    .tab-nav a:hover, .tab-nav .tab-btn:hover { background: var(--primary-light); color: var(--primary); }
+    .tab-nav a.active, .tab-nav .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .pagination { display: flex; justify-content: center; gap: 8px; padding: 24px; flex-wrap: wrap; }
+    .pagination button, .pagination span { min-width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 4px; background: none; border: 1px solid var(--border-light); color: var(--text-light); cursor: pointer; transition: all 0.2s; }
+    body.dark-mode .pagination button { border-color: var(--border-dark); color: var(--text-dark); }
+    .pagination button:hover { background: rgba(63,81,181,0.1); border-color: var(--primary); }
+    .pagination button.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .pagination button:disabled { opacity: 0.4; cursor: default; }
 
     tr.row-urgent { background-color: rgba(220, 53, 69, 0.08) !important; }
     tr.row-warning { background-color: rgba(255, 193, 7, 0.08) !important; }
@@ -338,58 +348,59 @@
 
     <!-- Tab Navigation -->
     <div class="tab-nav">
-        <a href="{{ path('admin_prestation_index', app.request.query.all|merge({tab: 'tous'})) }}" class="{{ currentTab == 'tous' ? 'active' : '' }}">Tous</a>
-        <a href="{{ path('admin_prestation_index', app.request.query.all|merge({tab: 'non_effectue'})) }}" class="{{ currentTab == 'non_effectue' ? 'active' : '' }}">Non effectué</a>
-        <a href="{{ path('admin_prestation_index', app.request.query.all|merge({tab: 'programme'})) }}" class="{{ currentTab == 'programme' ? 'active' : '' }}">Programmé</a>
-        <a href="{{ path('admin_prestation_index', app.request.query.all|merge({tab: 'en_cours'})) }}" class="{{ currentTab == 'en_cours' ? 'active' : '' }}">En cours</a>
-        <a href="{{ path('admin_prestation_index', app.request.query.all|merge({tab: 'termines'})) }}" class="{{ currentTab == 'termines' ? 'active' : '' }}">Terminé</a>
+        <button class="tab-btn{{ currentTab == 'tous' ? ' active' : '' }}" data-tab="tous">Tous</button>
+        <button class="tab-btn{{ currentTab == 'non_effectue' ? ' active' : '' }}" data-tab="non_effectue">Non effectué</button>
+        <button class="tab-btn{{ currentTab == 'programme' ? ' active' : '' }}" data-tab="programme">Programmé</button>
+        <button class="tab-btn{{ currentTab == 'en_cours' ? ' active' : '' }}" data-tab="en_cours">En cours</button>
+        <button class="tab-btn{{ currentTab == 'termines' ? ' active' : '' }}" data-tab="termines">Terminé</button>
     </div>
 
     <!-- Filter Card -->
     <div class="filter-card">
-        <form method="get" class="filter-form" id="filter-form">
+        <div class="filter-form" id="filter-form">
             <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                <input class="mdl-textfield__input" type="text" id="search" name="search" value="{{ app.request.get('search') }}">
-                <label class="mdl-textfield__label" for="search">Rechercher (client, N° commande...)</label>
+                <input class="mdl-textfield__input" type="text" id="search" autocomplete="off">
+                <label class="mdl-textfield__label" for="search">Rechercher (client, adresse, téléphone, N° commande, employé...)</label>
             </div>
 
             <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                <select class="mdl-textfield__input" id="statut" name="statut">
+                <select class="mdl-textfield__input" id="statut">
                     <option value="">Tous les statuts</option>
-                    <option value="à programmer" {{ app.request.get('statut') == 'à programmer' ? 'selected' : '' }}>À programmer</option>
-                    <option value="programmé" {{ app.request.get('statut') == 'programmé' ? 'selected' : '' }}>Programmé</option>
-                    <option value="en cours" {{ app.request.get('statut') == 'en cours' ? 'selected' : '' }}>En cours</option>
-                    <option value="terminé" {{ app.request.get('statut') == 'terminé' ? 'selected' : '' }}>Terminé</option>
-                    <option value="non effectué" {{ app.request.get('statut') == 'non effectué' ? 'selected' : '' }}>Non effectué</option>
+                    <option value="à programmer">À programmer</option>
+                    <option value="programmé">Programmé</option>
+                    <option value="en cours">En cours</option>
+                    <option value="terminé">Terminé</option>
+                    <option value="non effectué">Non effectué</option>
                 </select>
                 <label class="mdl-textfield__label" for="statut">Statut</label>
             </div>
 
             <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                <select class="mdl-textfield__input" id="employe" name="employe">
+                <select class="mdl-textfield__input" id="employe">
                     <option value="">Tous les employés</option>
                     {% for emp in employes %}
-                        <option value="{{ emp.id }}" {{ app.request.get('employe') == emp.id ? 'selected' : '' }}>{{ emp.nom }}</option>
+                        <option value="{{ emp.id }}">{{ emp.nom }}</option>
                     {% endfor %}
                 </select>
                 <label class="mdl-textfield__label" for="employe">Employé</label>
             </div>
 
             <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                <input class="mdl-textfield__input" type="date" id="date_debut" name="date_debut" value="{{ app.request.get('date_debut') }}">
+                <input class="mdl-textfield__input" type="date" id="date_debut">
                 <label class="mdl-textfield__label" for="date_debut">Date début</label>
             </div>
 
             <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                <input class="mdl-textfield__input" type="date" id="date_fin" name="date_fin" value="{{ app.request.get('date_fin') }}">
+                <input class="mdl-textfield__input" type="date" id="date_fin">
                 <label class="mdl-textfield__label" for="date_fin">Date fin</label>
             </div>
 
-            <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">
-                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">search</i>
-                Filtrer
+            <button type="button" id="reset-filters" class="mdl-button mdl-js-button mdl-button--raised" style="height: 48px;">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">clear</i>
+                Réinitialiser
             </button>
-        </form>
+        </div>
+        <div id="result-count" style="margin-top: 8px; font-size: 0.875rem; color: #757575;"></div>
     </div>
 
     <!-- Table Card -->
@@ -409,7 +420,11 @@
                     </thead>
                     <tbody>
                         {% for prestation in prestations %}
-                            <tr{% if prestation.statut.value == 'non effectué' %} class="row-urgent"{% elseif prestation.statut.value == 'en cours' %} class="row-warning"{% endif %}>
+                            <tr class="{{ prestation.statut.value == 'non effectué' ? 'row-urgent' : (prestation.statut.value == 'en cours' ? 'row-warning' : '') }}"
+                                data-statut="{{ prestation.statut.value }}"
+                                data-employe-id="{{ prestation.employe ? prestation.employe.id : '' }}"
+                                data-date="{{ prestation.datePrestation|date('Y-m-d') }}"
+                                data-search="{{ ((prestation.bonDeCommande ? (prestation.bonDeCommande.clientNom ~ ' ' ~ (prestation.bonDeCommande.clientAdresse ?? '') ~ ' ' ~ (prestation.bonDeCommande.clientTelephone ?? '') ~ ' ' ~ (prestation.bonDeCommande.clientEmail ?? '') ~ ' ' ~ (prestation.bonDeCommande.numeroCommande ?? '')) : '') ~ ' ' ~ (prestation.employe ? prestation.employe.nom : '') ~ ' ' ~ (prestation.typePrestation ? prestation.typePrestation.nom : '') ~ ' ' ~ prestation.datePrestation|date('d/m/Y'))|lower|escape('html_attr') }}">
                                 <td>
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <i class="material-icons" style="color: var(--primary); font-size: 20px;">event</i>
@@ -485,6 +500,9 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Pagination -->
+            <div class="pagination" id="pagination-container"></div>
         {% else %}
             <div class="empty-state">
                 <i class="material-icons">event_busy</i>
@@ -497,49 +515,191 @@
 </div>
 
 <script>
-// Auto-upgrade MDL fields
-document.addEventListener('DOMContentLoaded', function() {
-    ['search', 'statut', 'employe', 'date_debut', 'date_fin'].forEach(id => {
-        const input = document.getElementById(id);
-        if (input && input.value) {
-            input.parentElement.classList.add('is-dirty');
-        }
-    });
-});
-
 // Confirm delete
 function confirmDelete(id) {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette prestation ?\n\nCette action est irréversible.')) {
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = '{{ path('admin_prestation_delete', {id: '__ID__'}) }}'.replace('__ID__', id);
-        
         const csrfInput = document.createElement('input');
         csrfInput.type = 'hidden';
         csrfInput.name = '_token';
         csrfInput.value = '{{ csrf_token('delete') }}';
-        
         form.appendChild(csrfInput);
         document.body.appendChild(form);
         form.submit();
     }
 }
 
-// Auto-submit on filter change
-['statut', 'employe', 'date_debut', 'date_fin'].forEach(id => {
-    document.getElementById(id)?.addEventListener('change', function() {
-        document.getElementById('filter-form').submit();
-    });
-});
+// ==================== FILTRAGE ET PAGINATION DYNAMIQUES ====================
+(function() {
+    const ROWS_PER_PAGE = 15;
+    const tbody = document.querySelector('.data-table tbody');
+    if (!tbody) return;
 
-// Search with delay
-let searchTimeout;
-document.getElementById('search')?.addEventListener('input', function() {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-        document.getElementById('filter-form').submit();
-    }, 500);
-});
+    const allRows = Array.from(tbody.querySelectorAll('tr'));
+    let filteredRows = [];
+    let currentPage = 1;
+
+    // État des filtres (initialisé depuis l'URL)
+    const urlParams = new URLSearchParams(window.location.search);
+    let activeTab    = urlParams.get('tab') || 'tous';
+    let searchText   = '';
+    let statutFilter = '';
+    let employeFilter = '';
+    let dateDebut    = '';
+    let dateFin      = '';
+
+    // Marquer l'onglet actif initial
+    document.querySelectorAll('.tab-nav .tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === activeTab);
+    });
+
+    function matchRow(row) {
+        const statut     = row.dataset.statut || '';
+        const employeId  = row.dataset.employeId || '';
+        const date       = row.dataset.date || '';
+        const search     = row.dataset.search || '';
+
+        // --- Filtre onglet ---
+        if (activeTab === 'non_effectue' && statut !== 'non effectué') return false;
+        if (activeTab === 'programme'    && statut !== 'programmé')    return false;
+        if (activeTab === 'en_cours'     && statut !== 'en cours')     return false;
+        if (activeTab === 'termines'     && statut !== 'terminé')      return false;
+
+        // --- Filtre statut dropdown ---
+        if (statutFilter && statut !== statutFilter) return false;
+
+        // --- Filtre employé ---
+        if (employeFilter && employeId !== employeFilter) return false;
+
+        // --- Filtre recherche texte ---
+        if (searchText && !search.includes(searchText)) return false;
+
+        // --- Filtre dates de prestation ---
+        if (dateDebut && date < dateDebut) return false;
+        if (dateFin   && date > dateFin)   return false;
+
+        return true;
+    }
+
+    function applyFilters() {
+        filteredRows = allRows.filter(matchRow);
+        currentPage  = 1;
+        renderPage();
+
+        const params = new URLSearchParams();
+        if (activeTab !== 'tous') params.set('tab', activeTab);
+        const newUrl = params.toString() ? '?' + params.toString() : window.location.pathname;
+        history.replaceState(null, '', newUrl);
+    }
+
+    function renderPage() {
+        allRows.forEach(r => { r.style.display = 'none'; });
+        const start = (currentPage - 1) * ROWS_PER_PAGE;
+        filteredRows.slice(start, start + ROWS_PER_PAGE).forEach(r => { r.style.display = ''; });
+        renderPagination();
+
+        const countEl = document.getElementById('result-count');
+        if (countEl) countEl.textContent = filteredRows.length + ' résultat(s)';
+    }
+
+    function renderPagination() {
+        const container = document.getElementById('pagination-container');
+        if (!container) return;
+        const totalPages = Math.ceil(filteredRows.length / ROWS_PER_PAGE);
+        if (totalPages <= 1) { container.innerHTML = ''; return; }
+
+        const maxBtn = 7;
+        let s = Math.max(1, currentPage - Math.floor(maxBtn / 2));
+        let e = Math.min(totalPages, s + maxBtn - 1);
+        if (e - s < maxBtn - 1) s = Math.max(1, e - maxBtn + 1);
+
+        let html = `<button onclick="prestGoTo(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="material-icons">chevron_left</i></button>`;
+        if (s > 1) html += `<button onclick="prestGoTo(1)">1</button>`;
+        if (s > 2) html += `<span style="align-self:center;border:none;">…</span>`;
+        for (let p = s; p <= e; p++) {
+            html += `<button class="${p === currentPage ? 'active' : ''}" onclick="prestGoTo(${p})">${p}</button>`;
+        }
+        if (e < totalPages - 1) html += `<span style="align-self:center;border:none;">…</span>`;
+        if (e < totalPages) html += `<button onclick="prestGoTo(${totalPages})">${totalPages}</button>`;
+        html += `<button onclick="prestGoTo(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="material-icons">chevron_right</i></button>`;
+        container.innerHTML = html;
+    }
+
+    window.prestGoTo = function(page) {
+        const totalPages = Math.ceil(filteredRows.length / ROWS_PER_PAGE);
+        if (page < 1 || page > totalPages) return;
+        currentPage = page;
+        renderPage();
+        document.querySelector('.table-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    // --- Onglets ---
+    document.querySelectorAll('.tab-nav .tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            activeTab = this.dataset.tab;
+            document.querySelectorAll('.tab-nav .tab-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            applyFilters();
+        });
+    });
+
+    // --- Recherche texte ---
+    let searchTimer;
+    document.getElementById('search')?.addEventListener('input', function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            searchText = this.value.toLowerCase().trim();
+            applyFilters();
+        }, 200);
+    });
+
+    // --- Statut ---
+    document.getElementById('statut')?.addEventListener('change', function() {
+        statutFilter = this.value;
+        applyFilters();
+    });
+
+    // --- Employé ---
+    document.getElementById('employe')?.addEventListener('change', function() {
+        employeFilter = this.value;
+        applyFilters();
+    });
+
+    // --- Dates ---
+    document.getElementById('date_debut')?.addEventListener('change', function() {
+        dateDebut = this.value;
+        applyFilters();
+    });
+    document.getElementById('date_fin')?.addEventListener('change', function() {
+        dateFin = this.value;
+        applyFilters();
+    });
+
+    // --- Réinitialiser ---
+    document.getElementById('reset-filters')?.addEventListener('click', function() {
+        activeTab = 'tous';
+        searchText = '';
+        statutFilter = '';
+        employeFilter = '';
+        dateDebut = '';
+        dateFin = '';
+
+        ['search', 'statut', 'employe', 'date_debut', 'date_fin'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.value = ''; el.parentElement?.classList.remove('is-dirty'); }
+        });
+
+        document.querySelectorAll('.tab-nav .tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.tab-nav .tab-btn[data-tab="tous"]')?.classList.add('active');
+
+        applyFilters();
+    });
+
+    // --- Initialisation ---
+    applyFilters();
+})();
 </script>
 
 {% endblock %}
