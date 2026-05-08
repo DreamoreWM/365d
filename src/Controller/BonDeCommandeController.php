@@ -43,53 +43,10 @@ class BonDeCommandeController extends AbstractController
         // Mise à jour des statuts avant affichage
         $this->prestationManager->updateAllBonDeCommande();
 
-        $search = $request->query->get('search', '');
-        $statut = $request->query->get('statut', '');
-        $tab = $request->query->get('tab', 'tous');
-
+        // Chargement de tous les bons (le filtrage est géré côté client en JS)
         $qb = $this->repository->createQueryBuilder('b')
             ->leftJoin('b.prestations', 'p')
             ->addSelect('p');
-
-        // Filtre de recherche
-        if ($search) {
-            $qb->andWhere('b.clientNom LIKE :search
-                        OR b.clientEmail LIKE :search
-                        OR b.clientTelephone LIKE :search
-                        OR b.numeroCommande LIKE :search')
-               ->setParameter('search', '%' . $search . '%');
-        }
-
-        // Filtre par statut
-        if ($statut) {
-            $qb->andWhere('b.statut = :statut')
-               ->setParameter('statut', $statut);
-        }
-
-        // Filtre par onglet
-        if ($tab === 'urgents') {
-            // Urgents = bons "à programmer" uniquement (pas terminés, pas déjà programmés)
-            // avec une prestation non effectuée OU une deadline proche
-            $qb->andWhere('b.statut = :aProgrammer')
-               ->andWhere(
-                $qb->expr()->orX(
-                    'p.statut = :nonEffectue',
-                    '(b.dateLimiteExecution IS NOT NULL AND b.dateLimiteExecution <= :deadlineProche)'
-                )
-            )
-            ->setParameter('nonEffectue', StatutPrestation::NON_EFFECTUE)
-            ->setParameter('deadlineProche', new \DateTimeImmutable('+7 days'))
-            ->setParameter('aProgrammer', StatutBonDeCommande::A_PROGRAMMER);
-        } elseif ($tab === 'a_programmer') {
-            $qb->andWhere('b.statut = :statutTab')
-               ->setParameter('statutTab', StatutBonDeCommande::A_PROGRAMMER);
-        } elseif ($tab === 'en_cours') {
-            $qb->andWhere('b.statut IN (:statutsTab)')
-               ->setParameter('statutsTab', [StatutBonDeCommande::PROGRAMME, StatutBonDeCommande::EN_COURS]);
-        } elseif ($tab === 'termines') {
-            $qb->andWhere('b.statut = :statutTab')
-               ->setParameter('statutTab', StatutBonDeCommande::TERMINE);
-        }
 
         // Pré-tri SQL : rough ordering avant le tri PHP métier
         $qb->addOrderBy('b.dateLimiteExecution', 'ASC')
@@ -153,14 +110,17 @@ class BonDeCommandeController extends AbstractController
             ->getQuery()
             ->getSingleScalarResult();
 
+        $typePrestations = $this->em->getRepository(TypePrestation::class)->findAll();
+
         return $this->render('admin/bon_commande/index.html.twig', [
             'bonDeCommandes' => $bonDeCommandes,
-            'currentTab' => $tab,
+            'currentTab' => $request->query->get('tab', 'tous'),
             'urgentsCount' => (int) $urgentsCount,
             'tousCount' => (int) $tousCount,
             'aProgrammerCount' => (int) $aProgrammerCount,
             'enCoursCount' => (int) $enCoursCount,
             'terminesCount' => (int) $terminesCount,
+            'typePrestations' => $typePrestations,
         ]);
     }
 
