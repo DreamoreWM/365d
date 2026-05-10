@@ -22,7 +22,7 @@ class DiscordHandler extends AbstractProcessingHandler
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
-        private readonly string $webhookUrl,
+        private readonly ?string $webhookUrl,
         int|string|Level $level = Level::Error,
         bool $bubble = true,
     ) {
