@@ -4,6 +4,7 @@ namespace App\Enum;
 
 enum StatutPrestation: string
 {
+    case BROUILLON = 'brouillon';
     case A_PROGRAMMER = 'à programmer';
     case PROGRAMME = 'programmé';
     case EN_COURS = 'en cours';
@@ -13,6 +14,7 @@ enum StatutPrestation: string
     public function label(): string
     {
         return match ($this) {
+            self::BROUILLON => 'Brouillon',
             self::A_PROGRAMMER => 'À programmer',
             self::PROGRAMME => 'Programmé',
             self::EN_COURS => 'En cours',
@@ -24,6 +26,7 @@ enum StatutPrestation: string
     public function cssClass(): string
     {
         return match ($this) {
+            self::BROUILLON => 'brouillon',
             self::A_PROGRAMMER => 'a-programmer',
             self::PROGRAMME => 'programme',
             self::EN_COURS => 'en-cours',
@@ -35,6 +38,7 @@ enum StatutPrestation: string
     public function icon(): string
     {
         return match ($this) {
+            self::BROUILLON => 'edit_note',
             self::A_PROGRAMMER => 'schedule',
             self::PROGRAMME => 'event',
             self::EN_COURS => 'play_circle',

@@ -35,9 +35,13 @@ class PrestationManager
             return;
         }
 
-        // Les statuts terminaux ne changent jamais automatiquement
+        // Les statuts terminaux (et brouillon) ne changent jamais automatiquement
         $currentStatut = $prestation->getStatut();
-        if ($currentStatut === StatutPrestation::TERMINE || $currentStatut === StatutPrestation::NON_EFFECTUE) {
+        if (
+            $currentStatut === StatutPrestation::BROUILLON
+            || $currentStatut === StatutPrestation::TERMINE
+            || $currentStatut === StatutPrestation::NON_EFFECTUE
+        ) {
             return;
         }
 
@@ -83,6 +87,11 @@ class PrestationManager
 
         foreach ($prestations as $p) {
             $statut = $p->getStatut();
+
+            // Les brouillons ne comptent pas encore comme prestations réelles
+            if ($statut === StatutPrestation::BROUILLON) {
+                continue;
+            }
 
             if ($statut === StatutPrestation::TERMINE) {
                 $terminees++;
