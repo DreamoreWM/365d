@@ -52,7 +52,7 @@ class JwtCookieOnLoginListener
                 ->withPath('/')
                 ->withHttpOnly(true)
                 ->withSecure('auto')
-                ->withSameSite('lax')
+                ->withSameSite('strict')
         );
     }
 }

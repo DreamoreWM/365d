@@ -2,6 +2,7 @@
 {% block title %}Planning{% endblock %}
 
 {% block content %}
+<meta name="csrf-token" content="{{ csrf_token('planning_ajax') }}">
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 
@@ -875,6 +876,9 @@ const _cs = document.createElement('style');
 EMPLOYES.forEach(e => { _cs.textContent += `[data-empid="${e.id}"] { background: ${empColor(e.id)} !important; }`; });
 document.head.appendChild(_cs);
 
+// ====== CSRF ======
+const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+
 // ====== STATE ======
 let selBon    = null;
 let selEmpId  = null;
@@ -1479,7 +1483,7 @@ async function validateTournee() {
     if (!confirm('Valider toutes les prestations en brouillon pour ce technicien ce jour ?')) return;
     const r = await fetch('/admin/planning/validate-tournee', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
         body: JSON.stringify({ employeId: selEmpId, date }),
     });
     const data = await r.json().catch(() => ({}));
@@ -1500,7 +1504,7 @@ async function discardTournee() {
     if (!confirm('Supprimer toutes les prestations en brouillon pour ce technicien ce jour ?')) return;
     const r = await fetch('/admin/planning/discard-tournee', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
         body: JSON.stringify({ employeId: selEmpId, date }),
     });
     const data = await r.json().catch(() => ({}));
@@ -1716,7 +1720,7 @@ async function validateTourneeFromPop(empId) {
     closePop();
     const r = await fetch('/admin/planning/validate-tournee', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
         body: JSON.stringify({ employeId: empId, date }),
     });
     const data = await r.json().catch(() => ({}));

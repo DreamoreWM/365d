@@ -23,6 +23,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Csrf\CsrfToken;
+use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
 #[Route('/admin/planning')]
 class PlanningController extends AbstractController
@@ -38,7 +40,15 @@ class PlanningController extends AbstractController
         private GeocodingService $geocoder,
         private TourneeOptimizer $optimizer,
         private ParametreService $parametres,
+        private CsrfTokenManagerInterface $csrfTokenManager,
     ) {}
+
+    private function validateAjaxCsrf(Request $request): bool
+    {
+        $token = $request->headers->get('X-CSRF-Token')
+            ?? (json_decode($request->getContent(), true)['_csrf_token'] ?? null);
+        return $this->csrfTokenManager->isTokenValid(new CsrfToken('planning_ajax', (string) $token));
+    }
 
     private function hmToMin(?string $hm): int
     {
@@ -547,6 +557,10 @@ class PlanningController extends AbstractController
     public function createBatch(Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        if (!$this->validateAjaxCsrf($request)) {
+            return $this->json(['error' => 'Token CSRF invalide'], 403);
+        }
 
         $data = json_decode($request->getContent(), true);
 
@@ -1312,6 +1326,10 @@ class PlanningController extends AbstractController
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
+        if (!$this->validateAjaxCsrf($request)) {
+            return $this->json(['error' => 'Token CSRF invalide'], 403);
+        }
+
         $data      = json_decode($request->getContent(), true) ?? [];
         $employeId = $data['employeId'] ?? $request->request->get('employeId');
         $dateStr   = $data['date'] ?? $request->request->get('date');
@@ -1379,6 +1397,10 @@ class PlanningController extends AbstractController
     public function discardTournee(Request $request): JsonResponse
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        if (!$this->validateAjaxCsrf($request)) {
+            return $this->json(['error' => 'Token CSRF invalide'], 403);
+        }
 
         $data      = json_decode($request->getContent(), true) ?? [];
         $employeId = $data['employeId'] ?? $request->request->get('employeId');

@@ -318,6 +318,28 @@ class BonDeCommandeController extends AbstractController
         return $this->redirectToRoute('admin_bon_commande_index');
     }
 
+    private const ALLOWED_MIME_TYPES = [
+        'application/pdf',
+        'image/png',
+        'image/jpeg',
+        'image/webp',
+        'image/bmp',
+    ];
+
+    private const MAX_UPLOAD_SIZE = 20 * 1024 * 1024; // 20 Mo
+
+    private function validateUploadedFile(\Symfony\Component\HttpFoundation\File\UploadedFile $file): ?string
+    {
+        if ($file->getSize() > self::MAX_UPLOAD_SIZE) {
+            return 'Le fichier dépasse la taille maximale autorisée (20 Mo)';
+        }
+        $mime = $file->getMimeType();
+        if (!in_array($mime, self::ALLOWED_MIME_TYPES, true)) {
+            return 'Type de fichier non autorisé. Seuls PDF et images (PNG, JPEG, WebP, BMP) sont acceptés.';
+        }
+        return null;
+    }
+
     // =====================================================
     // IMPORT OCR (PDF Parser pour les PDFs, Tesseract pour les images)
     // =====================================================
@@ -325,10 +347,27 @@ class BonDeCommandeController extends AbstractController
     public function importViaOcr(Request $request): Response
     {
         if ($request->isMethod('POST') && $file = $request->files->get('photo')) {
-            $ext          = strtolower($file->getClientOriginalExtension() ?: ($file->guessExtension() ?? ''));
+            $uploadError = $this->validateUploadedFile($file);
+            if ($uploadError) {
+                if ($request->isXmlHttpRequest()) {
+                    return new JsonResponse(['success' => false, 'error' => $uploadError], 400);
+                }
+                $this->addFlash('danger', $uploadError);
+                return $this->redirectToRoute('admin_bon_commande_index');
+            }
+
+            $mime         = $file->getMimeType();
+            $ext          = match ($mime) {
+                'application/pdf' => 'pdf',
+                'image/png'       => 'png',
+                'image/jpeg'      => 'jpg',
+                'image/webp'      => 'webp',
+                'image/bmp'       => 'bmp',
+                default           => 'bin',
+            };
             $originalName = $file->getClientOriginalName();
             $fileSize     = $file->getSize(); // avant move() car SplFileInfo::getSize() lève une exception après
-            $tmpPath      = sys_get_temp_dir() . '/' . uniqid('ocr_') . '.' . ($ext ?: 'bin');
+            $tmpPath      = sys_get_temp_dir() . '/' . uniqid('ocr_') . '.' . $ext;
             $file->move(sys_get_temp_dir(), basename($tmpPath));
 
             $logPath = $this->getParameter('kernel.project_dir') . '/var/ocr_debug.log';
@@ -343,7 +382,7 @@ class BonDeCommandeController extends AbstractController
             );
 
             // === EXTRACTION DU TEXTE ===
-            if ($ext === 'pdf') {
+            if ($mime === 'application/pdf') {
                 $textBrut = $this->pdfTextExtractor->extractRaw($tmpPath);
                 $engine   = 'PDF Parser';
             } else {
@@ -438,11 +477,29 @@ class BonDeCommandeController extends AbstractController
         $results = [];
 
         foreach ($files as $file) {
-            $ext          = strtolower($file->getClientOriginalExtension() ?: ($file->guessExtension() ?? ''));
+            $uploadError = $this->validateUploadedFile($file);
+            if ($uploadError) {
+                $results[] = [
+                    'filename' => $file->getClientOriginalName(),
+                    'data'     => [],
+                    'error'    => $uploadError,
+                ];
+                continue;
+            }
+
+            $mime         = $file->getMimeType();
+            $ext          = match ($mime) {
+                'application/pdf' => 'pdf',
+                'image/png'       => 'png',
+                'image/jpeg'      => 'jpg',
+                'image/webp'      => 'webp',
+                'image/bmp'       => 'bmp',
+                default           => 'bin',
+            };
             $originalName = $file->getClientOriginalName();
             $fileSize     = $file->getSize();
             $token        = 'ocr_preview_' . uniqid('', true);
-            $tmpName      = $token . '.' . ($ext ?: 'bin');
+            $tmpName      = $token . '.' . $ext;
             $tmpDir       = sys_get_temp_dir();
             $file->move($tmpDir, $tmpName);
             $tmpPath = $tmpDir . '/' . $tmpName;
@@ -454,7 +511,7 @@ class BonDeCommandeController extends AbstractController
             );
 
             try {
-                if ($ext === 'pdf') {
+                if ($mime === 'application/pdf') {
                     $textBrut = $this->pdfTextExtractor->extractRaw($tmpPath);
                     $engine   = 'PDF Parser';
                 } else {

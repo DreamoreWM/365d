@@ -34,7 +34,7 @@ class AppFixtures extends Fixture
             $user = new User();
             $user->setEmail($faker->unique()->email);
             $user->setNom($faker->lastName);
-            $hashedPassword = $this->hasher->hashPassword($user, "password");
+            $hashedPassword = $this->hasher->hashPassword($user, bin2hex(random_bytes(16)));
             $user->setPassword($hashedPassword);
              $user->setRoles(['ROLE_USER']);
             $users[] = $user;
@@ -44,7 +44,7 @@ class AppFixtures extends Fixture
          $user = new User();
             $user->setEmail("admin@example.com");
             $user->setNom("alexandre");
-            $hashedPassword = $this->hasher->hashPassword($user, "admin123");
+            $hashedPassword = $this->hasher->hashPassword($user, bin2hex(random_bytes(16)));
             $user->setPassword($hashedPassword);
             $user->setRoles(['ROLE_ADMIN']);
             $users[] = $user;

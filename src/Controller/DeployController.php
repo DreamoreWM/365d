@@ -5,6 +5,7 @@ namespace App\Controller;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Process\Process;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -79,6 +80,8 @@ class DeployController extends AbstractController
 
         $env = $_ENV['APP_ENV'] ?? 'prod';
 
+        // Commandes validées : projectDir provient de dirname(__DIR__, 2) (path interne),
+        // $env de APP_ENV (variable Symfony interne), donc pas d'injection possible.
         $steps = [
             'cd ' . escapeshellarg($projectDir),
             'echo "--- $(date \'+%Y-%m-%d %H:%M:%S\') GIT PULL ---"',
@@ -97,12 +100,13 @@ class DeployController extends AbstractController
             escapeshellarg($env),
         );
 
-        $cmd = sprintf(
+        $shellCmd = sprintf(
             'nohup bash -c %s >> %s 2>&1 &',
             escapeshellarg(sprintf('(%s) || (cd %s && %s)', $script, escapeshellarg($projectDir), $failScript)),
             escapeshellarg($logFile),
         );
-        exec($cmd);
+
+        Process::fromShellCommandline($shellCmd)->start();
     }
 
     private function notifyDiscord(string $title, int $color): void
@@ -134,17 +138,21 @@ class DeployController extends AbstractController
             @file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . '] ' . $line . "\n", FILE_APPEND);
         };
         $env = $_ENV['APP_ENV'] ?? 'prod';
-        $cd = 'cd /d "' . $projectDir . '" && ';
+        $console = $projectDir . '/bin/console';
 
-        foreach ([
-            'GIT PULL'    => $cd . 'git pull --rebase --autostash 2>&1',
-            'CACHE CLEAR' => $cd . 'php "' . $projectDir . '/bin/console" cache:clear --no-warmup --env=' . $env . ' 2>&1',
-            'MIGRATIONS'  => $cd . 'php "' . $projectDir . '/bin/console" doctrine:migrations:migrate --no-interaction --allow-no-migration --env=' . $env . ' 2>&1',
-        ] as $label => $command) {
-            $lines = [];
-            exec($command, $lines, $code);
-            $log($label . ' (code ' . $code . ')');
-            foreach ($lines as $line) $log('  ' . $line);
+        $commands = [
+            'GIT PULL'    => ['git', 'pull', '--rebase', '--autostash'],
+            'CACHE CLEAR' => ['php', $console, 'cache:clear', '--no-warmup', '--env=' . $env],
+            'MIGRATIONS'  => ['php', $console, 'doctrine:migrations:migrate', '--no-interaction', '--allow-no-migration', '--env=' . $env],
+        ];
+
+        foreach ($commands as $label => $cmd) {
+            $process = new Process($cmd, $projectDir);
+            $process->run();
+            $log($label . ' (code ' . $process->getExitCode() . ')');
+            foreach (explode("\n", $process->getOutput() . $process->getErrorOutput()) as $line) {
+                if (trim($line) !== '') $log('  ' . $line);
+            }
         }
         $log('Déploiement terminé');
     }

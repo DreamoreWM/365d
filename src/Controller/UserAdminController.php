@@ -157,13 +157,11 @@ class UserAdminController extends AbstractController
             );
         }
 
-        // Vérification email unique
-        if ($isNew) {
-            $existant = $this->repository->findOneBy(['email' => $user->getEmail()]);
-            if ($existant) {
-                $this->addFlash('danger', 'Cet email est déjà utilisé');
-                return $this->redirectToRoute('admin_user_new');
-            }
+        // Vérification email unique (création ET modification)
+        $existant = $this->repository->findOneBy(['email' => $user->getEmail()]);
+        if ($existant && $existant->getId() !== $user->getId()) {
+            $this->addFlash('danger', 'Cet email est déjà utilisé');
+            return $this->redirectToRoute($isNew ? 'admin_user_new' : 'admin_user_edit', $isNew ? [] : ['id' => $user->getId()]);
         }
 
         $this->em->persist($user);
