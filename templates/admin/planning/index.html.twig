@@ -701,7 +701,7 @@ body.dark-mode .edv-bg-slot { border-top-color: var(--border-dark); }
 .edv-event.edv-trajet {
     font-style: italic; font-size: 0.68rem; color: #555;
     display: flex; align-items: center; gap: 2px;
-    box-shadow: none;
+    box-shadow: none; pointer-events: none; cursor: default;
 }
 body.dark-mode .edv-event.edv-trajet { color: #bbb; }
 .edv-event.edv-brouillon { border: 2px dashed rgba(255,255,255,0.7); }
@@ -1818,11 +1818,12 @@ function buildEdvGrid(date, events) {
                 if (statut === 'brouillon') { cls += ' edv-brouillon'; bg = hexToRgba('#9c27b0', 0.75); }
             }
 
-            const safeData = encodeURIComponent(JSON.stringify(ev));
+            const safeData = isTrajet ? '' : encodeURIComponent(JSON.stringify(ev));
             const startFmt = start.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+            const clickAttr = isTrajet ? '' : `data-ev="${safeData}" onclick="onEdvEventClick(event,this)"`;
             colsHtml += `<div class="${cls}"
                 style="top:${Math.max(0,top)}px;height:${height}px;background:${bg};color:${textC};"
-                data-ev="${safeData}" onclick="onEdvEventClick(event,this)">`;
+                ${clickAttr}>`;
             if (isTrajet) {
                 colsHtml += `<i class="material-icons" style="font-size:10px;flex-shrink:0;">directions_car</i> ${ev.extendedProps.dureeTrajetMinutes} min`;
             } else {
