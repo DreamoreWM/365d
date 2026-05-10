@@ -1007,6 +1007,27 @@ class PlanningController extends AbstractController
                     'adresseOverride' => $bon?->getAdresseGpsOverride(),
                 ],
             ];
+
+            // Bloc grisé représentant le temps de trajet avant cette prestation
+            if (($trajetMin = $p->getDureeTrajetMinutes()) > 0) {
+                $trajetEnd   = $startDt;
+                $trajetStart = $trajetEnd->modify('-' . $trajetMin . ' minutes');
+                $events[] = [
+                    'id'         => 'trajet_' . $p->getId(),
+                    'title'      => $trajetMin . ' min',
+                    'start'      => $trajetStart->format('c'),
+                    'end'        => $trajetEnd->format('c'),
+                    'classNames' => ['trajet-event'],
+                    'editable'   => false,
+                    'extendedProps' => [
+                        'isTrajet'           => true,
+                        'prestationId'       => $p->getId(),
+                        'employeId'          => $employe?->getId(),
+                        'employeNom'         => $employe?->getNom() ?? 'Non assigné',
+                        'dureeTrajetMinutes' => $trajetMin,
+                    ],
+                ];
+            }
         }
 
         return $this->json($events);
