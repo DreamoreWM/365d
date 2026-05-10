@@ -120,6 +120,7 @@
         <tr>
             <td style="height: 390px; position: relative;">
                 {% if prestation.statut.value == 'absent' or prestation.statut.value == 'non effectué' %}
+                    {% if prestation.statut.value == 'absent' %}
                     <div style="
                         position: absolute;
                         top: 50%;
@@ -138,7 +139,28 @@
                         text-transform: uppercase;
                         transform: rotate(-30deg);
                         font-family: Arial, Helvetica, sans-serif;
-                    ">{{ prestation.statut.value == 'absent' ? 'ABSENT' : 'NON EFFECTUÉ' }}</div>
+                    ">ABSENT</div>
+                    {% else %}
+                    <div style="
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        margin-top: -140px;
+                        margin-left: -210px;
+                        width: 420px;
+                        text-align: center;
+                        color: rgba(200, 0, 0, 0.80);
+                        border: 10px solid rgba(200, 0, 0, 0.80);
+                        border-radius: 18px;
+                        padding: 30px 40px;
+                        font-size: 96px;
+                        font-weight: bold;
+                        letter-spacing: 4px;
+                        text-transform: uppercase;
+                        transform: rotate(-30deg);
+                        font-family: Arial, Helvetica, sans-serif;
+                    ">NON EFFECTUÉ</div>
+                    {% endif %}
                 {% else %}
                     {# Infos intervention #}
                     {% set infos = prestation.infosIntervention ?? {} %}
