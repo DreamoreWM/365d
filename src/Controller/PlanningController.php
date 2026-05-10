@@ -315,11 +315,14 @@ class PlanningController extends AbstractController
         $heure      = $request->request->get('heure', '09:00');
         $creneauStr = $request->request->get('creneau');
         $modeBrouillon = $request->request->get('mode') === 'brouillon';
+        $redirectTo = $request->request->get('redirect_to');
 
         // Validation
         if (!$bonId || !$employeId || !$date) {
             $this->addFlash('danger', 'Tous les champs sont obligatoires');
-            return $this->redirectToRoute('admin_planning_index');
+            return $redirectTo
+                ? $this->redirect($redirectTo)
+                : $this->redirectToRoute('admin_planning_index');
         }
 
         $bon = $this->bonRepo->find($bonId);
@@ -327,7 +330,9 @@ class PlanningController extends AbstractController
 
         if (!$bon || !$employe) {
             $this->addFlash('danger', 'Bon de commande ou employé introuvable');
-            return $this->redirectToRoute('admin_planning_index');
+            return $redirectTo
+                ? $this->redirect($redirectTo)
+                : $this->redirectToRoute('admin_planning_index');
         }
 
         // Créer la prestation
@@ -363,10 +368,12 @@ class PlanningController extends AbstractController
             $availability = $this->fixeSlotAvailability($dateTime, $duree, $bon, $employe);
             if (!$availability['ok']) {
                 $this->addFlash('danger', $availability['message']);
-                return $this->redirectToRoute('admin_planning_index', [
-                    'date' => $date,
-                    'employe' => $employeId,
-                ]);
+                return $redirectTo
+                    ? $this->redirect($redirectTo)
+                    : $this->redirectToRoute('admin_planning_index', [
+                        'date' => $date,
+                        'employe' => $employeId,
+                    ]);
             }
         }
 
@@ -411,6 +418,10 @@ class PlanningController extends AbstractController
 
         $label = $modeBrouillon ? 'Prestation ajoutée au brouillon pour ' : 'Prestation créée avec succès pour ';
         $this->addFlash('success', $label . $employe->getNom());
+
+        if ($redirectTo) {
+            return $this->redirect($redirectTo);
+        }
 
         return $this->redirectToRoute('admin_planning_index', [
             'date' => $date,

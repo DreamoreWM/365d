@@ -831,10 +831,10 @@
                 <span>Prestations ({{ bon.prestations|length }})</span>
             </div>
             {% if bon.statut.value != 'terminé' %}
-            <a href="{{ path('admin_planning_index', {bonId: bon.id}) }}" class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent">
+            <button type="button" onclick="openPlanModal()" class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent">
                 <i class="material-icons" style="vertical-align: middle; margin-right: 4px;">calendar_today</i>
                 Programmer une prestation
-            </a>
+            </button>
             {% endif %}
         </div>
 
@@ -996,6 +996,174 @@
 
 </div>
 
+{# ===== MODAL PROGRAMMATION PRESTATION ===== #}
+<style>
+.plan-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 1200;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+.plan-overlay.open { display: flex; }
+.plan-modal {
+    background: var(--card-light, #fff);
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    width: 100%;
+    max-width: 480px;
+    overflow: hidden;
+}
+body.dark-mode .plan-modal { background: var(--card-dark, #1e1e2e); }
+.plan-modal-hdr {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: #fff;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.plan-modal-hdr h2 { margin: 0; font-size: 1.1rem; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+.plan-modal-hdr button { background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer; line-height: 1; padding: 2px 6px; border-radius: 6px; }
+.plan-modal-hdr button:hover { background: rgba(255,255,255,.2); }
+.plan-modal-body { padding: 24px 20px 8px; }
+.plan-field { margin-bottom: 18px; }
+.plan-field label { display: block; font-size: 0.8rem; font-weight: 700; color: #9e9e9e; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+.plan-field select,
+.plan-field input[type="date"],
+.plan-field input[type="time"],
+.plan-field textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border-light, #e0e0e0);
+    border-radius: 6px;
+    font-size: .95rem;
+    background: var(--bg-light, #fafafa);
+    color: var(--text-light, #212121);
+    box-sizing: border-box;
+    font-family: inherit;
+}
+body.dark-mode .plan-field select,
+body.dark-mode .plan-field input,
+body.dark-mode .plan-field textarea {
+    background: #2a2a3e;
+    border-color: var(--border-dark, #333);
+    color: var(--text-dark, #e0e0e0);
+}
+.plan-field select:focus,
+.plan-field input:focus,
+.plan-field textarea:focus { outline: none; border-color: var(--primary, #3f51b5); }
+.plan-dt-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.plan-slot-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.plan-slot-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 7px 10px;
+    border: 1.5px solid var(--border-light, #e0e0e0);
+    border-radius: 6px;
+    background: none;
+    font-size: .82rem;
+    cursor: pointer;
+    color: var(--text-light, #424242);
+    transition: all .15s;
+}
+body.dark-mode .plan-slot-btn { color: var(--text-dark); border-color: var(--border-dark); }
+.plan-slot-btn.active { border-color: var(--primary, #3f51b5); background: rgba(63,81,181,.1); color: var(--primary, #3f51b5); font-weight: 600; }
+.plan-modal-footer { padding: 12px 20px 20px; display: flex; gap: 10px; }
+.plan-btn-submit {
+    flex: 1;
+    padding: 11px;
+    background: var(--primary, #3f51b5);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: .95rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background .15s;
+}
+.plan-btn-submit:hover { background: var(--primary-dark, #303f9f); }
+.plan-btn-cancel {
+    padding: 11px 18px;
+    background: none;
+    border: 1.5px solid var(--border-light, #e0e0e0);
+    border-radius: 6px;
+    font-size: .95rem;
+    cursor: pointer;
+    color: var(--text-light, #424242);
+}
+body.dark-mode .plan-btn-cancel { border-color: var(--border-dark); color: var(--text-dark); }
+.plan-btn-cancel:hover { background: rgba(0,0,0,.05); }
+</style>
+
+<div class="plan-overlay" id="planOverlay" onclick="closePlanModal()">
+    <div class="plan-modal" onclick="event.stopPropagation()">
+        <div class="plan-modal-hdr">
+            <h2><i class="material-icons">calendar_today</i> Programmer une prestation</h2>
+            <button onclick="closePlanModal()" title="Fermer">✕</button>
+        </div>
+
+        <form method="POST" action="{{ path('admin_planning_create_prestation') }}" id="planForm" onsubmit="return onPlanSubmit(event)">
+            <input type="hidden" name="bon" value="{{ bon.id }}">
+            <input type="hidden" name="redirect_to" value="{{ path('admin_bon_commande_show', {id: bon.id}) }}">
+            <input type="hidden" name="creneau" id="planCreneau" value="">
+
+            <div class="plan-modal-body">
+
+                {# Employé #}
+                <div class="plan-field">
+                    <label>Technicien <span style="color:#e53935">*</span></label>
+                    <select name="employe" id="planEmploye" required>
+                        <option value="">— Choisir un technicien —</option>
+                        {% for emp in employes %}
+                            <option value="{{ emp.id }}">{{ emp.nom }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {# Date + Heure #}
+                <div class="plan-field">
+                    <label>Date et heure <span style="color:#e53935">*</span></label>
+                    <div class="plan-dt-row">
+                        <input type="date" name="date" id="planDate" required
+                               value="{{ 'tomorrow'|date('Y-m-d') }}">
+                        <input type="time" name="heure" id="planHeure" value="09:00">
+                    </div>
+                    <div class="plan-slot-btns">
+                        <button type="button" class="plan-slot-btn active" id="slotMatin"  onclick="setPlanSlot('matin', '09:00')">Matin (9h)</button>
+                        <button type="button" class="plan-slot-btn"        id="slotAprem"  onclick="setPlanSlot('aprem', '13:00')">Après-midi (13h)</button>
+                        <button type="button" class="plan-slot-btn"        id="slotFixe"   onclick="setPlanSlot('fixe',  null)">Heure fixe</button>
+                    </div>
+                </div>
+
+                {# Note #}
+                <div class="plan-field">
+                    <label>Note pour le technicien</label>
+                    <textarea name="description" rows="2" placeholder="Instructions, accès, code porte…"
+                              style="resize:vertical;"></textarea>
+                </div>
+            </div>
+
+            <div class="plan-modal-footer">
+                <button type="button" class="plan-btn-cancel" onclick="closePlanModal()">Annuler</button>
+                <button type="submit" class="plan-btn-submit">
+                    <i class="material-icons">add_circle</i>
+                    Confirmer la programmation
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{# ===== FIN MODAL ===== #}
+
 {% endblock %}
 
 {% block javascripts %}
@@ -1007,5 +1175,48 @@ function confirmDeleteBon() {
     }
 }
 
+// ===== MODAL PLANIFICATION =====
+function openPlanModal() {
+    document.getElementById('planOverlay').classList.add('open');
+    document.getElementById('planEmploye').focus();
+}
+function closePlanModal() {
+    document.getElementById('planOverlay').classList.remove('open');
+}
+
+function setPlanSlot(slot, heure) {
+    document.getElementById('planCreneau').value = slot;
+    document.querySelectorAll('.plan-slot-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('slot' + slot.charAt(0).toUpperCase() + slot.slice(1)).classList.add('active');
+    if (heure) {
+        document.getElementById('planHeure').value = heure;
+        document.getElementById('planHeure').readOnly = false;
+    } else {
+        // Heure fixe: libérer le champ heure pour saisie manuelle
+        document.getElementById('planHeure').readOnly = false;
+        document.getElementById('planHeure').focus();
+    }
+}
+
+// Fermer avec Echap
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closePlanModal();
+});
+
+function onPlanSubmit(e) {
+    const emp = document.getElementById('planEmploye').value;
+    const date = document.getElementById('planDate').value;
+    if (!emp) { alert('Veuillez sélectionner un technicien.'); e.preventDefault(); return false; }
+    if (!date) { alert('Veuillez sélectionner une date.'); e.preventDefault(); return false; }
+    // Set creneau from active slot button if not already set
+    if (!document.getElementById('planCreneau').value) {
+        const active = document.querySelector('.plan-slot-btn.active');
+        if (active) {
+            const id = active.id;
+            document.getElementById('planCreneau').value = id === 'slotMatin' ? 'matin' : id === 'slotAprem' ? 'aprem' : 'fixe';
+        }
+    }
+    return true;
+}
 </script>
 {% endblock %}
