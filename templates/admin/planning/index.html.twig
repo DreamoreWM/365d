@@ -3,8 +3,6 @@
 
 {% block content %}
 <meta name="csrf-token" content="{{ csrf_token('planning_ajax') }}">
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 
 <style>
 /* ===== ROOT LAYOUT ===== */
@@ -508,35 +506,8 @@ body.dark-mode .ev-pop-row { color: #aaa; }
 .s-termine       { background: #e8f5e9; color: #2e7d32; }
 .s-non-effectue  { background: #ffebee; color: #c62828; }
 
-/* Preview event on calendar */
-.fc-preview-event { opacity: 0.75; }
-.fc-preview-event .fc-event-main { font-style: italic; }
-
-/* Blocs temps de trajet (grisés avant chaque prestation) */
-.trajet-event {
-    opacity: 0.6;
-    pointer-events: none;
-    cursor: default;
-}
-.trajet-event .fc-event-main {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    padding: 1px 4px;
-    background-image: repeating-linear-gradient(
-        -45deg,
-        transparent,
-        transparent 5px,
-        rgba(255,255,255,0.18) 5px,
-        rgba(255,255,255,0.18) 10px
-    );
-    font-size: 0.72rem;
-    font-style: italic;
-}
-
-/* Brouillon event style */
+/* Brouillon event badge */
 .s-brouillon { background: #f3e5f5; color: #7b1fa2; }
-.fc-brouillon-event .fc-event-main-frame { opacity: 0.8; font-style: italic; }
 
 /* Capacity bars */
 .capacity-section {
@@ -603,6 +574,150 @@ body.dark-mode .brouillon-toggle-row { border-top-color: var(--border-dark); col
     .cal-main { height: 500px; }
     .wizard-panel { min-height: 500px; }
 }
+
+/* ===== EMPLOYEE DAY VIEW ===== */
+.cal-main { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+
+.edv-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border-light);
+    flex-shrink: 0;
+}
+body.dark-mode .edv-toolbar { border-bottom-color: var(--border-dark); }
+.edv-nav { display: flex; gap: 4px; }
+.edv-btn {
+    padding: 5px 10px;
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-light);
+    font-size: 0.85rem;
+    line-height: 1;
+    transition: all 0.15s;
+}
+body.dark-mode .edv-btn { border-color: var(--border-dark); color: var(--text-dark); }
+.edv-btn:hover { background: rgba(63,81,181,0.1); border-color: var(--primary); color: var(--primary); }
+.edv-btn .material-icons { font-size: 20px; }
+.edv-today-btn { padding: 5px 14px; font-size: 0.82rem; }
+.edv-title {
+    flex: 1;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-light);
+    text-transform: capitalize;
+}
+body.dark-mode .edv-title { color: var(--text-dark); }
+
+.edv-scroll { flex: 1; overflow: auto; position: relative; }
+.edv-grid-inner { display: inline-flex; flex-direction: column; min-width: 100%; }
+
+/* Header row */
+.edv-head-row {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--card-light);
+    border-bottom: 2px solid var(--border-light);
+}
+body.dark-mode .edv-head-row { background: var(--card-dark); border-bottom-color: var(--border-dark); }
+.edv-head-gutter {
+    width: 54px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border-light);
+    position: sticky;
+    left: 0;
+    background: var(--card-light);
+    z-index: 11;
+}
+body.dark-mode .edv-head-gutter { background: var(--card-dark); border-right-color: var(--border-dark); }
+.edv-head-cell {
+    flex: 1;
+    min-width: 140px;
+    padding: 10px 12px;
+    border-right: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-top: 3px solid transparent;
+}
+body.dark-mode .edv-head-cell { border-right-color: var(--border-dark); }
+.edv-emp-av {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; font-weight: 700; color: white; flex-shrink: 0;
+}
+.edv-emp-name { font-weight: 600; font-size: 0.88rem; color: var(--text-light); }
+body.dark-mode .edv-emp-name { color: var(--text-dark); }
+.edv-emp-sub { font-size: 0.7rem; color: #888; }
+
+/* Body */
+.edv-body-row { display: flex; }
+.edv-body-gutter {
+    width: 54px; flex-shrink: 0;
+    position: sticky; left: 0; z-index: 5;
+    background: var(--card-light);
+    border-right: 1px solid var(--border-light);
+}
+body.dark-mode .edv-body-gutter { background: var(--card-dark); border-right-color: var(--border-dark); }
+.edv-slot-label {
+    position: absolute; width: 100%; padding-right: 5px;
+    text-align: right; font-size: 0.66rem; color: #9e9e9e;
+    transform: translateY(-50%); pointer-events: none; white-space: nowrap;
+}
+.edv-emp-body {
+    flex: 1; min-width: 140px; position: relative;
+    border-right: 1px solid var(--border-light);
+}
+body.dark-mode .edv-emp-body { border-right-color: var(--border-dark); }
+.edv-bg-slot {
+    position: absolute; left: 0; right: 0;
+    border-top: 1px solid var(--border-light);
+    box-sizing: border-box; cursor: pointer;
+    transition: background 0.1s;
+}
+body.dark-mode .edv-bg-slot { border-top-color: var(--border-dark); }
+.edv-bg-slot.edv-half-hour { border-top-style: dashed; opacity: 0.5; }
+.edv-bg-slot:hover { background: rgba(63,81,181,0.07) !important; }
+
+/* Events */
+.edv-event {
+    position: absolute; left: 2px; right: 2px;
+    border-radius: 4px; padding: 2px 5px;
+    font-size: 0.74rem; font-weight: 500; color: white;
+    overflow: hidden; cursor: pointer; z-index: 2;
+    box-sizing: border-box; line-height: 1.3;
+    transition: filter 0.15s, box-shadow 0.15s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.edv-event:hover { filter: brightness(0.9); box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+.edv-event.edv-trajet {
+    font-style: italic; font-size: 0.68rem; color: #555;
+    display: flex; align-items: center; gap: 2px;
+    box-shadow: none; pointer-events: none; cursor: default;
+}
+body.dark-mode .edv-event.edv-trajet { color: #bbb; }
+.edv-event.edv-brouillon { border: 2px dashed rgba(255,255,255,0.7); }
+.edv-now-line {
+    position: absolute; left: 0; right: 0; height: 2px;
+    background: #f44336; z-index: 3; pointer-events: none;
+}
+.edv-now-line::before {
+    content: ''; position: absolute; left: -4px; top: -3px;
+    width: 8px; height: 8px; border-radius: 50%; background: #f44336;
+}
+.edv-no-emp {
+    padding: 60px 20px; text-align: center; color: #aaa; font-size: 0.9rem;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.edv-no-emp .material-icons { font-size: 36px; }
 </style>
 
 {# Flash messages #}
@@ -627,9 +742,19 @@ body.dark-mode .brouillon-toggle-row { border-top-color: var(--border-dark); col
         <div id="empList"></div>
     </aside>
 
-    <!-- CENTER: CALENDAR -->
+    <!-- CENTER: EMPLOYEE DAY VIEW -->
     <main class="p-card cal-main">
-        <div id="fullcalendar" style="height:100%;"></div>
+        <div class="edv-toolbar">
+            <div class="edv-nav">
+                <button class="edv-btn" onclick="edvPrev()" title="Jour précédent"><i class="material-icons">chevron_left</i></button>
+                <button class="edv-btn edv-today-btn" onclick="edvToday()">Aujourd'hui</button>
+                <button class="edv-btn" onclick="edvNext()" title="Jour suivant"><i class="material-icons">chevron_right</i></button>
+            </div>
+            <div class="edv-title" id="edvTitle">–</div>
+        </div>
+        <div class="edv-scroll" id="edvScroll">
+            <div id="edvGrid"></div>
+        </div>
     </main>
 
     <!-- RIGHT: WIZARD -->
@@ -888,7 +1013,6 @@ let statut         = 'à programmer';
 let groupe         = '';
 let typePrestation = '';
 let empLoads  = {};
-let calendar     = null;
 let searchTm     = null;
 let bonCache     = [];  // { id, ...data }
 let previewEvent = null;
@@ -920,12 +1044,12 @@ function renderEmpPanel() {
 function toggleEmp(id) {
     if (activeEmps.has(id)) activeEmps.delete(id); else activeEmps.add(id);
     renderEmpPanel();
-    calendar?.refetchEvents();
+    refreshEdv();
 }
 function setAllEmp(all) {
     EMPLOYES.forEach(e => all ? activeEmps.add(e.id) : activeEmps.delete(e.id));
     renderEmpPanel();
-    calendar?.refetchEvents();
+    refreshEdv();
 }
 
 // ====== STATS (load counts per employee for a date) ======
@@ -946,6 +1070,8 @@ function loadStats(date) {
                     wl.style.color = n > 3 ? '#ef5350' : n > 0 ? '#ff9800' : '#4caf50';
                 }
             });
+            // Update EDV column subtitles
+            updateEdvSubtitles();
         })
         .catch(() => {});
 }
@@ -1123,32 +1249,15 @@ function resetBon() {
 }
 
 function updateCalendarPreview() {
-    if (previewEvent) { previewEvent.remove(); previewEvent = null; }
-    const date  = document.getElementById('dateInp').value;
-    const heure = document.getElementById('timeInp').value;
-    if (!date || !heure || !calendar) return;
-    const dur   = (selBon?.dureeMinutes ?? selBon?.typePrestation?.dureeMinutes ?? 30);
-    const [h, m] = heure.split(':').map(Number);
-    const endTotal = h * 60 + m + dur;
-    const endH = String(Math.floor(endTotal / 60)).padStart(2, '0');
-    const endM = String(endTotal % 60).padStart(2, '0');
-    previewEvent = calendar.addEvent({
-        id:         '__preview__',
-        title:      '📍 Nouvelle intervention (' + dur + ' min)',
-        start:      `${date}T${heure}`,
-        end:        `${date}T${endH}:${endM}`,
-        color:      '#ff9800',
-        textColor:  '#fff',
-        classNames: ['fc-preview-event'],
-        editable:   false,
-    });
+    // Preview handled inline in the EDV grid; no-op here.
+    previewEvent = null;
 }
 
 function onDateChange() {
     const inp = document.getElementById('dateInp');
     const d = inp.value;
     inp.classList.toggle('filled', !!d);
-    if (d) { loadStats(d); calendar?.gotoDate(d); }
+    if (d) { loadStats(d); edvGoTo(d); }
     // Reload capacity when date changes (if employee already selected)
     if (selEmpId) {
         loadCapacite().then(() => doSearch());
@@ -1489,7 +1598,7 @@ async function validateTournee() {
     const data = await r.json().catch(() => ({}));
     if (r.ok) {
         showToast('success', data.message ?? 'Tournée validée');
-        calendar?.refetchEvents();
+        refreshEdv();
         await loadCapacite();
         doSearch();
         updateBrouillonIndicator();
@@ -1510,7 +1619,7 @@ async function discardTournee() {
     const data = await r.json().catch(() => ({}));
     if (r.ok) {
         showToast('success', data.message ?? 'Brouillon supprimé');
-        calendar?.refetchEvents();
+        refreshEdv();
         await loadCapacite();
         doSearch();
         updateBrouillonIndicator();
@@ -1559,7 +1668,7 @@ function updateReoptimizeBtn() {
     if (btn) btn.disabled = !(date && selEmpId);
 }
 
-// ====== FULLCALENDAR ======
+// ====== STATUS COLORS ======
 const STATUS_COLORS = {
     'brouillon':    '#9c27b0',
     'à programmer': '#e65100',
@@ -1569,98 +1678,222 @@ const STATUS_COLORS = {
     'non effectué': '#d32f2f',
 };
 
-function initCalendar() {
-    calendar = new FullCalendar.Calendar(document.getElementById('fullcalendar'), {
-        locale: 'fr',
-        initialView: 'timeGridWeek',
-        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' },
-        height: '100%',
-        nowIndicator: true,
-        slotMinTime: '07:00:00',
-        slotMaxTime: '20:00:00',
-        allDaySlot: false,
-        firstDay: 1,
-        buttonText: { today: "Aujourd'hui", month: 'Mois', week: 'Semaine', day: 'Jour' },
+// ====== EMPLOYEE DAY VIEW ======
+const EDV_SLOT_H  = 48;        // px per 30-min slot
+const EDV_T_START = 7 * 60;    // 07:00 in minutes
+const EDV_T_END   = 20 * 60;   // 20:00 in minutes
+const EDV_SLOTS   = (EDV_T_END - EDV_T_START) / 30; // 26 slots
 
-        events: function(info, ok, fail) {
-            const params = Array.from(activeEmps).map(id => `employes[]=${id}`).join('&');
-            fetch(`/admin/planning/events?start=${info.startStr}&end=${info.endStr}&${params}`)
-                .then(r => r.json())
-                .then(evs => {
-                    evs.forEach(ev => {
-                        if (ev.extendedProps?.isTrajet) {
-                            const empId = ev.extendedProps.employeId ?? 0;
-                            const base = empColor(empId);
-                            ev.backgroundColor = hexToRgba(base, 0.35);
-                            ev.borderColor      = hexToRgba(base, 0.55);
-                            ev.textColor        = '#444';
-                            return;
-                        }
-                        const statut = ev.extendedProps?.statut;
-                        const sc = STATUS_COLORS[statut];
-                        if (sc) ev.color = sc;
-                        // Brouillon events: dashed border + lighter
-                        if (statut === 'brouillon') {
-                            ev.classNames = [...(ev.classNames ?? []), 'fc-brouillon-event'];
-                            ev.borderColor = '#ab47bc';
-                            ev.backgroundColor = hexToRgba('#9c27b0', 0.55);
-                            ev.title = '✏ ' + ev.title;
-                        }
-                    });
-                    ok(evs);
-                })
-                .catch(fail);
-        },
+let edvDate = new Date();
 
-        datesSet: function(info) {
-            loadStats(info.startStr.slice(0,10));
-        },
+function edvDateStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function edvFormatTitle(d) {
+    return d.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+}
+function edvMinToPx(min) { return ((min - EDV_T_START) / 30) * EDV_SLOT_H; }
+function edvPadTime(h, m) { return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`; }
 
-        dateClick: function(info) {
-            const dateStr = info.dateStr.slice(0,10);
-            const clickedTime = info.dateStr.includes('T') ? info.dateStr.slice(11,16) : null;
-            const di = document.getElementById('dateInp');
-            di.value = dateStr;
-            di.classList.add('filled');
-            loadStats(dateStr);
+function edvPrev()  { edvDate.setDate(edvDate.getDate() - 1); refreshEdv(); }
+function edvNext()  { edvDate.setDate(edvDate.getDate() + 1); refreshEdv(); }
+function edvToday() { edvDate = new Date(); refreshEdv(); }
+function edvGoTo(dateStr) {
+    const [y,mo,d] = dateStr.split('-').map(Number);
+    edvDate = new Date(y, mo - 1, d);
+    refreshEdv();
+}
 
-            // If a half-day slot is active, queue after existing prestations instead of
-            // taking the raw clicked time. Otherwise honor the clicked time (heure fixe).
-            if (currentSlot === 'matin' || currentSlot === 'aprem') {
-                computeNextSlotTime(currentSlot).then(next => {
-                    document.getElementById('timeInp').value = next;
-                    refreshSummary();
-                });
-            } else {
-                document.getElementById('timeInp').value = clickedTime || '09:00';
-                refreshSummary();
-            }
-            // Open step 1 if bon not yet selected
-            if (!selBon) {
-                document.getElementById('wizSearch').focus();
-                document.querySelector('.wizard-body').scrollTop = 0;
-            }
-        },
+function refreshEdv() {
+    const date = edvDateStr(edvDate);
+    document.getElementById('edvTitle').textContent = edvFormatTitle(edvDate);
 
-        eventClick: function(info) {
-            if (info.event.extendedProps?.isTrajet) {
-                info.jsEvent.stopPropagation();
-                return;
-            }
-            showPop(info.event, info.el, info.jsEvent);
-            info.jsEvent.stopPropagation();
-        },
+    // Sync wizard date input
+    const di = document.getElementById('dateInp');
+    di.value = date;
+    di.classList.add('filled');
+    loadStats(date);
 
-        eventContent: function(arg) {
-            if (!arg.event.extendedProps?.isTrajet) return true;
-            const dur = arg.event.extendedProps.dureeTrajetMinutes;
-            const wrap = document.createElement('div');
-            wrap.style.cssText = 'display:flex;align-items:center;gap:3px;font-size:0.72rem;font-style:italic;padding:1px 3px;overflow:hidden;white-space:nowrap;';
-            wrap.innerHTML = `<i class="material-icons" style="font-size:11px;flex-shrink:0;">directions_car</i><span>${dur} min</span>`;
-            return { domNodes: [wrap] };
-        },
+    const emps = Array.from(activeEmps);
+    if (emps.length === 0) {
+        buildEdvGrid(date, []);
+        return;
+    }
+
+    document.getElementById('edvGrid').innerHTML =
+        '<div class="edv-no-emp"><i class="material-icons">hourglass_empty</i>Chargement…</div>';
+
+    const params = emps.map(id => `employes[]=${id}`).join('&');
+    fetch(`/admin/planning/events?start=${date}T00:00:00&end=${date}T23:59:59&${params}`)
+        .then(r => r.json())
+        .then(evs => buildEdvGrid(date, evs))
+        .catch(() => {
+            document.getElementById('edvGrid').innerHTML =
+                '<div class="edv-no-emp"><i class="material-icons">error_outline</i>Erreur de chargement</div>';
+        });
+}
+
+function buildEdvGrid(date, events) {
+    const activeList = EMPLOYES.filter(e => activeEmps.has(e.id));
+    const grid = document.getElementById('edvGrid');
+
+    if (activeList.length === 0) {
+        grid.innerHTML = '<div class="edv-no-emp"><i class="material-icons">people_outline</i>Sélectionnez des techniciens dans le panneau gauche</div>';
+        return;
+    }
+
+    // Group events by employee id
+    const evsByEmp = {};
+    activeList.forEach(e => { evsByEmp[e.id] = []; });
+    events.forEach(ev => {
+        const id = ev.extendedProps?.employeId;
+        if (id && evsByEmp[id]) evsByEmp[id].push(ev);
     });
-    calendar.render();
+
+    const totalH = EDV_SLOTS * EDV_SLOT_H;
+    const todayStr = edvDateStr(new Date());
+    const isToday  = date === todayStr;
+
+    // ---- Header row ----
+    let headHtml = '<div class="edv-head-row"><div class="edv-head-gutter"></div>';
+    activeList.forEach(e => {
+        const load = empLoads[e.id] ?? 0;
+        headHtml += `<div class="edv-head-cell" style="border-top:3px solid ${empColor(e.id)};">
+            <div class="edv-emp-av" style="background:${empColor(e.id)}">${esc(e.nom[0].toUpperCase())}</div>
+            <div>
+                <div class="edv-emp-name">${esc(e.nom)}</div>
+                <div class="edv-emp-sub" id="edvSub${e.id}">${load} prestation${load !== 1 ? 's' : ''}</div>
+            </div>
+        </div>`;
+    });
+    headHtml += '</div>';
+
+    // ---- Time gutter ----
+    let gutterHtml = `<div class="edv-body-gutter" style="height:${totalH}px;position:relative;">`;
+    for (let i = 0; i <= EDV_SLOTS; i++) {
+        const min = EDV_T_START + i * 30;
+        if (min % 60 === 0) {
+            gutterHtml += `<div class="edv-slot-label" style="top:${i * EDV_SLOT_H}px">${Math.floor(min/60)}:00</div>`;
+        }
+    }
+    gutterHtml += '</div>';
+
+    // ---- Employee columns ----
+    let colsHtml = '';
+    activeList.forEach(e => {
+        colsHtml += `<div class="edv-emp-body" style="height:${totalH}px;" data-emp-id="${e.id}">`;
+
+        // Background slots (clickable)
+        for (let i = 0; i < EDV_SLOTS; i++) {
+            const min = EDV_T_START + i * 30;
+            const h = Math.floor(min / 60), m = min % 60;
+            const isHalfHour = m === 30;
+            colsHtml += `<div class="edv-bg-slot${isHalfHour ? ' edv-half-hour' : ''}"
+                style="top:${i * EDV_SLOT_H}px;height:${EDV_SLOT_H}px;"
+                data-date="${date}" data-time="${edvPadTime(h,m)}" data-emp-id="${e.id}"
+                onclick="onEdvSlotClick(event,this)"></div>`;
+        }
+
+        // Events
+        (evsByEmp[e.id] || []).forEach(ev => {
+            const start   = new Date(ev.start);
+            const end     = ev.end ? new Date(ev.end) : new Date(start.getTime() + 30 * 60000);
+            const startMin = start.getHours() * 60 + start.getMinutes();
+            const endMin   = end.getHours()   * 60 + end.getMinutes();
+            const top      = edvMinToPx(startMin);
+            const height   = Math.max(edvMinToPx(endMin) - top, 20);
+
+            if (top >= edvMinToPx(EDV_T_END) || edvMinToPx(endMin) <= 0) return;
+
+            const isTrajet = ev.extendedProps?.isTrajet;
+            const statut   = ev.extendedProps?.statut;
+            let bg = '', cls = 'edv-event', textC = 'white';
+
+            if (isTrajet) {
+                bg    = hexToRgba(empColor(e.id), 0.28);
+                textC = '#555';
+                cls  += ' edv-trajet';
+            } else {
+                bg = STATUS_COLORS[statut] || empColor(e.id);
+                if (statut === 'brouillon') { cls += ' edv-brouillon'; bg = hexToRgba('#9c27b0', 0.75); }
+            }
+
+            const safeData = isTrajet ? '' : encodeURIComponent(JSON.stringify(ev));
+            const startFmt = start.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+            const clickAttr = isTrajet ? '' : `data-ev="${safeData}" onclick="onEdvEventClick(event,this)"`;
+            colsHtml += `<div class="${cls}"
+                style="top:${Math.max(0,top)}px;height:${height}px;background:${bg};color:${textC};"
+                ${clickAttr}>`;
+            if (isTrajet) {
+                colsHtml += `<i class="material-icons" style="font-size:10px;flex-shrink:0;">directions_car</i> ${ev.extendedProps.dureeTrajetMinutes} min`;
+            } else {
+                colsHtml += `<div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${esc(statut === 'brouillon' ? '✏ ' + ev.title : ev.title)}</div>`;
+                if (height > 30) colsHtml += `<div style="font-size:0.67rem;opacity:0.85;">${startFmt}</div>`;
+            }
+            colsHtml += '</div>';
+        });
+
+        // Current time indicator
+        if (isToday) {
+            const now = new Date();
+            const nowMin = now.getHours() * 60 + now.getMinutes();
+            if (nowMin >= EDV_T_START && nowMin <= EDV_T_END) {
+                colsHtml += `<div class="edv-now-line" style="top:${edvMinToPx(nowMin)}px;"></div>`;
+            }
+        }
+
+        colsHtml += '</div>';
+    });
+
+    grid.innerHTML = `<div class="edv-grid-inner">
+        ${headHtml}
+        <div class="edv-body-row">${gutterHtml}${colsHtml}</div>
+    </div>`;
+}
+
+function onEdvSlotClick(ev, el) {
+    ev.stopPropagation();
+    const date = el.dataset.date;
+    const time = el.dataset.time;
+    const empId = +el.dataset.empId;
+
+    const di = document.getElementById('dateInp');
+    di.value = date;
+    di.classList.add('filled');
+    document.getElementById('timeInp').value = time;
+
+    if (!selEmpId || selEmpId !== empId) {
+        const emp = EMPLOYES.find(e => e.id === empId);
+        if (emp) pickEmp(emp.id, emp.nom);
+    }
+    refreshSummary();
+    document.querySelector('.wizard-body').scrollTop = 0;
+}
+
+function onEdvEventClick(ev, el) {
+    ev.stopPropagation();
+    closePop();
+    try {
+        const raw = JSON.parse(decodeURIComponent(el.dataset.ev));
+        const pseudo = {
+            title:           raw.title,
+            start:           raw.start ? new Date(raw.start) : null,
+            end:             raw.end   ? new Date(raw.end)   : null,
+            backgroundColor: STATUS_COLORS[raw.extendedProps?.statut] || empColor(raw.extendedProps?.employeId ?? 0),
+            extendedProps:   raw.extendedProps || {},
+        };
+        showPop(pseudo, el, ev);
+    } catch(e) { console.error(e); }
+}
+
+function updateEdvSubtitles() {
+    EMPLOYES.forEach(e => {
+        const sub = document.getElementById(`edvSub${e.id}`);
+        if (sub) {
+            const n = empLoads[e.id] ?? 0;
+            sub.textContent = `${n} prestation${n !== 1 ? 's' : ''}`;
+        }
+    });
 }
 
 // ====== POPOVER ======
@@ -1726,7 +1959,7 @@ async function validateTourneeFromPop(empId) {
     const data = await r.json().catch(() => ({}));
     showToast(r.ok ? 'success' : 'error', data.message ?? data.error ?? 'Erreur');
     if (r.ok) {
-        calendar?.refetchEvents();
+        refreshEdv();
         if (selEmpId === empId) {
             await loadCapacite();
             doSearch();
@@ -1762,7 +1995,7 @@ async function regeocodeBon(bonId, currentAddr) {
             alert('Adresse géocodée : ' + data.latitude + ', ' + data.longitude
                 + (data.adresseOverride ? `\n(Override enregistré : ${data.adresseOverride})` : ''));
             closePop();
-            calendar.refetchEvents();
+            refreshEdv();
         } else {
             alert('Géocodage impossible. Vérifiez l\'orthographe (rue/avenue/bd) et le code postal.');
         }
@@ -1779,12 +2012,16 @@ document.addEventListener('click', e => {
 // ====== INIT ======
 document.addEventListener('DOMContentLoaded', () => {
     renderEmpPanel();
-    initCalendar();
-    // Don't call doSearch() on load — employee must be selected first
+
+    // Initialise the date from wizard input or today
     const di = document.getElementById('dateInp');
-    const today = di.value || new Date().toISOString().slice(0,10);
-    if (di.value) di.classList.add('filled');
-    loadStats(today);
+    if (di.value) {
+        const [y,mo,d] = di.value.split('-').map(Number);
+        edvDate = new Date(y, mo - 1, d);
+        di.classList.add('filled');
+    }
+
+    refreshEdv();
 });
 </script>
 {% endblock %}
