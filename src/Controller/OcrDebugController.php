@@ -6,26 +6,18 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/ocr-debug')]
+#[IsGranted('ROLE_ADMIN')]
 class OcrDebugController extends AbstractController
 {
-    private function checkToken(Request $request): bool
-    {
-        $token = $_ENV['OCR_DEBUG_TOKEN'] ?? '';
-        return $token && $request->query->get('token') === $token;
-    }
-
     // =====================================================
-    // LOG VIEWER — GET /ocr-debug/log?token=XXX
+    // LOG VIEWER — GET /ocr-debug/log
     // =====================================================
     #[Route('/log', name: 'ocr_debug_log', methods: ['GET'])]
     public function log(Request $request): Response
     {
-        if (!$this->checkToken($request)) {
-            return new Response('403 Forbidden', 403);
-        }
-
         $logPath = $this->getParameter('kernel.project_dir') . '/var/ocr_debug.log';
         $content = file_exists($logPath) ? file_get_contents($logPath) : '(log vide)';
 
@@ -35,7 +27,6 @@ class OcrDebugController extends AbstractController
             $content = '(log effacé)';
         }
 
-        $token = $request->query->get('token');
         $html  = '<!DOCTYPE html><html><head><meta charset="UTF-8">
 <title>OCR Debug Log</title>
 <meta http-equiv="refresh" content="5">
@@ -50,9 +41,9 @@ h2{color:#4fc3f7;margin:0 0 16px}
 </style></head><body>
 <h2>OCR Debug Log</h2>
 <div class="toolbar">
-  <a href="/ocr-debug/log?token=' . htmlspecialchars($token) . '">Rafraîchir</a>
-  <a href="/ocr-debug/log?token=' . htmlspecialchars($token) . '&clear=1">Effacer le log</a>
-  <a href="/ocr-debug/test?token=' . htmlspecialchars($token) . '">Tester un PDF</a>
+  <a href="/ocr-debug/log">Rafraîchir</a>
+  <a href="/ocr-debug/log?clear=1">Effacer le log</a>
+  <a href="/ocr-debug/test">Tester un PDF</a>
   <span class="refresh">Auto-refresh 5s</span>
 </div>
 <pre>' . htmlspecialchars($content) . '</pre>
@@ -62,17 +53,12 @@ h2{color:#4fc3f7;margin:0 0 16px}
     }
 
     // =====================================================
-    // TEST PDF — GET/POST /ocr-debug/test?token=XXX
+    // TEST PDF — GET/POST /ocr-debug/test
     // Affiche le texte brut extrait + les données parsées
     // =====================================================
     #[Route('/test', name: 'ocr_debug_test', methods: ['GET', 'POST'])]
     public function test(Request $request): Response
     {
-        if (!$this->checkToken($request)) {
-            return new Response('403 Forbidden', 403);
-        }
-
-        $token   = $request->query->get('token');
         $result  = '';
         $rawText = '';
 
@@ -219,7 +205,7 @@ a{color:#4fc3f7;text-decoration:none;padding:6px 12px;background:#333;border-rad
 </style></head><body>
 <h2>Test extraction PDF</h2>
 <div class="toolbar">
-  <a href="/ocr-debug/log?token=' . htmlspecialchars($token) . '">Voir les logs</a>
+  <a href="/ocr-debug/log">Voir les logs</a>
 </div>
 <form method="post" enctype="multipart/form-data">
   <input type="file" name="pdf" accept=".pdf" required>

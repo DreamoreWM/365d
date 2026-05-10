@@ -52,7 +52,7 @@ security:
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/logout, roles: PUBLIC_ACCESS }
-        - { path: ^/ocr-debug, roles: PUBLIC_ACCESS }
+        - { path: ^/ocr-debug, roles: ROLE_ADMIN }
         - { path: ^/landing, roles: PUBLIC_ACCESS }
         - { path: ^/$, roles: PUBLIC_ACCESS }
         - { path: ^/admin, roles: ROLE_ADMIN }

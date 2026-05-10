@@ -5,7 +5,7 @@ framework:
     # Note that the session will be started ONLY if you read or write from it.
     session:
         cookie_secure: auto
-        cookie_samesite: lax
+        cookie_samesite: strict
     asset_mapper:
         paths:
             - assets/
