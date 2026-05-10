@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\BonDeCommande;
 use App\Entity\Relance;
 use App\Entity\TypePrestation;
+use App\Entity\User;
 use App\Enum\StatutBonDeCommande;
 use App\Enum\StatutPrestation;
 use App\Repository\BonDeCommandeRepository;
@@ -194,10 +195,13 @@ class BonDeCommandeController extends AbstractController
             }
         }
 
+        $employes = $this->em->getRepository(User::class)->findAll();
+
         return $this->render('admin/bon_commande/show.html.twig', [
             'bon' => $bon,
             'derniereNonEffectuee' => $derniereNonEffectuee,
             'dernierePrestation' => $dernierePrestation,
+            'employes' => $employes,
         ]);
     }
 
