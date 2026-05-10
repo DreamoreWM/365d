@@ -13,7 +13,7 @@ class DeployController extends AbstractController
 {
     public function __construct(
         private readonly HttpClientInterface $httpClient,
-        private readonly string $discordDeployWebhook = '',
+        private readonly ?string $discordDeployWebhook = null,
     ) {}
 
     #[Route('/deploy', name: 'deploy_webhook', methods: ['POST'])]
