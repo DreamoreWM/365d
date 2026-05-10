@@ -10,6 +10,7 @@ enum StatutPrestation: string
     case EN_COURS = 'en cours';
     case TERMINE = 'terminé';
     case NON_EFFECTUE = 'non effectué';
+    case ABSENT = 'absent';
 
     public function label(): string
     {
@@ -20,6 +21,7 @@ enum StatutPrestation: string
             self::EN_COURS => 'En cours',
             self::TERMINE => 'Terminé',
             self::NON_EFFECTUE => 'Non effectué',
+            self::ABSENT => 'Absent',
         };
     }
 
@@ -32,6 +34,7 @@ enum StatutPrestation: string
             self::EN_COURS => 'en-cours',
             self::TERMINE => 'termine',
             self::NON_EFFECTUE => 'non-effectue',
+            self::ABSENT => 'non-effectue',
         };
     }
 
@@ -44,6 +47,7 @@ enum StatutPrestation: string
             self::EN_COURS => 'play_circle',
             self::TERMINE => 'check_circle',
             self::NON_EFFECTUE => 'cancel',
+            self::ABSENT => 'person_off',
         };
     }
 }

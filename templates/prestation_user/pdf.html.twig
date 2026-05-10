@@ -119,26 +119,26 @@
     <table>
         <tr>
             <td style="height: 390px; position: relative;">
-                {% if prestation.statut.value == 'non effectué' %}
+                {% if prestation.statut.value == 'absent' or prestation.statut.value == 'non effectué' %}
                     <div style="
                         position: absolute;
                         top: 50%;
                         left: 50%;
-                        margin-top: -80px;
-                        margin-left: -160px;
-                        width: 320px;
+                        margin-top: -90px;
+                        margin-left: -210px;
+                        width: 420px;
                         text-align: center;
                         color: rgba(200, 0, 0, 0.80);
                         border: 10px solid rgba(200, 0, 0, 0.80);
-                        border-radius: 12px;
-                        padding: 18px 10px;
+                        border-radius: 18px;
+                        padding: 22px 30px;
                         font-size: 96px;
                         font-weight: bold;
                         letter-spacing: 8px;
                         text-transform: uppercase;
                         transform: rotate(-30deg);
                         font-family: Arial, Helvetica, sans-serif;
-                    ">ABSENT</div>
+                    ">{{ prestation.statut.value == 'absent' ? 'ABSENT' : 'NON EFFECTUÉ' }}</div>
                 {% else %}
                     {# Infos intervention #}
                     {% set infos = prestation.infosIntervention ?? {} %}

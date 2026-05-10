@@ -417,7 +417,7 @@ class BonDeCommande
     public function hasNonEffectuee(): bool
     {
         foreach ($this->prestations as $p) {
-            if ($p->getStatut() === StatutPrestation::NON_EFFECTUE) {
+            if (in_array($p->getStatut(), [StatutPrestation::NON_EFFECTUE, StatutPrestation::ABSENT], true)) {
                 return true;
             }
         }
