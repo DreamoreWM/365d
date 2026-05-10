@@ -228,7 +228,7 @@ class PrestationUserController extends AbstractController
             return $this->redirectToRoute('app_user_prestations');
         }
 
-        $prestation->setStatut(StatutPrestation::NON_EFFECTUE);
+        $prestation->setStatut(StatutPrestation::ABSENT);
         $em->flush();
 
         return $this->redirectToRoute('app_user_prestations', [

@@ -855,11 +855,11 @@
                             {{ p.statut.label }}
                         </span>
                         <div style="display: flex; gap: 8px; align-items: center;">
-                            {% if p.datePrestation|date('Y-m-d') == 'now'|date('Y-m-d') and p.statut.value != 'non effectué' %}
+                            {% if p.datePrestation|date('Y-m-d') == 'now'|date('Y-m-d') and p.statut.value != 'non effectué' and p.statut.value != 'absent' %}
                                 <form method="post"
                                       action="{{ path('app_user_prestation_absent', {id: p.id}) }}"
                                       style="display: inline;"
-                                      onsubmit="return confirm('Marquer cette prestation comme non effectuée ?');">
+                                      onsubmit="return confirm('Marquer le locataire comme absent ?');">
                                     <button type="submit"
                                             class="mdl-button mdl-js-button mdl-button--raised"
                                             style="background: #d32f2f; color: white; min-width: unset; padding: 0 12px;">

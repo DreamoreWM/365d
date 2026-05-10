@@ -189,8 +189,8 @@ class BonDeCommandeController extends AbstractController
             // Prendre la dernière prestation (la plus récente)
             $dernierePrestation = end($prestations);
             
-            // Vérifier si elle est non effectuée
-            if ($dernierePrestation && $dernierePrestation->getStatut() === StatutPrestation::NON_EFFECTUE) {
+            // Vérifier si elle est non effectuée ou absent
+            if ($dernierePrestation && in_array($dernierePrestation->getStatut(), [StatutPrestation::NON_EFFECTUE, StatutPrestation::ABSENT], true)) {
                 $derniereNonEffectuee = true;
             }
         }

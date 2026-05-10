@@ -3,7 +3,7 @@
 {% set prestationIsToday = prestation.datePrestation|date('Y-m-d') == 'now'|date('Y-m-d') %}
 {% set isTermine = (
     prestation.statut.value == 'terminé'
-    or (prestation.statut.value == 'non effectué' and prestationIsToday)
+    or ((prestation.statut.value == 'non effectué' or prestation.statut.value == 'absent') and prestationIsToday)
 ) and not editMode|default(false) %}
 
 {% block title %}Prestation - {{ prestation.bonDeCommande.clientNom }}{% endblock %}
@@ -639,7 +639,7 @@
 <div class="prestation-detail-container">
 
     {# ===== HEADER ===== #}
-    <div class="detail-header {% if isTermine %}header-termine{% elseif prestation.statut.value == 'en cours' %}header-en-cours{% elseif prestation.statut.value == 'non effectué' %}header-non-effectue{% endif %}">
+    <div class="detail-header {% if isTermine %}header-termine{% elseif prestation.statut.value == 'en cours' %}header-en-cours{% elseif prestation.statut.value == 'non effectué' or prestation.statut.value == 'absent' %}header-non-effectue{% endif %}">
         <div class="header-top-row">
             <a href="{{ path('app_user_prestations', {date: prestation.datePrestation|date('Y-m-d')}) }}" class="back-btn">
                 <i class="material-icons">arrow_back</i>
@@ -1202,8 +1202,8 @@
                         <i class="material-icons">close</i>
                         Annuler
                     </a>
-                {% elseif prestation.statut.value == 'non effectué' %}
-                    {# Mode édition d'une prestation non effectuée (absent) — le jour même #}
+                {% elseif prestation.statut.value == 'non effectué' or prestation.statut.value == 'absent' %}
+                    {# Mode édition d'une prestation non effectuée / absent — le jour même #}
                     <button type="submit" name="valider" value="1" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored"
                             onclick="return confirm('Valider cette intervention et la marquer comme terminée ?');">
                         <i class="material-icons">check_circle</i>
