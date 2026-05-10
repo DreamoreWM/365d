@@ -533,6 +533,60 @@ body.dark-mode .ev-pop-row { color: #aaa; }
     font-style: italic;
 }
 
+/* Brouillon event style */
+.s-brouillon { background: #f3e5f5; color: #7b1fa2; }
+.fc-brouillon-event .fc-event-main-frame { opacity: 0.8; font-style: italic; }
+
+/* Capacity bars */
+.capacity-section {
+    padding: 10px 16px 4px;
+    border-bottom: 1px solid var(--border-light);
+}
+body.dark-mode .capacity-section { border-bottom-color: var(--border-dark); }
+.capacity-title { font-size: 0.75rem; font-weight: 700; color: #9e9e9e; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
+.capacity-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.8rem; }
+.capacity-label { width: 52px; color: var(--text-light); flex-shrink: 0; }
+body.dark-mode .capacity-label { color: var(--text-dark); }
+.capacity-bar-track { flex: 1; height: 7px; border-radius: 99px; background: rgba(0,0,0,0.08); overflow: hidden; }
+body.dark-mode .capacity-bar-track { background: rgba(255,255,255,0.1); }
+.capacity-bar-fill { height: 100%; border-radius: 99px; transition: width 0.3s ease; }
+.capacity-bar-fill.ok   { background: #4caf50; }
+.capacity-bar-fill.warn { background: #ff9800; }
+.capacity-bar-fill.full { background: #ef5350; }
+.capacity-mins { font-size: 0.73rem; color: #9e9e9e; flex-shrink: 0; white-space: nowrap; }
+
+/* Capacity filter toggle */
+.capacity-filter { display: flex; align-items: center; gap: 7px; padding: 6px 16px 8px; font-size: 0.8rem; color: var(--text-light); }
+body.dark-mode .capacity-filter { color: var(--text-dark); }
+.capacity-filter input[type=checkbox] { accent-color: var(--primary); width: 14px; height: 14px; cursor: pointer; }
+.capacity-filter label { cursor: pointer; user-select: none; }
+.fits-badge { display: inline-flex; align-items: center; gap: 2px; font-size: 0.68rem; padding: 1px 5px; border-radius: 99px; font-weight: 700; }
+.fits-ok   { background: #e8f5e9; color: #2e7d32; }
+.fits-no   { background: #ffebee; color: #c62828; }
+
+/* Brouillon mode toggle in footer */
+.brouillon-toggle-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid var(--border-light); margin-top: 10px; font-size: 0.84rem; color: var(--text-light); }
+body.dark-mode .brouillon-toggle-row { border-top-color: var(--border-dark); color: var(--text-dark); }
+.toggle-switch { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; inset: 0; background: #ccc; border-radius: 99px; cursor: pointer; transition: 0.2s; }
+.toggle-slider:before { content:''; position: absolute; width: 14px; height: 14px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+.toggle-switch input:checked + .toggle-slider { background: #7b1fa2; }
+.toggle-switch input:checked + .toggle-slider:before { transform: translateX(16px); }
+
+/* Brouillon indicator */
+.brouillon-indicator { display: none; align-items: center; gap: 8px; padding: 10px 13px; background: #f3e5f5; border: 1px solid #ce93d8; border-radius: 8px; margin-top: 10px; }
+.brouillon-indicator.visible { display: flex; }
+.brouillon-indicator .bi-icon { font-size: 18px; color: #7b1fa2; flex-shrink: 0; }
+.brouillon-indicator .bi-text { flex: 1; font-size: 0.82rem; color: #4a148c; }
+.brouillon-indicator .bi-text strong { font-weight: 700; }
+.bi-actions { display: flex; gap: 6px; }
+.btn-validate-tournee { padding: 6px 11px; background: #4caf50; color: #fff; border: none; border-radius: 7px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: background 0.15s; }
+.btn-validate-tournee:hover { background: #388e3c; }
+.btn-discard-tournee { padding: 6px 11px; background: transparent; color: #c62828; border: 1px solid #ef9a9a; border-radius: 7px; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: background 0.15s; }
+.btn-discard-tournee:hover { background: #ffebee; }
+.btn-validate-tournee .material-icons, .btn-discard-tournee .material-icons { font-size: 14px; }
+
 /* Toast */
 .toasts { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
 .toast { padding: 12px 18px; border-radius: 8px; color: white; font-size: 0.88rem; font-weight: 500; box-shadow: 0 4px 16px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px; animation: toastIn 0.3s ease; }
@@ -586,15 +640,49 @@ body.dark-mode .ev-pop-row { color: #aaa; }
 
         <div class="wizard-body">
 
-            <!-- STEP 1: BON -->
+            <!-- STEP 1: EMPLOYEE (first) -->
             <div class="w-step active" id="wStep1">
                 <div class="step-head" onclick="goToStep(1)">
                     <div class="step-num">1</div>
-                    <span class="step-lbl">Bon de commande</span>
+                    <span class="step-lbl">Technicien</span>
                     <span class="step-done-badge" id="s1badge"><i class="material-icons">check_circle</i><span id="s1text"></span></span>
                 </div>
+                <div class="step-content">
+                    <div class="emp-grid">
+                        {% for emp in employes %}
+                        <button class="emp-btn" id="eb{{ emp.id }}" onclick="pickEmp({{ emp.id }},'{{ emp.nom|e('html_attr') }}')">
+                            <div class="emp-btn-avatar" data-empid="{{ emp.id }}">{{ emp.nom|first|upper }}</div>
+                            <span class="emp-btn-name">{{ emp.nom }}</span>
+                            <span class="emp-btn-load" id="eload{{ emp.id }}">–</span>
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2: BON (filtered by capacity) -->
+            <div class="w-step" id="wStep2">
+                <div class="step-head" onclick="goToStep(2)">
+                    <div class="step-num">2</div>
+                    <span class="step-lbl">Bon de commande</span>
+                    <span class="step-done-badge" id="s2badge"><i class="material-icons">check_circle</i><span id="s2text"></span></span>
+                </div>
+                <!-- Capacity bars (shown when employee selected) -->
+                <div class="capacity-section" id="capacitySection" style="display:none;">
+                    <div class="capacity-title">Capacité du jour</div>
+                    <div class="capacity-row">
+                        <span class="capacity-label">Matin</span>
+                        <div class="capacity-bar-track"><div class="capacity-bar-fill ok" id="barMatin" style="width:100%"></div></div>
+                        <span class="capacity-mins" id="txtMatin">–</span>
+                    </div>
+                    <div class="capacity-row">
+                        <span class="capacity-label">Après-midi</span>
+                        <div class="capacity-bar-track"><div class="capacity-bar-fill ok" id="barAprem" style="width:100%"></div></div>
+                        <span class="capacity-mins" id="txtAprem">–</span>
+                    </div>
+                </div>
                 <!-- Selected bon — toujours visible (hors step-content) -->
-                <div class="sel-bon-box" id="selBonBox" style="margin: 0 20px 12px;">
+                <div class="sel-bon-box" id="selBonBox" style="margin: 0 20px 12px; display:none;">
                     <div style="flex:1; min-width:0;">
                         <div class="bon-name" id="selBonName"></div>
                         <div class="bon-addr" id="selBonAddr"></div>
@@ -608,6 +696,10 @@ body.dark-mode .ev-pop-row { color: #aaa; }
                 <div class="step-content">
                     <!-- Search area -->
                     <div id="searchArea">
+                        <div class="capacity-filter" id="capacityFilter" style="display:none;">
+                            <input type="checkbox" id="filterByCapacity" onchange="showFiltered()" checked>
+                            <label for="filterByCapacity">Afficher seulement les bons qui tiennent dans les créneaux disponibles</label>
+                        </div>
                         <div class="search-wrap">
                             <i class="material-icons">search</i>
                             <input type="text" id="wizSearch" placeholder="Client, adresse, numéro BC…" oninput="debSearch()">
@@ -632,28 +724,8 @@ body.dark-mode .ev-pop-row { color: #aaa; }
                         </div>
                         {% endif %}
                         <div class="bon-list" id="bonList">
-                            <div class="search-msg"><i class="material-icons">hourglass_empty</i>Chargement…</div>
+                            <div class="search-msg"><i class="material-icons">person</i>Sélectionnez un technicien d'abord</div>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- STEP 2: EMPLOYEE -->
-            <div class="w-step" id="wStep2">
-                <div class="step-head" onclick="goToStep(2)">
-                    <div class="step-num">2</div>
-                    <span class="step-lbl">Technicien</span>
-                    <span class="step-done-badge" id="s2badge"><i class="material-icons">check_circle</i><span id="s2text"></span></span>
-                </div>
-                <div class="step-content">
-                    <div class="emp-grid">
-                        {% for emp in employes %}
-                        <button class="emp-btn" id="eb{{ emp.id }}" onclick="pickEmp({{ emp.id }},'{{ emp.nom|e('html_attr') }}')">
-                            <div class="emp-btn-avatar" data-empid="{{ emp.id }}">{{ emp.nom|first|upper }}</div>
-                            <span class="emp-btn-name">{{ emp.nom }}</span>
-                            <span class="emp-btn-load" id="eload{{ emp.id }}">–</span>
-                        </button>
-                        {% endfor %}
                     </div>
                 </div>
             </div>
@@ -711,11 +783,37 @@ body.dark-mode .ev-pop-row { color: #aaa; }
                 <input type="hidden" name="heure"       id="fHeure">
                 <input type="hidden" name="creneau"     id="fCreneau">
                 <input type="hidden" name="description" id="fNote">
+                <input type="hidden" name="mode"        id="fMode">
                 <button type="submit" class="btn-create" id="btnCreate" disabled>
-                    <i class="material-icons">add_circle</i>
-                    Créer l'intervention
+                    <i class="material-icons" id="btnCreateIcon">add_circle</i>
+                    <span id="btnCreateLabel">Créer l'intervention</span>
                 </button>
             </form>
+
+            <!-- Mode brouillon toggle -->
+            <div class="brouillon-toggle-row">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="brouillonToggle" onchange="onBrouillonToggle()">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span><strong>Mode brouillon</strong> — Préparer la tournée sans la valider</span>
+            </div>
+
+            <!-- Brouillon indicator (appears when drafts exist for emp+date) -->
+            <div class="brouillon-indicator" id="brouillonIndicator">
+                <i class="material-icons bi-icon">edit_note</i>
+                <div class="bi-text">
+                    <strong id="brouillonCount">0</strong> prestation(s) en brouillon pour ce technicien ce jour
+                </div>
+                <div class="bi-actions">
+                    <button class="btn-validate-tournee" onclick="validateTournee()" title="Confirme toutes les prestations en brouillon et optimise la tournée">
+                        <i class="material-icons">check_circle</i> Valider
+                    </button>
+                    <button class="btn-discard-tournee" onclick="discardTournee()" title="Supprime toutes les prestations en brouillon">
+                        <i class="material-icons">delete</i>
+                    </button>
+                </div>
+            </div>
 
             <form method="post" action="{{ path('admin_planning_reoptimize') }}" style="margin-top: 12px;"
                   onsubmit="return onReoptimize(this)">
@@ -790,6 +888,8 @@ let calendar     = null;
 let searchTm     = null;
 let bonCache     = [];  // { id, ...data }
 let previewEvent = null;
+let isBrouillon  = false;  // mode brouillon
+let capaciteData = null;   // { matinDisponible, apremDisponible, ... }
 
 // ====== UTILS ======
 function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
@@ -866,9 +966,11 @@ function setTypePrestation(btn, val) {
 }
 
 function doSearch() {
-    const q = document.getElementById('wizSearch').value.trim();
-    // Fetch sans aucun filtre (sauf texte) → counts exacts sur toutes les dimensions, filtre client-side
-    const p = new URLSearchParams({ q, statut: '', groupe_geo: '', type_prestation: '', all: '1' });
+    if (!selEmpId) return; // Require employee selection first
+    const q    = document.getElementById('wizSearch').value.trim();
+    const date = document.getElementById('dateInp').value;
+    const p    = new URLSearchParams({ q, statut: '', groupe_geo: '', type_prestation: '', all: '1',
+                                       employe: selEmpId ?? '', date: date ?? '' });
     document.getElementById('bonList').innerHTML = '<div class="search-msg"><i class="material-icons">hourglass_empty</i>Recherche…</div>';
     fetch(`/admin/planning/search-bons?${p}`)
         .then(r => r.json())
@@ -885,6 +987,11 @@ function showFiltered() {
     if (statut)         bons = bons.filter(b => b.statut === statut);
     if (groupe)         bons = bons.filter(b => String(b.groupeGeo?.id ?? '') === String(groupe));
     if (typePrestation) bons = bons.filter(b => String(b.typePrestation?.id ?? '') === String(typePrestation));
+    // If capacity filter is active and capacity is known, filter by fits
+    const filterCb = document.getElementById('filterByCapacity');
+    if (filterCb?.checked && capaciteData) {
+        bons = bons.filter(b => b.fitsAnySlot !== false);
+    }
     showResults(bons);
 }
 
@@ -917,6 +1024,19 @@ function showResults(bons) {
         const geoIcon = (b.geocoded === false)
             ? `<i class="material-icons" title="Adresse non géolocalisée" style="font-size:13px;vertical-align:middle;color:#d32f2f">location_off</i>`
             : (b.geocoded === true ? `<i class="material-icons" title="Adresse géolocalisée" style="font-size:13px;vertical-align:middle;color:#2e7d32">location_on</i>` : '');
+        // Capacity fit badge
+        let fitBadge = '';
+        if (capaciteData && b.fitsAnySlot !== null && b.fitsAnySlot !== undefined) {
+            const dur = b.dureeMinutes ?? 30;
+            if (b.fitsAnySlot) {
+                const slots = [];
+                if (b.fitsMatin) slots.push('matin');
+                if (b.fitsAprem) slots.push('aprem');
+                fitBadge = `<span class="fits-badge fits-ok" title="${dur} min — tient dans : ${slots.join(', ')}"><i class="material-icons" style="font-size:10px;">check</i> ${dur} min</span>`;
+            } else {
+                fitBadge = `<span class="fits-badge fits-no" title="${dur} min — ne tient pas dans les créneaux disponibles"><i class="material-icons" style="font-size:10px;">block</i> ${dur} min</span>`;
+            }
+        }
         return `<div class="bon-card" onclick="pickBon(${b.id})">
             <div class="bon-name">${esc(b.clientNom)} ${geoIcon}</div>
             <div class="bon-addr"><i class="material-icons" style="font-size:11px;vertical-align:middle;">place</i> ${esc(b.clientAdresse)}</div>
@@ -925,12 +1045,31 @@ function showResults(bons) {
                 ${progText ? `<span class="b-badge b-prog">${progText} interv.</span>` : ''}
                 ${b.typePrestation ? `<span class="b-badge b-type">${esc(b.typePrestation.nom)}</span>` : ''}
                 ${b.groupeGeo ? `<span class="b-badge b-geo">${esc(b.groupeGeo.nom)}</span>` : ''}
+                ${fitBadge}
             </div>
         </div>`;
     }).join('');
 }
 
 // ====== WIZARD STEPS ======
+
+// STEP 1: Employee picked first
+function pickEmp(id, nom) {
+    if (selEmpId) document.getElementById(`eb${selEmpId}`)?.classList.remove('selected');
+    selEmpId = id; selEmpNom = nom;
+    updateReoptimizeBtn && updateReoptimizeBtn();
+    document.getElementById(`eb${id}`)?.classList.add('selected');
+    document.getElementById('s1text').textContent = nom;
+    document.getElementById('wStep1').classList.replace('active','done');
+    document.getElementById('wStep2').classList.add('active');
+    document.querySelector('.wizard-body').scrollTop = 0;
+    // Load capacity for this employee + current date and refresh search with employee filter
+    loadCapacite().then(() => doSearch());
+    updateBrouillonIndicator();
+    refreshSummary();
+}
+
+// STEP 2: Bon picked
 function pickBon(id) {
     const b = bonCache.find(x => x.id === id);
     if (!b) return;
@@ -947,41 +1086,13 @@ function pickBon(id) {
     document.getElementById('selBonBox').style.display = 'flex';
     document.getElementById('searchArea').style.display = 'none';
 
-    // Mark step 1 done, activate step 2
-    document.getElementById('s1text').textContent = b.clientNom;
-    document.getElementById('wStep1').classList.replace('active','done');
-    document.getElementById('wStep2').classList.add('active');
-    document.querySelector('.wizard-body').scrollTop = 0;
-    refreshSummary();
-}
-
-function resetBon() {
-    selBon = null;
-    if (previewEvent) { previewEvent.remove(); previewEvent = null; }
-    document.getElementById('selBonBox').style.display = 'none';
-    document.getElementById('searchArea').style.display = 'block';
-    document.getElementById('wStep1').classList.remove('done');
-    document.getElementById('wStep1').classList.add('active');
-    document.getElementById('wStep2').classList.remove('active','done');
-    document.getElementById('wStep3').classList.remove('active','done');
-    // Deselect employee button
-    if (selEmpId) { document.getElementById(`eb${selEmpId}`)?.classList.remove('selected'); }
-    selEmpId = null; selEmpNom = null;
-    document.getElementById('s2badge').style.display = 'none';
-    refreshSummary();
-    document.getElementById('wizSearch').focus();
-}
-
-function pickEmp(id, nom) {
-    if (selEmpId) document.getElementById(`eb${selEmpId}`)?.classList.remove('selected');
-    selEmpId = id; selEmpNom = nom;
-    updateReoptimizeBtn && updateReoptimizeBtn();
-    document.getElementById(`eb${id}`)?.classList.add('selected');
-    document.getElementById('s2text').textContent = nom;
+    // Mark step 2 done, activate step 3
+    document.getElementById('s2text').textContent = b.clientNom;
     document.getElementById('wStep2').classList.replace('active','done');
     document.getElementById('wStep3').classList.add('active');
     document.querySelector('.wizard-body').scrollTop = 999;
-    // If user already chose a half-day, re-queue after this employee's existing prestations.
+
+    // Queue time after existing prestations if half-day slot already selected
     if (currentSlot === 'matin' || currentSlot === 'aprem') {
         computeNextSlotTime(currentSlot).then(next => {
             document.getElementById('timeInp').value = next;
@@ -992,6 +1103,19 @@ function pickEmp(id, nom) {
         refreshSummary();
         checkFixeConflict();
     }
+}
+
+function resetBon() {
+    selBon = null;
+    if (previewEvent) { previewEvent.remove(); previewEvent = null; }
+    document.getElementById('selBonBox').style.display = 'none';
+    document.getElementById('searchArea').style.display = 'block';
+    document.getElementById('wStep2').classList.remove('done');
+    document.getElementById('wStep2').classList.add('active');
+    document.getElementById('wStep3').classList.remove('active','done');
+    document.getElementById('s2badge').style.display = 'none';
+    refreshSummary();
+    document.getElementById('wizSearch').focus();
 }
 
 function updateCalendarPreview() {
@@ -1021,6 +1145,11 @@ function onDateChange() {
     const d = inp.value;
     inp.classList.toggle('filled', !!d);
     if (d) { loadStats(d); calendar?.gotoDate(d); }
+    // Reload capacity when date changes (if employee already selected)
+    if (selEmpId) {
+        loadCapacite().then(() => doSearch());
+        updateBrouillonIndicator();
+    }
     // Keep the auto-queued hour in sync when the day changes.
     if (d && selEmpId && (currentSlot === 'matin' || currentSlot === 'aprem')) {
         computeNextSlotTime(currentSlot).then(next => {
@@ -1203,20 +1332,40 @@ function refreshSummary() {
     // when the user actually clicked a slot button (or its equivalent).
     document.getElementById('fCreneau').value = currentSlot ?? '';
     document.getElementById('fNote').value    = document.getElementById('noteInp')?.value ?? '';
+    document.getElementById('fMode').value    = isBrouillon ? 'brouillon' : '';
     updateCalendarPreview();
 
     const ready = selBon && selEmpId && date && heure;
     document.getElementById('btnCreate').disabled = !ready || fixeConflict;
 
+    // Update create button label based on mode
+    const icon  = document.getElementById('btnCreateIcon');
+    const label = document.getElementById('btnCreateLabel');
+    if (isBrouillon) {
+        if (icon)  icon.textContent  = 'edit_note';
+        if (label) label.textContent = 'Ajouter au brouillon';
+        if (document.getElementById('btnCreate')) {
+            document.getElementById('btnCreate').style.background = '#7b1fa2';
+        }
+    } else {
+        if (icon)  icon.textContent  = 'add_circle';
+        if (label) label.textContent = 'Créer l\'intervention';
+        if (document.getElementById('btnCreate')) {
+            document.getElementById('btnCreate').style.background = '';
+        }
+    }
+
     const box = document.getElementById('confirmBox');
     if (ready) {
         const df = new Date(date + 'T12:00').toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+        const brouillonRow = isBrouillon ? `<div class="c-row" style="color:#7b1fa2"><i class="material-icons">edit_note</i><strong>Mode brouillon</strong> — à valider avant publication</div>` : '';
         box.className = 'confirm-summary visible';
         box.innerHTML = `
             <div class="c-row"><i class="material-icons">person</i><strong>${esc(selBon.clientNom)}</strong></div>
             <div class="c-row"><i class="material-icons">place</i>${esc(selBon.clientAdresse)}</div>
             <div class="c-row"><i class="material-icons">engineering</i><strong>${esc(selEmpNom)}</strong></div>
-            <div class="c-row"><i class="material-icons">schedule</i>${esc(df)} à <strong>${esc(heure)}</strong></div>`;
+            <div class="c-row"><i class="material-icons">schedule</i>${esc(df)} à <strong>${esc(heure)}</strong></div>
+            ${brouillonRow}`;
     } else {
         box.className = 'confirm-summary';
     }
@@ -1226,15 +1375,143 @@ function refreshSummary() {
 function goToStep(n) {
     const step = document.getElementById(`wStep${n}`);
     if (!step.classList.contains('done')) return; // only act if already done
-    if (n === 1) { resetBon(); return; }
-    if (n === 2) {
+    if (n === 1) {
+        // Reset employee selection
         if (selEmpId) document.getElementById(`eb${selEmpId}`)?.classList.remove('selected');
         selEmpId = null; selEmpNom = null;
-        document.getElementById('wStep2').classList.remove('done');
-        document.getElementById('wStep2').classList.add('active');
-        document.getElementById('wStep3').classList.remove('active', 'done');
+        selBon   = null;
+        if (previewEvent) { previewEvent.remove(); previewEvent = null; }
+        capaciteData = null;
+        document.getElementById('capacitySection').style.display = 'none';
+        document.getElementById('capacityFilter').style.display = 'none';
+        document.getElementById('selBonBox').style.display = 'none';
+        document.getElementById('searchArea').style.display = 'block';
+        document.getElementById('wStep1').classList.remove('done');
+        document.getElementById('wStep1').classList.add('active');
+        document.getElementById('wStep2').classList.remove('active','done');
+        document.getElementById('wStep3').classList.remove('active','done');
+        document.getElementById('s1badge').style.display = 'none';
+        document.getElementById('s2badge').style.display = 'none';
+        document.getElementById('bonList').innerHTML = '<div class="search-msg"><i class="material-icons">person</i>Sélectionnez un technicien d\'abord</div>';
+        updateBrouillonIndicator();
         refreshSummary();
-        document.querySelector('.wizard-body').scrollTop = 100;
+        return;
+    }
+    if (n === 2) { resetBon(); return; }
+}
+
+// ====== BROUILLON MODE ======
+function onBrouillonToggle() {
+    isBrouillon = document.getElementById('brouillonToggle').checked;
+    refreshSummary();
+}
+
+// ====== CAPACITY ======
+function loadCapacite() {
+    const date = document.getElementById('dateInp').value;
+    if (!selEmpId || !date) {
+        capaciteData = null;
+        document.getElementById('capacitySection').style.display = 'none';
+        document.getElementById('capacityFilter').style.display = 'none';
+        return Promise.resolve(null);
+    }
+    return fetch(`/admin/planning/capacite-jour?employe=${encodeURIComponent(selEmpId)}&date=${encodeURIComponent(date)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+            capaciteData = data;
+            renderCapacityBars(data);
+            return data;
+        })
+        .catch(() => { capaciteData = null; return null; });
+}
+
+function renderCapacityBars(data) {
+    if (!data) {
+        document.getElementById('capacitySection').style.display = 'none';
+        document.getElementById('capacityFilter').style.display = 'none';
+        return;
+    }
+    document.getElementById('capacitySection').style.display = 'block';
+    document.getElementById('capacityFilter').style.display = 'flex';
+
+    function barPct(used, total) { return total > 0 ? Math.min(100, Math.round(used / total * 100)) : 0; }
+    function barClass(pct) { return pct >= 100 ? 'full' : pct >= 75 ? 'warn' : 'ok'; }
+
+    const matinPct = barPct(data.matinUsed, data.matinTotal);
+    const apremPct = barPct(data.apremUsed, data.apremTotal);
+
+    const barMatin = document.getElementById('barMatin');
+    const barAprem = document.getElementById('barAprem');
+    barMatin.style.width = matinPct + '%';
+    barMatin.className   = 'capacity-bar-fill ' + barClass(matinPct);
+    barAprem.style.width = apremPct + '%';
+    barAprem.className   = 'capacity-bar-fill ' + barClass(apremPct);
+
+    function fmtMin(m) { return m >= 60 ? `${Math.floor(m/60)}h${m%60 ? String(m%60).padStart(2,'0') : ''}` : `${m} min`; }
+    document.getElementById('txtMatin').textContent = `${fmtMin(data.matinDisponible)} libre`;
+    document.getElementById('txtAprem').textContent = `${fmtMin(data.apremDisponible)} libre`;
+}
+
+// ====== BROUILLON INDICATOR ======
+function updateBrouillonIndicator() {
+    const date = document.getElementById('dateInp').value;
+    if (!selEmpId || !date) {
+        document.getElementById('brouillonIndicator').classList.remove('visible');
+        return;
+    }
+    fetch(`/admin/planning/capacite-jour?employe=${encodeURIComponent(selEmpId)}&date=${encodeURIComponent(date)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+            const ind = document.getElementById('brouillonIndicator');
+            if (data && data.brouillonCount > 0) {
+                document.getElementById('brouillonCount').textContent = data.brouillonCount;
+                ind.classList.add('visible');
+            } else {
+                ind.classList.remove('visible');
+            }
+        })
+        .catch(() => {});
+}
+
+async function validateTournee() {
+    const date = document.getElementById('dateInp').value;
+    if (!selEmpId || !date) return;
+    if (!confirm('Valider toutes les prestations en brouillon pour ce technicien ce jour ?')) return;
+    const r = await fetch('/admin/planning/validate-tournee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeId: selEmpId, date }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok) {
+        showToast('success', data.message ?? 'Tournée validée');
+        calendar?.refetchEvents();
+        await loadCapacite();
+        doSearch();
+        updateBrouillonIndicator();
+    } else {
+        showToast('error', data.error ?? 'Erreur');
+    }
+}
+
+async function discardTournee() {
+    const date = document.getElementById('dateInp').value;
+    if (!selEmpId || !date) return;
+    if (!confirm('Supprimer toutes les prestations en brouillon pour ce technicien ce jour ?')) return;
+    const r = await fetch('/admin/planning/discard-tournee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeId: selEmpId, date }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok) {
+        showToast('success', data.message ?? 'Brouillon supprimé');
+        calendar?.refetchEvents();
+        await loadCapacite();
+        doSearch();
+        updateBrouillonIndicator();
+    } else {
+        showToast('error', data.error ?? 'Erreur');
     }
 }
 
@@ -1280,6 +1557,7 @@ function updateReoptimizeBtn() {
 
 // ====== FULLCALENDAR ======
 const STATUS_COLORS = {
+    'brouillon':    '#9c27b0',
     'à programmer': '#e65100',
     'programmé':    '#3f51b5',
     'en cours':     '#ff9800',
@@ -1307,7 +1585,6 @@ function initCalendar() {
                 .then(evs => {
                     evs.forEach(ev => {
                         if (ev.extendedProps?.isTrajet) {
-                            // Coloriser le bloc trajet avec la couleur de l'employé (translucide)
                             const empId = ev.extendedProps.employeId ?? 0;
                             const base = empColor(empId);
                             ev.backgroundColor = hexToRgba(base, 0.35);
@@ -1315,8 +1592,16 @@ function initCalendar() {
                             ev.textColor        = '#444';
                             return;
                         }
-                        const sc = STATUS_COLORS[ev.extendedProps?.statut];
+                        const statut = ev.extendedProps?.statut;
+                        const sc = STATUS_COLORS[statut];
                         if (sc) ev.color = sc;
+                        // Brouillon events: dashed border + lighter
+                        if (statut === 'brouillon') {
+                            ev.classNames = [...(ev.classNames ?? []), 'fc-brouillon-event'];
+                            ev.borderColor = '#ab47bc';
+                            ev.backgroundColor = hexToRgba('#9c27b0', 0.55);
+                            ev.title = '✏ ' + ev.title;
+                        }
                     });
                     ok(evs);
                 })
@@ -1405,8 +1690,12 @@ function showPop(event, el, jsEvent) {
     const regeocodeBtn = p.bonId
         ? `<button onclick="regeocodeBon(${p.bonId}, '${prefill}')" class="ev-pop-btn btn-view" title="Corriger l'adresse pour le géocodage"><i class="material-icons">my_location</i>Géocoder</button>`
         : '';
+    const validateBrouillonBtn = p.statut === 'brouillon' && p.employeId
+        ? `<button onclick="validateTourneeFromPop(${p.employeId})" class="ev-pop-btn" style="background:#7b1fa2;color:#fff;"><i class="material-icons">check_circle</i>Valider</button>`
+        : '';
     document.getElementById('popActions').innerHTML = `
         <a href="/admin/bon-commande/${p.bonId}" class="ev-pop-btn btn-view"><i class="material-icons">open_in_new</i>Voir bon</a>
+        ${validateBrouillonBtn}
         ${regeocodeBtn}
         <button onclick="delPrestation(${p.prestationId})" class="ev-pop-btn btn-del"><i class="material-icons">delete</i>Supprimer</button>`;
 
@@ -1420,6 +1709,27 @@ function showPop(event, el, jsEvent) {
     pop.style.top  = Math.max(4, top)  + 'px';
 }
 function closePop() { document.getElementById('evPop').classList.remove('open'); }
+
+async function validateTourneeFromPop(empId) {
+    const date = document.getElementById('dateInp').value || new Date().toISOString().slice(0,10);
+    if (!confirm('Valider toutes les prestations en brouillon pour ce technicien ce jour ?')) return;
+    closePop();
+    const r = await fetch('/admin/planning/validate-tournee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeId: empId, date }),
+    });
+    const data = await r.json().catch(() => ({}));
+    showToast(r.ok ? 'success' : 'error', data.message ?? data.error ?? 'Erreur');
+    if (r.ok) {
+        calendar?.refetchEvents();
+        if (selEmpId === empId) {
+            await loadCapacite();
+            doSearch();
+            updateBrouillonIndicator();
+        }
+    }
+}
 
 function delPrestation(id) {
     if (!confirm('Supprimer cette intervention ?')) return;
@@ -1466,7 +1776,7 @@ document.addEventListener('click', e => {
 document.addEventListener('DOMContentLoaded', () => {
     renderEmpPanel();
     initCalendar();
-    doSearch();
+    // Don't call doSearch() on load — employee must be selected first
     const di = document.getElementById('dateInp');
     const today = di.value || new Date().toISOString().slice(0,10);
     if (di.value) di.classList.add('filled');

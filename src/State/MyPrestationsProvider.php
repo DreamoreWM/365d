@@ -4,6 +4,7 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
+use App\Enum\StatutPrestation;
 use App\Repository\PrestationRepository;
 use Symfony\Bundle\SecurityBundle\Security;
 
@@ -23,9 +24,13 @@ class MyPrestationsProvider implements ProviderInterface
             return [];
         }
 
-        return $this->prestationRepository->findBy(
-            ['employe' => $user],
-            ['datePrestation' => 'DESC']
-        );
+        return $this->prestationRepository->createQueryBuilder('p')
+            ->where('p.employe = :user')
+            ->andWhere('p.statut != :brouillon')
+            ->setParameter('user', $user)
+            ->setParameter('brouillon', StatutPrestation::BROUILLON->value)
+            ->orderBy('p.datePrestation', 'DESC')
+            ->getQuery()
+            ->getResult();
     }
 }

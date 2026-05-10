@@ -299,11 +299,12 @@ class PlanningController extends AbstractController
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
-        $bonId = $request->request->get('bon');
-        $employeId = $request->request->get('employe');
-        $date = $request->request->get('date');
-        $heure = $request->request->get('heure', '09:00');
+        $bonId      = $request->request->get('bon');
+        $employeId  = $request->request->get('employe');
+        $date       = $request->request->get('date');
+        $heure      = $request->request->get('heure', '09:00');
         $creneauStr = $request->request->get('creneau');
+        $modeBrouillon = $request->request->get('mode') === 'brouillon';
 
         // Validation
         if (!$bonId || !$employeId || !$date) {
@@ -359,8 +360,12 @@ class PlanningController extends AbstractController
             }
         }
 
-        // Mettre à jour le statut
-        $this->prestationManager->updatePrestationStatut($prestation);
+        // Statut : brouillon si demandé, sinon calcul automatique selon la date
+        if ($modeBrouillon) {
+            $prestation->setStatut(StatutPrestation::BROUILLON);
+        } else {
+            $this->prestationManager->updatePrestationStatut($prestation);
+        }
 
         $this->em->persist($prestation);
         $this->em->flush();
@@ -369,30 +374,33 @@ class PlanningController extends AbstractController
         $this->geocoder->ensureGeocoded($bon);
         $this->em->flush();
 
-        // Re-optimize the day's tour for this employee (skip if creneau=fixe — anchor only)
-        try {
-            $diag = $this->optimizer->optimizeDay($dateTime, $employe);
-            if ($diag['depotMissing']) {
-                $this->addFlash('warning',
-                    'Adresse de la société non géolocalisée — les tournées ne peuvent pas être optimisées. Renseignez-la dans Paramètres.');
+        if (!$modeBrouillon) {
+            // Re-optimize the day's tour for this employee (skip if creneau=fixe — anchor only)
+            try {
+                $diag = $this->optimizer->optimizeDay($dateTime, $employe);
+                if ($diag['depotMissing']) {
+                    $this->addFlash('warning',
+                        'Adresse de la société non géolocalisée — les tournées ne peuvent pas être optimisées. Renseignez-la dans Paramètres.');
+                }
+                if (!empty($diag['notGeocoded'])) {
+                    $noms = implode(', ', array_slice($diag['notGeocoded'], 0, 5));
+                    $reste = count($diag['notGeocoded']) - 5;
+                    $this->addFlash('warning', sprintf(
+                        'Géocodage impossible pour %d bon(s) : %s%s. Les trajets de ces bons sont ignorés par l\'optimiseur.',
+                        count($diag['notGeocoded']), $noms, $reste > 0 ? " (+$reste autres)" : ''
+                    ));
+                }
+                $this->warnIfDayOverflows($dateTime, $employe);
+            } catch (\Throwable $e) {
+                // Optimization is best-effort — never block creation
             }
-            if (!empty($diag['notGeocoded'])) {
-                $noms = implode(', ', array_slice($diag['notGeocoded'], 0, 5));
-                $reste = count($diag['notGeocoded']) - 5;
-                $this->addFlash('warning', sprintf(
-                    'Géocodage impossible pour %d bon(s) : %s%s. Les trajets de ces bons sont ignorés par l\'optimiseur.',
-                    count($diag['notGeocoded']), $noms, $reste > 0 ? " (+$reste autres)" : ''
-                ));
-            }
-            $this->warnIfDayOverflows($dateTime, $employe);
-        } catch (\Throwable $e) {
-            // Optimization is best-effort — never block creation
+
+            // Mettre à jour le bon de commande
+            $this->prestationManager->updateBonDeCommande($bon);
         }
 
-        // Mettre à jour le bon de commande
-        $this->prestationManager->updateBonDeCommande($bon);
-
-        $this->addFlash('success', 'Prestation créée avec succès pour ' . $employe->getNom());
+        $label = $modeBrouillon ? 'Prestation ajoutée au brouillon pour ' : 'Prestation créée avec succès pour ';
+        $this->addFlash('success', $label . $employe->getNom());
 
         return $this->redirectToRoute('admin_planning_index', [
             'date' => $date,
@@ -542,10 +550,11 @@ class PlanningController extends AbstractController
 
         $data = json_decode($request->getContent(), true);
 
-        $bonIds = $data['bonIds'] ?? [];
-        $employeId = $data['employeId'] ?? null;
-        $date = $data['date'] ?? null;
-        $heure = $data['heure'] ?? '09:00';
+        $bonIds        = $data['bonIds'] ?? [];
+        $employeId     = $data['employeId'] ?? null;
+        $date          = $data['date'] ?? null;
+        $heure         = $data['heure'] ?? '09:00';
+        $modeBrouillon = ($data['mode'] ?? '') === 'brouillon';
 
         // Validation
         if (empty($bonIds) || !$employeId || !$date) {
@@ -587,14 +596,18 @@ class PlanningController extends AbstractController
                     ?? $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES)
                 );
 
-                // Mettre à jour le statut
-                $this->prestationManager->updatePrestationStatut($prestation);
+                if ($modeBrouillon) {
+                    $prestation->setStatut(StatutPrestation::BROUILLON);
+                } else {
+                    $this->prestationManager->updatePrestationStatut($prestation);
+                }
 
                 $this->em->persist($prestation);
                 $this->em->flush();
 
-                // Mettre à jour le bon de commande
-                $this->prestationManager->updateBonDeCommande($bon);
+                if (!$modeBrouillon) {
+                    $this->prestationManager->updateBonDeCommande($bon);
+                }
 
                 $created[] = [
                     'prestationId' => $prestation->getId(),
@@ -616,20 +629,70 @@ class PlanningController extends AbstractController
     }
 
     // =====================================================
-    // RÉCUPÉRER LES BONS DISPONIBLES
+    // RÉCUPÉRER LES BONS DISPONIBLES (avec filtre capacité optionnel)
     // =====================================================
     #[Route('/bons-disponibles', name: 'admin_planning_bons_disponibles', methods: ['GET'])]
-    public function bonsDisponibles(BonDeCommandeRepository $bonRepo): JsonResponse
+    public function bonsDisponibles(Request $request, BonDeCommandeRepository $bonRepo): JsonResponse
     {
+        $employeId = $request->query->get('employe');
+        $dateStr   = $request->query->get('date');
+
+        // Calcul de la capacité restante si un technicien + date sont fournis
+        $matinDisponible = null;
+        $apremDisponible = null;
+        $defDur = $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES);
+
+        if ($employeId && $dateStr) {
+            $employe = $this->userRepo->find($employeId);
+            if ($employe) {
+                $date      = new \DateTimeImmutable($dateStr);
+                $dateStart = $date->setTime(0, 0, 0);
+                $dateEnd   = $date->setTime(23, 59, 59);
+
+                $debutMin    = $this->hmToMin($this->parametres->get(ParametreService::HEURE_PREMIERE));
+                $pauseDebMin = $this->hmToMin($this->parametres->get(ParametreService::HEURE_PAUSE_DEBUT));
+                $pauseFinMin = $this->hmToMin($this->parametres->get(ParametreService::HEURE_PAUSE_FIN));
+                $finMin      = $this->hmToMin($this->parametres->get(ParametreService::HEURE_FIN_JOURNEE));
+
+                $matinTotal = max(0, $pauseDebMin - $debutMin);
+                $apremTotal = max(0, $finMin - $pauseFinMin);
+                $matinUsed  = 0;
+                $apremUsed  = 0;
+
+                $existing = $this->prestationRepo->createQueryBuilder('p')
+                    ->leftJoin('p.typePrestation', 't')->addSelect('t')
+                    ->where('p.employe = :emp')
+                    ->andWhere('p.datePrestation >= :start')
+                    ->andWhere('p.datePrestation <= :end')
+                    ->setParameter('emp', $employe)
+                    ->setParameter('start', $dateStart)
+                    ->setParameter('end', $dateEnd)
+                    ->getQuery()->getResult();
+
+                foreach ($existing as $p) {
+                    $dur = ($p->getDureeMinutes() ?? $p->getTypePrestation()?->getDureeTheoriqueMinutes() ?? $defDur)
+                         + ($p->getDureeTrajetMinutes() ?? 0);
+                    if ($p->getCreneau() === CreneauPrestation::APREM) {
+                        $apremUsed += $dur;
+                    } else {
+                        $matinUsed += $dur;
+                    }
+                }
+
+                $matinDisponible = max(0, $matinTotal - $matinUsed);
+                $apremDisponible = max(0, $apremTotal - $apremUsed);
+            }
+        }
+
         // Récupérer les bons qui ont encore des prestations à programmer
         $qb = $bonRepo->createQueryBuilder('b')
             ->where('b.nombrePrestations < b.nombrePrestationsNecessaires')
             ->orWhere('b.nombrePrestations IS NULL')
             ->orderBy('b.dateCommande', 'DESC')
             ->setMaxResults(50);
-        
+
         $bons = $qb->getQuery()->getResult();
-        
+
         $groupes = $this->groupeGeoRepo->findAllActifs();
 
         $results = [];
@@ -649,6 +712,12 @@ class PlanningController extends AbstractController
                 }
             }
 
+            $dureeMinutes = $bon->getTypePrestation()?->getDureeTheoriqueMinutes() ?? $defDur;
+
+            // Si capacité connue, indiquer si le bon tient dans les créneaux disponibles
+            $fitsMatin = $matinDisponible !== null ? ($dureeMinutes <= $matinDisponible) : null;
+            $fitsAprem = $apremDisponible !== null ? ($dureeMinutes <= $apremDisponible) : null;
+
             $results[] = [
                 'id' => $bon->getId(),
                 'clientNom' => $bon->getClientNom(),
@@ -665,8 +734,10 @@ class PlanningController extends AbstractController
                     'nom' => $bon->getTypePrestation()->getNom(),
                     'dureeMinutes' => $bon->getTypePrestation()->getDureeTheoriqueMinutes(),
                 ] : null,
-                'dureeMinutes' => $bon->getTypePrestation()?->getDureeTheoriqueMinutes()
-                    ?? $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES),
+                'dureeMinutes'  => $dureeMinutes,
+                'fitsMatin'     => $fitsMatin,
+                'fitsAprem'     => $fitsAprem,
+                'fitsAnySlot'   => $fitsMatin || $fitsAprem,
                 'geocoded' => $bon->hasCoordonnees(),
                 'adresseOverride' => $bon->getAdresseGpsOverride(),
             ];
@@ -688,9 +759,52 @@ class PlanningController extends AbstractController
         $sort = $request->query->get('sort', 'date_desc');
         $all = $request->query->get('all', '');
 
-        // Sans filtre et sans flag all= → raccourci bons disponibles
+        // Sans filtre et sans flag all= → raccourci bons disponibles (inclut le calcul de capacité)
         if (!$all && strlen($query) < 2 && !$statut && !$groupeGeoId && !$typePrestationId) {
-            return $this->bonsDisponibles($bonRepo);
+            return $this->bonsDisponibles($request, $bonRepo);
+        }
+
+        // Calcul capacité optionnel pour le filtre client-side
+        $employeId = $request->query->get('employe');
+        $dateStr   = $request->query->get('date');
+        $matinDisponible = null;
+        $apremDisponible = null;
+        $defDur = $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES);
+
+        if ($employeId && $dateStr) {
+            $employe = $this->userRepo->find($employeId);
+            if ($employe) {
+                $date      = new \DateTimeImmutable($dateStr);
+                $dateStart = $date->setTime(0, 0, 0);
+                $dateEnd   = $date->setTime(23, 59, 59);
+                $debutMin    = $this->hmToMin($this->parametres->get(ParametreService::HEURE_PREMIERE));
+                $pauseDebMin = $this->hmToMin($this->parametres->get(ParametreService::HEURE_PAUSE_DEBUT));
+                $pauseFinMin = $this->hmToMin($this->parametres->get(ParametreService::HEURE_PAUSE_FIN));
+                $finMin      = $this->hmToMin($this->parametres->get(ParametreService::HEURE_FIN_JOURNEE));
+                $matinTotal = max(0, $pauseDebMin - $debutMin);
+                $apremTotal = max(0, $finMin - $pauseFinMin);
+                $matinUsed = $apremUsed = 0;
+                $existing = $this->prestationRepo->createQueryBuilder('p')
+                    ->leftJoin('p.typePrestation', 't')->addSelect('t')
+                    ->where('p.employe = :emp')
+                    ->andWhere('p.datePrestation >= :start')
+                    ->andWhere('p.datePrestation <= :end')
+                    ->setParameter('emp', $employe)
+                    ->setParameter('start', $dateStart)
+                    ->setParameter('end', $dateEnd)
+                    ->getQuery()->getResult();
+                foreach ($existing as $p) {
+                    $dur = ($p->getDureeMinutes() ?? $p->getTypePrestation()?->getDureeTheoriqueMinutes() ?? $defDur)
+                         + ($p->getDureeTrajetMinutes() ?? 0);
+                    if ($p->getCreneau() === CreneauPrestation::APREM) {
+                        $apremUsed += $dur;
+                    } else {
+                        $matinUsed += $dur;
+                    }
+                }
+                $matinDisponible = max(0, $matinTotal - $matinUsed);
+                $apremDisponible = max(0, $apremTotal - $apremUsed);
+            }
         }
         
         $qb = $bonRepo->createQueryBuilder('b');
@@ -789,6 +903,11 @@ class PlanningController extends AbstractController
                 }
             }
             
+            $dureeMinutes = $bon->getTypePrestation()?->getDureeTheoriqueMinutes()
+                ?? $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES);
+            $fitsMatin = $matinDisponible !== null ? ($dureeMinutes <= $matinDisponible) : null;
+            $fitsAprem = $apremDisponible !== null ? ($dureeMinutes <= $apremDisponible) : null;
+
             $results[] = [
                 'id' => $bon->getId(),
                 'clientNom' => $bon->getClientNom(),
@@ -805,8 +924,10 @@ class PlanningController extends AbstractController
                     'nom' => $bon->getTypePrestation()->getNom(),
                     'dureeMinutes' => $bon->getTypePrestation()->getDureeTheoriqueMinutes(),
                 ] : null,
-                'dureeMinutes' => $bon->getTypePrestation()?->getDureeTheoriqueMinutes()
-                    ?? $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES),
+                'dureeMinutes'  => $dureeMinutes,
+                'fitsMatin'     => $fitsMatin,
+                'fitsAprem'     => $fitsAprem,
+                'fitsAnySlot'   => $fitsMatin || $fitsAprem,
                 'geocoded' => $bon->hasCoordonnees(),
                 'adresseOverride' => $bon->getAdresseGpsOverride(),
             ];
@@ -1098,6 +1219,205 @@ class PlanningController extends AbstractController
         }
 
         return $this->json($result);
+    }
+
+    // =====================================================
+    // CAPACITÉ RESTANTE D'UN TECHNICIEN POUR UN JOUR
+    // =====================================================
+    #[Route('/capacite-jour', name: 'admin_planning_capacite_jour', methods: ['GET'])]
+    public function capaciteJour(Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $employeId = $request->query->get('employe');
+        $dateStr   = $request->query->get('date');
+
+        if (!$employeId || !$dateStr) {
+            return $this->json(['error' => 'employe et date obligatoires'], 400);
+        }
+
+        $employe = $this->userRepo->find($employeId);
+        if (!$employe) {
+            return $this->json(['error' => 'Employé introuvable'], 404);
+        }
+
+        $date      = new \DateTimeImmutable($dateStr);
+        $dateStart = $date->setTime(0, 0, 0);
+        $dateEnd   = $date->setTime(23, 59, 59);
+
+        $debutMin      = $this->hmToMin($this->parametres->get(ParametreService::HEURE_PREMIERE));
+        $pauseDebMin   = $this->hmToMin($this->parametres->get(ParametreService::HEURE_PAUSE_DEBUT));
+        $pauseFinMin   = $this->hmToMin($this->parametres->get(ParametreService::HEURE_PAUSE_FIN));
+        $finMin        = $this->hmToMin($this->parametres->get(ParametreService::HEURE_FIN_JOURNEE));
+        $defDur        = $this->parametres->getInt(ParametreService::DUREE_DEFAUT_MINUTES);
+
+        $matinTotal = max(0, $pauseDebMin - $debutMin);
+        $apremTotal = max(0, $finMin - $pauseFinMin);
+
+        $prestations = $this->prestationRepo->createQueryBuilder('p')
+            ->leftJoin('p.typePrestation', 't')->addSelect('t')
+            ->where('p.employe = :emp')
+            ->andWhere('p.datePrestation >= :start')
+            ->andWhere('p.datePrestation <= :end')
+            ->setParameter('emp', $employe)
+            ->setParameter('start', $dateStart)
+            ->setParameter('end', $dateEnd)
+            ->getQuery()->getResult();
+
+        $matinUsed  = 0;
+        $apremUsed  = 0;
+        $brouillonCount = 0;
+        $confirmeCount  = 0;
+
+        foreach ($prestations as $p) {
+            $dur    = ($p->getDureeMinutes() ?? $p->getTypePrestation()?->getDureeTheoriqueMinutes() ?? $defDur)
+                    + ($p->getDureeTrajetMinutes() ?? 0);
+            $creneau = $p->getCreneau();
+
+            if ($p->getStatut() === StatutPrestation::BROUILLON) {
+                $brouillonCount++;
+            } else {
+                $confirmeCount++;
+            }
+
+            if ($creneau === CreneauPrestation::APREM) {
+                $apremUsed += $dur;
+            } else {
+                // MATIN and FIXE both consume morning capacity by default
+                $matinUsed += $dur;
+            }
+        }
+
+        return $this->json([
+            'matinTotal'      => $matinTotal,
+            'apremTotal'      => $apremTotal,
+            'matinUsed'       => $matinUsed,
+            'apremUsed'       => $apremUsed,
+            'matinDisponible' => max(0, $matinTotal - $matinUsed),
+            'apremDisponible' => max(0, $apremTotal - $apremUsed),
+            'brouillonCount'  => $brouillonCount,
+            'confirmeCount'   => $confirmeCount,
+            'heureDebut'      => $this->minToHm($debutMin),
+            'heurePauseDeb'   => $this->minToHm($pauseDebMin),
+            'heurePauseFin'   => $this->minToHm($pauseFinMin),
+            'heureFin'        => $this->minToHm($finMin),
+        ]);
+    }
+
+    // =====================================================
+    // VALIDER UN BROUILLON DE TOURNÉE (→ PROGRAMME/EN_COURS)
+    // =====================================================
+    #[Route('/validate-tournee', name: 'admin_planning_validate_tournee', methods: ['POST'])]
+    public function validateTournee(Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $data      = json_decode($request->getContent(), true) ?? [];
+        $employeId = $data['employeId'] ?? $request->request->get('employeId');
+        $dateStr   = $data['date'] ?? $request->request->get('date');
+
+        if (!$employeId || !$dateStr) {
+            return $this->json(['error' => 'employeId et date obligatoires'], 400);
+        }
+
+        $employe = $this->userRepo->find($employeId);
+        if (!$employe) {
+            return $this->json(['error' => 'Employé introuvable'], 404);
+        }
+
+        $date      = new \DateTimeImmutable($dateStr);
+        $dateStart = $date->setTime(0, 0, 0);
+        $dateEnd   = $date->setTime(23, 59, 59);
+
+        $brouillons = $this->prestationRepo->createQueryBuilder('p')
+            ->where('p.employe = :emp')
+            ->andWhere('p.datePrestation >= :start')
+            ->andWhere('p.datePrestation <= :end')
+            ->andWhere('p.statut = :brouillon')
+            ->setParameter('emp', $employe)
+            ->setParameter('start', $dateStart)
+            ->setParameter('end', $dateEnd)
+            ->setParameter('brouillon', StatutPrestation::BROUILLON->value)
+            ->getQuery()->getResult();
+
+        if (empty($brouillons)) {
+            return $this->json(['validated' => 0, 'message' => 'Aucun brouillon à valider']);
+        }
+
+        $bonsToUpdate = [];
+        foreach ($brouillons as $p) {
+            // Reset statut so PrestationManager can set it based on date
+            $p->setStatut(StatutPrestation::A_PROGRAMMER);
+            $this->prestationManager->updatePrestationStatut($p);
+            if ($p->getBonDeCommande()) {
+                $bonsToUpdate[$p->getBonDeCommande()->getId()] = $p->getBonDeCommande();
+            }
+        }
+        $this->em->flush();
+
+        foreach ($bonsToUpdate as $bon) {
+            $this->prestationManager->updateBonDeCommande($bon);
+        }
+
+        // Run route optimization after validation
+        try {
+            $this->optimizer->optimizeDay($date, $employe);
+        } catch (\Throwable) {
+            // Best-effort
+        }
+
+        return $this->json([
+            'validated' => count($brouillons),
+            'message'   => count($brouillons) . ' prestation(s) validée(s) et tournée optimisée.',
+        ]);
+    }
+
+    // =====================================================
+    // ANNULER UN BROUILLON DE TOURNÉE
+    // =====================================================
+    #[Route('/discard-tournee', name: 'admin_planning_discard_tournee', methods: ['POST'])]
+    public function discardTournee(Request $request): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $data      = json_decode($request->getContent(), true) ?? [];
+        $employeId = $data['employeId'] ?? $request->request->get('employeId');
+        $dateStr   = $data['date'] ?? $request->request->get('date');
+
+        if (!$employeId || !$dateStr) {
+            return $this->json(['error' => 'employeId et date obligatoires'], 400);
+        }
+
+        $employe = $this->userRepo->find($employeId);
+        if (!$employe) {
+            return $this->json(['error' => 'Employé introuvable'], 404);
+        }
+
+        $date      = new \DateTimeImmutable($dateStr);
+        $dateStart = $date->setTime(0, 0, 0);
+        $dateEnd   = $date->setTime(23, 59, 59);
+
+        $brouillons = $this->prestationRepo->createQueryBuilder('p')
+            ->where('p.employe = :emp')
+            ->andWhere('p.datePrestation >= :start')
+            ->andWhere('p.datePrestation <= :end')
+            ->andWhere('p.statut = :brouillon')
+            ->setParameter('emp', $employe)
+            ->setParameter('start', $dateStart)
+            ->setParameter('end', $dateEnd)
+            ->setParameter('brouillon', StatutPrestation::BROUILLON->value)
+            ->getQuery()->getResult();
+
+        $count = count($brouillons);
+        foreach ($brouillons as $p) {
+            $this->em->remove($p);
+        }
+        $this->em->flush();
+
+        return $this->json([
+            'discarded' => $count,
+            'message'   => $count . ' prestation(s) en brouillon supprimée(s).',
+        ]);
     }
 
     // =====================================================
